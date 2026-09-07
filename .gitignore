@@ -1,0 +1,5 @@
+# Obsidian local-only files (device-specific, don't need to sync)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+.trash/
