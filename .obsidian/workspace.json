@@ -22,22 +22,6 @@
             }
           }
         ]
-      },
-      {
-        "id": "202243b3af7e6db8",
-        "type": "tabs",
-        "children": [
-          {
-            "id": "476047b028ecf9a0",
-            "type": "leaf",
-            "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
-            }
-          }
-        ]
       }
     ],
     "direction": "vertical"
@@ -185,13 +169,23 @@
               "icon": "lucide-list",
               "title": "Outline"
             }
+          },
+          {
+            "id": "4310da3c2aedfa60",
+            "type": "leaf",
+            "state": {
+              "type": "git-view",
+              "state": {},
+              "icon": "git-pull-request",
+              "title": "Source Control"
+            }
           }
-        ]
+        ],
+        "currentTab": 5
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -201,11 +195,13 @@
       "daily-notes:Open today's daily note": false,
       "templates:Insert template": false,
       "command-palette:Open command palette": false,
-      "bases:Create new base": false
+      "bases:Create new base": false,
+      "obsidian-git:Open Git source control": false
     }
   },
-  "active": "cda56fa2f9f92f3a",
+  "active": "885ff80739d1551e",
   "lastOpenFiles": [
+    "Welcome.md",
     "sql/joins-and-subqueries.md",
     "python/decorators.md",
     "projects/project-log-template.md",
@@ -219,7 +215,6 @@
     "pyspark",
     "python",
     "sql",
-    "domians",
-    "Welcome.md"
+    "domians"
   ]
 }
