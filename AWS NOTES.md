@@ -1208,5 +1208,22 @@ Notice `--vpc-zone-identifier` takes **multiple subnets across different AZs** �
 
 #### Interview questions with answers 
 
-**"Your ASG has Min=2, Max=10, target tracking on CPU at 50%. During a traffic spike, CPU hits 95% but the ASG only ever scales to 4 instances, then stalls — even though Max is 10. What could be limiting it, and it's not the ASG config itself?"**  
-→ Something _outside_ the ASG's own settings is capping it — most commonly: (1) an **EC2 service quota** (vCPU limit per account/region) being hit, (2) a **subnet running out of available IP addresses** in the AZs the ASG is deployed into, or (3) an attached Elastic Load Balancer or target group having its own capacity/registration limits. This is a favorite curveball because candidates assume Min/Max is the only ceiling — in reality the ASG can be blocked by quiet failures elsewhere in the account that don't show up in the ASG's own dashboard, only in its Activity History/scaling activity error messages.
+1. **"Your ASG has Min=2, Max=10, target tracking on CPU at 50%. During a traffic spike, CPU hits 95% but the ASG only ever scales to 4 instances, then stalls — even though Max is 10. What could be limiting it, and it's not the ASG config itself?"**  
+→ Something _outside_ the ASG's own settings is capping it — most commonly: 
+(1) an **EC2 service quota** (vCPU limit per account/region) being hit, 
+(2) a **subnet running out of available IP addresses** in the AZs the ASG is deployed into, or 
+(3) an attached Elastic Load Balancer or target group having its own capacity/registration limits. This is a favorite curveball because candidates assume Min/Max is the only ceiling — in reality the ASG can be blocked by quiet failures elsewhere in the account that don't show up in the ASG's own dashboard, only in its Activity History/scaling activity error messages.
+
+2. **"Why would you use Scheduled Scaling _in addition to_ Target Tracking rather than just Target Tracking alone, for a known traffic pattern like a lunch rush?"**  
+→ Target tracking is _reactive_ — it scales only after the metric (e.g., CPU) has already crossed the threshold, meaning there's a lag between demand rising and capacity catching up, during which users can experience degraded performance. Scheduled scaling is _proactive_ — it pre-provisions capacity ahead of a known spike (e.g., set desired capacity higher at 11:45am for a 12pm lunch rush) so instances are already warm and ready the moment demand hits, then target tracking handles any additional fine-tuning beyond the predictable baseline.
+
+3. **"A cost-conscious manager sets Min=0 on an ASG serving a production API to 'save money during quiet periods.' What's the risk?"**  
+→ If desired capacity ever scales down to 0, there are zero running instances — meaning the API is completely unreachable, not just slow, until a scaling trigger fires and a new instance boots (which itself takes time — no instant recovery). For a production-facing API, Min should be set to whatever the minimum instance count is that can still serve baseline traffic (often 1–2, spread across AZs), never 0; Min=0 is only appropriate for batch/worker ASGs where "no work available" genuinely means "nothing should be running."
+
+#### Scenario question
+
+An ASG is configured correctly with Min=2, Max=8, target tracking at 50% CPU, spread across 3 AZs. One day, one entire AZ goes down (a rare but real AWS event). What happens to the ASG's running instances and its ability to maintain desired capacity, and what's the one config choice from _today's_ lesson that determines whether the app stays available or not?
+
+
+
+
