@@ -8,17 +8,17 @@
         "type": "tabs",
         "children": [
           {
-            "id": "885ff80739d1551e",
+            "id": "afaaac7d45d66d13",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Welcome.md",
+                "file": "AWS NOTES.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Welcome"
+              "title": "AWS NOTES"
             }
           }
         ]
@@ -83,7 +83,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "right": {
     "id": "e53e5e1d4a1cb4c0",
@@ -176,8 +177,8 @@
             "state": {
               "type": "git-view",
               "state": {},
-              "icon": "git-pull-request",
-              "title": "Source Control"
+              "icon": "lucide-ghost",
+              "title": "git-view"
             }
           }
         ],
@@ -185,7 +186,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -199,15 +201,17 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "885ff80739d1551e",
+  "active": "afaaac7d45d66d13",
   "lastOpenFiles": [
+    "AWS NOTES.md",
+    "domains/domain1-cloud-concepts.md",
+    "README.md",
+    "aws",
     "Welcome.md",
     "sql/joins-and-subqueries.md",
     "python/decorators.md",
     "projects/project-log-template.md",
-    "domains/domain1-cloud-concepts.md",
     "domains",
-    "README.md",
     "daily",
     "projects",
     "dbt",
