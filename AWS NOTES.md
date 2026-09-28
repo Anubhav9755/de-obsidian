@@ -1167,3 +1167,46 @@ Scaling happens via **scaling policies**, the most common being:
 - **Scheduled scaling** — "every weekday at 8:59am, set desired = 10" for predictable traffic patterns (e.g., a B2B app that's busy during business hours and dead at night)
 
 ASGs also handle **health checks and self-healing**: if an instance fails a health check (EC2 status check or an attached ELB health check), the ASG terminates it and launches a replacement automatically — this is a distinct benefit from scaling itself.
+
+### The industry problem this solves
+
+A ticket-booking site sells concert tickets that go on sale at exactly 10:00am. At 9:59am, traffic is near zero. At 10:00am, it's 50x normal traffic for 15 minutes, then drops back down. Provisioning for peak 24/7 means paying for 50x capacity almost all day for nothing. Provisioning for average traffic means the site falls over exactly when it matters most — at the moment of the sale.
+
+With Auto Scaling: scheduled scaling can pre-warm capacity right before 10:00am (since target tracking alone might react a few minutes too slowly to a sudden 50x spike), then target tracking takes over to fine-tune during the rush, and the ASG scales back down afterward. The company pays for high capacity only during the ~20 minutes it's actually needed.
+
+#### CODE
+
+```
+# Create a launch template (defines what an instance in the ASG looks like)
+aws ec2 create-launch-template \
+  --launch-template-name my-app-template \
+  --version-description v1 \
+  --launch-template-data '{"ImageId":"ami-0abcd1234","InstanceType":"t3.micro"}'
+
+# Create the Auto Scaling Group itself
+aws autoscaling create-auto-scaling-group \
+  --auto-scaling-group-name my-app-asg \
+  --launch-template LaunchTemplateName=my-app-template,Version='1' \
+  --min-size 2 \
+  --max-size 10 \
+  --desired-capacity 2 \
+  --vpc-zone-identifier "subnet-abc123,subnet-def456" \
+  --target-group-arns arn:aws:elasticloadbalancing:...:targetgroup/my-tg
+
+# Attach a target tracking scaling policy (keep avg CPU near 50%)
+aws autoscaling put-scaling-policy \
+  --auto-scaling-group-name my-app-asg \
+  --policy-name cpu-target-tracking \
+  --policy-type TargetTrackingScaling \
+  --target-tracking-configuration '{
+      "PredefinedMetricSpecification": {"PredefinedMetricType": "ASGAverageCPUUtilization"},
+      "TargetValue": 50.0
+    }'
+```
+
+Notice `--vpc-zone-identifier` takes **multiple subnets across different AZs** — this is deliberate. An ASG that only spans one AZ has no fault tolerance if that AZ goes down; spreading across AZs (from Lesson 8's Region/AZ hierarchy) is how Auto Scaling contributes to high availability, not just cost efficiency.
+
+#### Interview questions with answers 
+
+**"Your ASG has Min=2, Max=10, target tracking on CPU at 50%. During a traffic spike, CPU hits 95% but the ASG only ever scales to 4 instances, then stalls — even though Max is 10. What could be limiting it, and it's not the ASG config itself?"**  
+→ Something _outside_ the ASG's own settings is capping it — most commonly: (1) an **EC2 service quota** (vCPU limit per account/region) being hit, (2) a **subnet running out of available IP addresses** in the AZs the ASG is deployed into, or (3) an attached Elastic Load Balancer or target group having its own capacity/registration limits. This is a favorite curveball because candidates assume Min/Max is the only ceiling — in reality the ASG can be blocked by quiet failures elsewhere in the account that don't show up in the ASG's own dashboard, only in its Activity History/scaling activity error messages.
