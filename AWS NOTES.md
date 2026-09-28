@@ -1147,3 +1147,23 @@ This is the classic gotcha: people assume "Beanstalk = auto scaling by name" and
 
 ---
 
+### Auto Scaling (EC2 Auto Scaling Groups)
+
+Think of a restaurant kitchen staffing plan. On a slow Tuesday afternoon, one cook is enough. On Friday dinner rush, you need five. A bad manager either keeps five cooks on payroll all week (wasteful) or keeps one cook all week and lets Friday dinner collapse into chaos (unreliable). A good manager has a **staffing policy**: "if the ticket queue backs up past X, call in another cook; if it's been quiet for 20 minutes, send someone home." Auto Scaling is that staffing policy, automated, for EC2 instances.
+#### Definition
+
+An **Auto Scaling Group (ASG)** is a logical collection of EC2 instances that AWS automatically grows or shrinks based on defined rules, so capacity matches actual demand instead of being fixed.
+
+Three core numbers define every ASG:
+
+- **Minimum** — the floor; ASG never scales below this, even at zero traffic
+- **Maximum** — the ceiling; ASG never scales above this, even under extreme load (a cost/safety guardrail)
+- **Desired** — the current target the ASG is actively trying to maintain; scaling actions move this number up or down between Min and Max
+
+Scaling happens via **scaling policies**, the most common being:
+
+- **Target tracking** — "keep average CPU at 50%" — you set a target metric value, AWS handles the math of how many instances that requires (this is the modern default, least manual)
+- **Step scaling** — explicit rules like "if CPU > 80% for 5 min, add 2 instances; if CPU > 90%, add 4"
+- **Scheduled scaling** — "every weekday at 8:59am, set desired = 10" for predictable traffic patterns (e.g., a B2B app that's busy during business hours and dead at night)
+
+ASGs also handle **health checks and self-healing**: if an instance fails a health check (EC2 status check or an attached ELB health check), the ASG terminates it and launches a replacement automatically — this is a distinct benefit from scaling itself.
