@@ -1144,3 +1144,6 @@ Where to fix it: **Beanstalk Console → Configuration → Capacity**. There you
 3. Verify a scaling trigger exists (e.g., CloudWatch alarm on average CPU > 70% for N minutes) — because even with Max raised, if no trigger is configured, the ASG still won't know _when_ to add instances
 
 This is the classic gotcha: people assume "Beanstalk = auto scaling by name" and never check that the ASG's own Min/Max and trigger policy were actually set up for growth.
+
+---
+
