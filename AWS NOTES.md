@@ -1053,6 +1053,94 @@ The IAM role attached (`lambda-execution-role`) is critical — Lambda's permiss
 #### Interview questions with answers (leveled up)
 
 1. _"A company wants to migrate a video transcoding job that regularly takes 40 minutes to Lambda for cost savings. What's wrong with this plan, and what would you recommend instead?"_ → Lambda has a hard 15-minute maximum execution timeout — a 40-minute job cannot run on Lambda at all, regardless of memory/config tuning. The right fit is a container-based service (ECS/Fargate) or EC2, which support long-running processes without an artificial time ceiling.
+
 2. _"Your Lambda function processes payment webhooks and occasionally receives a burst of 5,000 simultaneous requests. What could go wrong, and how would you prevent it?"_ → If account-level concurrency limits (default 1000) are shared across other functions/services, this burst could throttle invocations — some webhooks would fail to process. Fix: configure **reserved concurrency** on this specific function to guarantee it capacity, and/or use an SQS queue in front of Lambda to buffer and smooth the burst instead of hitting Lambda directly.
+
 3. _"Why is a cold start a bigger concern for a user-facing API than for a nightly batch job, even though the actual added latency might be the same number of milliseconds?"_ → A user-facing API's cold start directly delays a real person waiting for a response — degrading perceived performance/UX in the moment. A nightly batch job has no human waiting in real time, so the same few hundred milliseconds of added latency is functionally invisible to anyone.
+
 4. _"You're told 'Lambda functions should be stateless.' A developer stores a counter variable at the global scope of the function code, outside the handler, and it seems to persist across some invocations but not others. Why does this happen, and why is relying on it dangerous?"_ → AWS may reuse a "warm" execution environment for consecutive invocations, which coincidentally lets global-scope variables persist — but this is an unreliable implementation detail, not a guarantee. A cold start, a scale-out event, or AWS recycling the environment wipes it with zero warning, silently corrupting logic that assumed persistence. State must live in an external store (DynamoDB, S3, ElastiCache) to be reliable.
+
+
+#### Scenario question
+
+A startup's API is built entirely on Lambda + API Gateway. During a viral traffic spike, some users start seeing failed requests, but CloudWatch shows the functions themselves aren't erroring — they're just not being invoked at all for some requests. What's the most likely underlying cause given what you now know about Lambda, and what are two different ways you could architect around it?
+
+The most likely cause is hitting the **account-level Lambda concurrency limit** (default 1000) — once that ceiling is hit, API Gateway requests that can't get a Lambda execution slot are **throttled (HTTP 429)**, not passed through as a function error. That's exactly why CloudWatch shows no errors _inside_ the functions — the functions never got invoked in the first place; the request was rejected before reaching them.
+
+**Two architectural fixes:**
+
+1. **Request a concurrency limit increase** from AWS and set **reserved concurrency** on this specific critical function so it always has guaranteed capacity, immune to other functions in the account eating the shared pool.
+2. **Put an SQS queue in front of Lambda** — API Gateway writes the request to the queue instantly (fast, always succeeds), and Lambda drains the queue at whatever pace it can sustain. This decouples "accepting the request" from "processing it immediately," smoothing spikes instead of dropping requests during them.
+
+---
+
+### Elastic Beanstalk
+
+Imagine you want to open a restaurant. You could buy the building, install plumbing, wire the electrics, hire an architect, get permits, build the kitchen from scratch (that's raw EC2 — you manage everything). Or you could lease a fully-fitted commercial kitchen space where the plumbing, gas lines, and electrical are already done — you just bring your recipes and staff and start cooking (that's Elastic Beanstalk). You still _own_ the restaurant and can walk into the kitchen and rewire something if you really want to — but you don't _have_ to touch the infrastructure to get started.
+
+### Definition
+
+Elastic Beanstalk is a **Platform-as-a-Service (PaaS)** orchestration layer built on top of underlying AWS services (EC2, Auto Scaling, ELB, S3, CloudWatch). You upload your application code (Java, .NET, PHP, Node.js, Python, Ruby, Go, Docker), and Beanstalk automatically handles:
+
+- Provisioning the EC2 instances to run it
+- Setting up load balancing and auto scaling
+- Health monitoring and basic auto-recovery
+- Deployment (including rolling updates, blue/green via swapping environment URLs)
+
+Critically: **the underlying resources are not hidden from you** — unlike a fully-managed service like Lambda, Beanstalk provisions real EC2 instances, a real ELB, a real Auto Scaling group, and you can go into the EC2 console and see them, SSH into them, and modify them directly if needed. Beanstalk is an _orchestration convenience layer_, not an abstraction that removes the servers.
+
+**you pay for the underlying resources (EC2, ELB, etc.) — Beanstalk itself is free.** It's not a separate billed service; it's automation on top of ones you already pay for.
+
+### The industry problem this solves
+
+A small startup has a Node.js web app ready to ship. The founders don't have a dedicated DevOps engineer. The "correct" manual path is: launch EC2 instances, configure an Auto Scaling group, set up an Application Load Balancer, configure health checks, set up a CI/CD deployment pipeline for rolling updates, wire CloudWatch alarms — easily a week of infra work for a two-person team who just want their app live.
+
+With Beanstalk: `eb init`, `eb create`, `eb deploy` — and within minutes they have a load-balanced, auto-scaled, monitored environment running their code, with none of that manual wiring. They can focus on the app; Beanstalk handles the operational scaffolding.
+
+The flip side (equally testable): a team that _needs_ fine-grained control over their networking topology, custom AMIs with heavy pre-baked configuration, or non-standard architectures finds Beanstalk's opinionated structure limiting — that's when you drop to raw EC2 + your own orchestration, or move to ECS/Fargate for containerized workloads with more control.
+
+#### CODE 
+
+```
+# Initialize a Beanstalk application in your project directory
+eb init -p node.js my-app --region us-east-1
+
+# Create an environment and deploy — this provisions EC2, ELB, ASG, security groups, etc.
+eb create my-app-env
+
+# Deploy a new version of your code to the existing environment
+eb deploy
+
+# Check environment health
+eb health
+
+# Open the running app in your browser
+eb open
+```
+
+Behind the scenes, `eb create` is essentially doing the EC2 + ELB + Auto Scaling Group work, using a config you can still override via a `.ebextensions/` folder (YAML/JSON config files) if you need to customize instance type, environment variables, or scaling triggers.
+
+### Interview questions with answers
+
+1. **"Your team says 'Elastic Beanstalk is a PaaS, so we don't need to think about EC2 costs — Beanstalk pricing covers it.' What's wrong with this statement?"**  
+→ Elastic Beanstalk itself has **no additional charge** — you pay only for the underlying resources it provisions (EC2 instances, ELB, EBS volumes, data transfer). Thinking of it as a separately-priced service is a fundamental misunderstanding; cost optimization on a Beanstalk app means the exact same EC2/ELB cost levers as a manually-built environment (right-sizing instances, Reserved/Spot pricing, etc.).
+
+2. **"A developer deploys an app via Beanstalk, then manually goes into the EC2 console and changes the instance type directly on the running instances. Two days later, Beanstalk performs a routine environment update and the change is gone. Why?"**  
+→ Beanstalk treats its environment configuration as the source of truth and can reprovision or update instances to match that stored configuration during health checks, scaling events, or deployments — manual out-of-band changes to the underlying EC2 instances aren't tracked by Beanstalk and get overwritten. The correct way to make the change persistent is through Beanstalk's own configuration (console settings or `.ebextensions`), not by hand-editing the EC2 resources it manages.
+
+3. **"When would you choose Beanstalk over plain EC2, and when would you choose ECS/Fargate over Beanstalk?"**  
+→ Beanstalk over EC2: when you want fast time-to-deploy for a standard web app/API without hand-building the ASG/ELB/monitoring stack, and your app fits a supported platform. ECS/Fargate over Beanstalk: when your workload is containerized and you need more granular control over container orchestration, task placement, or you're running multiple microservices that don't fit Beanstalk's single-application-environment model as cleanly.
+
+### Scenario question (answer next chat)
+
+A team deploys their app on Elastic Beanstalk with default settings. During a load test, they notice the app becomes unresponsive under high traffic, but when they check, only **one EC2 instance** is running the whole time — no new instances were launched despite CPU sitting at 95%+. Beanstalk is supposed to handle scaling automatically. What's the most likely misconfiguration, and where would you go to fix it?
+
+The most likely cause: the Beanstalk environment was created as a **"Single Instance" environment type** (or, if load-balanced, the Auto Scaling Group has **Min = Max = 1**) — either way, there's no headroom for Beanstalk to scale into, so no matter how high CPU climbs, there's nowhere for a second instance to go.
+
+Where to fix it: **Beanstalk Console → Configuration → Capacity**. There you'd:
+
+1. Change the environment type from "Single instance" to "Load balanced, auto scaling" if it wasn't already
+2. Raise Max instances above 1 (e.g., to 4)
+3. Verify a scaling trigger exists (e.g., CloudWatch alarm on average CPU > 70% for N minutes) — because even with Max raised, if no trigger is configured, the ASG still won't know _when_ to add instances
+
+This is the classic gotcha: people assume "Beanstalk = auto scaling by name" and never check that the ASG's own Min/Max and trigger policy were actually set up for growth.
