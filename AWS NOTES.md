@@ -1,4 +1,4 @@
-### Lesson 1: What Is Cloud Computing (and why does it exist)
+﻿### Lesson 1: What Is Cloud Computing (and why does it exist)
 
 #### The analogy first (unconventional bit)
 
@@ -1224,8 +1224,67 @@ Notice `--vpc-zone-identifier` takes **multiple subnets across different AZs** �
 
 An ASG is configured correctly with Min=2, Max=8, target tracking at 50% CPU, spread across 3 AZs. One day, one entire AZ goes down (a rare but real AWS event). What happens to the ASG's running instances and its ability to maintain desired capacity, and what's the one config choice from _today's_ lesson that determines whether the app stays available or not?
 
+If one AZ goes down, the ASG **loses whatever instances were running in that AZ** — EC2 health checks (or ELB health checks) detect them as unreachable, and the ASG terminates them and tries to launch replacements to get back to desired capacity. Because the ASG spans 3 AZs, it can launch replacement instances in the **remaining healthy AZs** — so overall desired capacity can still be maintained, just redistributed.
 
+The one config choice that determines survival: **whether Min (2) is high enough to be met using only the surviving AZs, and whether those AZs have subnet capacity to absorb the shifted load.** If, say, both of the 2 minimum instances happened to be in the AZ that failed, there's a brief window with **zero running instances** until the ASG detects the failure and launches replacements elsewhere — meaning the app's actual availability during an AZ outage depends on instances already being _spread across_ AZs at the moment of failure, not just configured to span multiple AZs in theory. This is exactly why ELB health checks (next lesson) matter — they detect failure faster and more accurately than basic EC2 status checks alone.
 
+---
 
+### Elastic Load Balancing (ELB)
 
+Picture a busy restaurant with multiple kitchens in the back, all capable of cooking the same menu. Instead of customers walking randomly into whichever kitchen door they see first (some kitchens get slammed, others sit idle), there's a host at the front who looks at which kitchen has capacity right now and sends the order there. If a kitchen catches fire, the host stops sending orders to it entirely until it's fixed. That host is the Load Balancer — it doesn't cook anything itself, it just intelligently distributes incoming orders (requests) across the kitchens (instances) that can handle them.
+
+### Definition
+
+**Elastic Load Balancing (ELB)** is a managed service that distributes incoming application traffic across multiple targets (EC2 instances, containers, IP addresses, Lambda functions) in one or more Availability Zones, and continuously performs **health checks** to route traffic only to healthy targets.
+Three types, each for a different layer of traffic:
+
+-   **Application Load Balancer (ALB)** — operates at Layer 7 (HTTP/HTTPS). Understands the content of requests — can route based on URL path (`/api` → one target group, `/images` → another), hostname, or headers. This is the default choice for modern web apps and microservices.
+- 
+-   **Network Load Balancer (NLB)** — operates at Layer 4 (TCP/UDP). Doesn't inspect request content — routes purely on IP/port, at extremely high throughput and low latency. Used for use cases needing raw speed or non-HTTP protocols (e.g., gaming servers, financial trading systems).
+- 
+-   **Gateway Load Balancer (GWLB)** — used for deploying and scaling third-party virtual network appliances (firewalls, intrusion detection) transparently in front of traffic — a more specialized, less commonly tested type.
+
+ELB is what an ASG plugs into to actually receive and distribute traffic — the ASG decides _how many_ instances exist, the ELB decides _which requests go to which instance_. They're complementary, not overlapping.
+
+### The industry problem this solves
+
+A company runs an e-commerce app across 6 EC2 instances behind Auto Scaling for redundancy and capacity. Without a load balancer, how does a customer's browser know which of the 6 instances to hit? Hardcoding one instance's IP defeats the whole purpose of having 6 — if that one instance goes down, the site appears down to anyone using that IP, even though 5 healthy instances are sitting idle.
+
+ELB gives customers **one stable DNS endpoint** to hit, and behind that single endpoint, it silently spreads traffic across all healthy instances, pulls unhealthy ones out of rotation the moment a health check fails, and adds newly-launched ASG instances into rotation automatically as they come up. Users never know or care how many instances exist behind it — that's the whole point of "elastic."
+
+#### CODE 
+
+```
+# Create an Application Load Balancer
+aws elbv2 create-load-balancer \
+  --name my-app-alb \
+  --subnets subnet-abc123 subnet-def456 \
+  --security-groups sg-0123456 \
+  --type application
+
+# Create a target group (the pool of instances traffic gets routed to)
+aws elbv2 create-target-group \
+  --name my-app-tg \
+  --protocol HTTP \
+  --port 80 \
+  --vpc-id vpc-0123456 \
+  --health-check-path /health \
+  --health-check-interval-seconds 30
+
+# Create a listener — the rule for "traffic arriving on port 443 goes to this target group"
+aws elbv2 create-listener \
+  --load-balancer-arn arn:aws:elasticloadbalancing:...:loadbalancer/app/my-app-alb/... \
+  --protocol HTTPS \
+  --port 443 \
+  --certificates CertificateArn=arn:aws:acm:...:certificate/... \
+  --default-actions Type=forward,TargetGroupArn=arn:aws:elasticloadbalancing:...:targetgroup/my-app-tg
+```
+
+The `--health-check-path /health` matters more than it looks — it means your app needs to expose an actual `/health` endpoint that returns 200 OK only when the app is genuinely ready to serve traffic (e.g., its database connection is live), not just "the server process is running." A shallow health check that only proves the process exists, not that it works, is a classic real-world bug.
+
+### Interview questions with answers (leveled up)
+
+1. **"A team switches their app from an ALB to an NLB for 'better performance' without checking anything else, and suddenly their path-based routing rules (`/api/*` vs `/static/*` going to different target groups) stop working. Why?"**  
+→ NLB operates at Layer 4 (TCP) and has no visibility into HTTP-level content like URL paths or headers — it can only route based on IP/port. Path-based routing is a Layer 7 (HTTP-aware) feature exclusive to ALB. Swapping load balancer types isn't a drop-in performance upgrade; it changes what routing capabilities are even available, and the team needs to redesign their routing strategy (e.g., separate NLBs per service, or stay on ALB) rather than assume feature parity.
 
