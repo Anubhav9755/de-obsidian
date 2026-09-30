@@ -1,4 +1,4 @@
-﻿### Lesson 1: What Is Cloud Computing (and why does it exist)
+### Lesson 1: What Is Cloud Computing (and why does it exist)
 
 #### The analogy first (unconventional bit)
 
@@ -1287,4 +1287,35 @@ The `--health-check-path /health` matters more than it looks — it means your a
 
 1. **"A team switches their app from an ALB to an NLB for 'better performance' without checking anything else, and suddenly their path-based routing rules (`/api/*` vs `/static/*` going to different target groups) stop working. Why?"**  
 → NLB operates at Layer 4 (TCP) and has no visibility into HTTP-level content like URL paths or headers — it can only route based on IP/port. Path-based routing is a Layer 7 (HTTP-aware) feature exclusive to ALB. Swapping load balancer types isn't a drop-in performance upgrade; it changes what routing capabilities are even available, and the team needs to redesign their routing strategy (e.g., separate NLBs per service, or stay on ALB) rather than assume feature parity.
+
+**"An ALB's target group shows all instances as 'healthy,' but users still report intermittent 502 errors. What are two things worth investigating beyond the health check status itself?"**  
+→ (1) The health check interval/threshold might be too lenient — an instance can fail _between_ health check intervals and still show healthy until the next check catches it, meaning real users can hit a briefly-dead instance during that gap. (2) The issue could be at the instance's application layer itself (e.g., the app's connection pool to a downstream database is exhausted under load, timing out real requests) even though the shallow health check endpoint itself still returns 200 — reinforcing the earlier point that a health check is only as good as what it actually verifies.
+
+**"Why does an ALB typically sit in public subnets while the EC2 instances behind it sit in private subnets — walk through the traffic flow and why this is more secure."** 
+→ The ALB is the only component that needs a public-facing presence to accept internet traffic; it's purpose-built and hardened by AWS to be internet-exposed safely. The EC2 instances doing the actual app logic and holding data have zero need for direct internet exposure — placing them in private subnets means they're unreachable directly from the internet even if someone knows their IP, and all traffic _must_ pass through the ALB's security group rules and health-checked routing first. This is defense-in-depth: even a compromised ALB config doesn't automatically expose the instances, since the private subnet's own routing (no direct internet gateway route) is a second barrier.
+
+#### Scenario question 
+
+A company's ALB is configured with a target group containing instances across 2 AZs. During a deploy, all instances in **AZ-1** get replaced at once (old ones terminated, new ones launched) while AZ-2's instances are untouched. Users start reporting a short but noticeable burst of errors during the deploy window, even though AZ-2 was never touched and had "enough" capacity on paper. What's the most likely mechanism causing errors, and what would you change about the deployment approach?
+
+The most likely mechanism: **replacing all of AZ-1's instances at once meant AZ-2 alone had to absorb 100% of live traffic during the transition — but new AZ-1 instances weren't instantly ready to take load either.** Two compounding effects:
+
+1. **No warm-up grace period** — newly launched instances in AZ-1 might pass a basic health check before the app is _actually_ ready (JVM warm-up, connection pools initializing, caches cold), so the ALB starts routing to them prematurely and those early requests fail or are slow.
+2. **No connection draining (deregistration delay)** — when the _old_ AZ-1 instances were terminated, if in-flight requests weren't allowed to finish first, those requests got cut off mid-response, producing errors even though "on paper" AZ-2 had capacity.
+
+**What to change:** Don't replace an entire AZ's instances simultaneously. Use a **rolling deployment** (e.g., ASG **Instance Refresh** with a `MinHealthyPercentage` like 90%, replacing instances a few at a time across _both_ AZs rather than one AZ wholesale) combined with:
+
+- A proper **target group health check grace period** so new instances aren't sent traffic until truly ready
+- **Deregistration delay** configured on the target group so terminating instances finish in-flight requests before being pulled from rotation
+
+This turns a "capacity cliff" into a gradual, zero-visible-impact transition.
+
+---
+### EBS (Elastic Block Store)
+
+Think of an EC2 instance as a laptop you rent by the hour. The laptop itself is powerful, but when you shut it down and return it, everything on its internal hard drive is gone — that's EC2's default **instance store** behavior for ephemeral data. EBS is like plugging in an **external hard drive** to that rented laptop instead: the drive persists independently of the laptop, you can unplug it and plug it into a _different_ rented laptop, and if the laptop itself is returned/destroyed, your external drive and everything on it survives untouched.
+
+#### Definition
+
+**EBS (Elastic Block Store)** is persistent, block-level storage designed to attach to a single EC2 instance at a time (like a virtual hard drive), independent of the instance's own lifecycle.
 
