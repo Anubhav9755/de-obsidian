@@ -1315,7 +1315,66 @@ This turns a "capacity cliff" into a gradual, zero-visible-impact transition.
 
 Think of an EC2 instance as a laptop you rent by the hour. The laptop itself is powerful, but when you shut it down and return it, everything on its internal hard drive is gone — that's EC2's default **instance store** behavior for ephemeral data. EBS is like plugging in an **external hard drive** to that rented laptop instead: the drive persists independently of the laptop, you can unplug it and plug it into a _different_ rented laptop, and if the laptop itself is returned/destroyed, your external drive and everything on it survives untouched.
 
-#### Definition
+### Definition
 
 **EBS (Elastic Block Store)** is persistent, block-level storage designed to attach to a single EC2 instance at a time (like a virtual hard drive), independent of the instance's own lifecycle.
 
+Key properties:
+
+- **Persists independently of the instance** — stopping or terminating an EC2 instance doesn't automatically delete its attached EBS volume (unless you explicitly set "delete on termination")
+
+- **AZ-locked** — an EBS volume lives in a specific Availability Zone and can only attach to instances in that _same_ AZ. To move data to another AZ, you must snapshot it first, then restore the snapshot into a volume in the target AZ.
+
+- **Snapshots** — point-in-time, incremental backups of an EBS volume stored in S3 behind the scenes. Incremental means only _changed blocks_ since the last snapshot are saved, making repeated snapshots cheap and fast compared to a full copy each time.
+
+- **Volume types** trade off IOPS, throughput, and cost:
+    - `gp3` (General Purpose SSD) — the modern default for most workloads, balanced price/performance
+    - `io2`/`io2 Block Express` (Provisioned IOPS SSD) — for high-performance databases needing guaranteed, consistent IOPS
+    - `st1` (Throughput Optimized HDD) — cheap, for large sequential workloads like big data/log processing, not for random small reads
+    - `sc1` (Cold HDD) — cheapest, for rarely-accessed data
+
+### The industry problem this solves
+
+A company runs a database on an EC2 instance. The instance itself occasionally needs to be resized (say, from `m5.large` to `m5.xlarge` for more CPU) or replaced after a hardware failure. If the database's data lived only on the instance's local ephemeral storage, resizing or replacing the instance would **wipe the entire database**.
+
+With EBS: the database's data volume is a separate EBS volume attached to the instance. When you need to resize, you stop the instance, detach nothing (EBS survives instance stop), resize the instance type, restart — the EBS volume is still attached with all data intact. If the instance itself dies entirely, you can detach the EBS volume and attach it to a brand-new replacement instance, and the database is back online with zero data loss, because storage and compute lifecycle are decoupled.
+
+### CODE
+
+```
+# Create an EBS volume in a specific AZ
+aws ec2 create-volume \
+  --availability-zone us-east-1a \
+  --size 100 \
+  --volume-type gp3
+
+# Attach it to a running EC2 instance
+aws ec2 attach-volume \
+  --volume-id vol-0123456789abcdef0 \
+  --instance-id i-0123456789abcdef0 \
+  --device /dev/sdf
+
+# Take a point-in-time snapshot (incremental, stored in S3 behind the scenes)
+aws ec2 create-snapshot \
+  --volume-id vol-0123456789abcdef0 \
+  --description "Pre-migration backup"
+
+# Restore a snapshot into a new volume in a DIFFERENT AZ (the only way to "move" EBS data across AZs)
+aws ec2 create-volume \
+  --availability-zone us-east-1b \
+  --snapshot-id snap-0123456789abcdef0 \
+  --volume-type gp3
+```
+
+Notice the last command — this is the actual mechanism for the "EBS is AZ-locked" rule from above. There's no "move volume to another AZ" API call; snapshot-then-restore-elsewhere is the only path, and it's a common exam trick question phrased as "how do you migrate data across AZs."
+
+### Interview questions with answers
+
+**"A team terminates an EC2 instance expecting to keep their data since 'EBS is persistent,' but the volume is gone afterward too. What happened?"**  
+→ Every EBS volume has a **"Delete on Termination"** flag, and for the **root volume** specifically, this defaults to `true` unless explicitly changed — so terminating the instance deleted the root EBS volume along with it. "EBS is persistent" is true _in principle_, but that persistence is only guaranteed if the delete-on-termination setting was explicitly turned off for volumes you intend to survive instance termination; non-root/additional volumes default to `false`, but the root volume's default catches people off guard.
+
+**"Why can't you just detach an EBS volume from an instance in `us-east-1a` and attach it directly to an instance in `us-east-1b`?"**  
+→ EBS volumes are physically tied to the Availability Zone's underlying storage infrastructure they were created in — they're not a "file" that can move freely, they're a replicated block storage volume bound to that AZ's hardware. Cross-AZ attachment isn't supported at all; the only path is to create a snapshot (which _is_ stored in S3, a regional/multi-AZ service) and restore a new volume from that snapshot in the target AZ — which is effectively a copy, not a move, of the underlying data.
+
+**"Your team provisions an `io2` volume for a database expecting top-tier performance, but a teammate says the _instance type_ also matters, not just the volume type. Are they right, and why?"**  
+→ Yes — an EC2 instance has its own **EBS-optimized bandwidth limit** (how much total throughput it can push to/from all attached EBS volumes combined), independent of any single volume's provisioned IOPS. Attaching a high-performance `io2` volume to an instance type with a low EBS bandwidth ceiling means the _instance_ becomes the bottleneck, not the volume — you'd be paying for IOPS the instance physically can't deliver to the application. Matching volume performance tier to an instance type that can actually utilize it (or scaling up the instance) is necessary, not optional.
