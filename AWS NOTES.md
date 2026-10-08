@@ -1379,7 +1379,8 @@ Notice the last command — this is the actual mechanism for the "EBS is AZ-lock
 **"Your team provisions an `io2` volume for a database expecting top-tier performance, but a teammate says the _instance type_ also matters, not just the volume type. Are they right, and why?"**  
 → Yes — an EC2 instance has its own **EBS-optimized bandwidth limit** (how much total throughput it can push to/from all attached EBS volumes combined), independent of any single volume's provisioned IOPS. Attaching a high-performance `io2` volume to an instance type with a low EBS bandwidth ceiling means the _instance_ becomes the bottleneck, not the volume — you'd be paying for IOPS the instance physically can't deliver to the application. Matching volume performance tier to an instance type that can actually utilize it (or scaling up the instance) is necessary, not optional.
 
-### Scenario question (answer next chat)
+### Scenario question 
 
 A company's finance database runs on EC2 with a `gp3` EBS volume. One morning, the volume's performance suddenly degrades badly, but CloudWatch shows the instance's CPU is low and there's no unusual traffic. A teammate checks and finds the application has been doing far more random small-write operations than usual due to a recent code change. What's the most likely EBS-specific explanation for the slowdown, and what would you check or change?
+
 
