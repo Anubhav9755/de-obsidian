@@ -1590,3 +1590,68 @@ Running your own database on EC2 is like owning a **restaurant and also being th
 **DNS**: the internet’s phone book, translating a name (`mydb.abc.us-east-1.rds.amazonaws.com`) into the current IP address behind it.
 
 Connect this to **Lesson 4 (Shared Responsibility)**: with RDS, AWS secures and patches the hardware, operating system, and database software. You’re responsible for your data, schema (table design), queries, user access, and the security group. You **cannot SSH into an RDS server**; the OS is AWS’s job.
+
+Key features:
+
+- **Automated backups**: daily snapshots plus continuous transaction logs (a running record of every change), kept 1-35 days. This enables **point-in-time recovery**: restore to any second within the retention window.
+
+- **Manual snapshots**: backups you trigger yourself; they stay until you delete them.
+
+- **Multi-AZ**: AWS keeps a **standby copy** of your database in a _different AZ_, updated synchronously (every write is copied before it’s confirmed). If the primary fails, RDS **automatically fails over**: it flips the DNS name to point at the standby, typically within a minute or two. This is for **availability**, not speed. In the standard setup, the standby isn’t used for queries.
+
+- **Read Replicas**: extra copies updated **asynchronously** (a small delay) that your apps can query for **reads**. They offload read-heavy traffic from the primary for **performance**. They can live in another Region and can be **promoted** to become standalone databases.
+
+- **DB subnet group**: the set of subnets (in at least 2 AZs) where RDS is allowed to place your instances.
+
+- **Storage autoscaling** and **encryption at rest** (using AWS KMS, the key management service) are also available.
+
+**The two most-confused features:** Multi-AZ = survive failure (availability). Read Replica = handle more reads (performance).
+
+#### The industry problem this solves
+
+A company self-manages MySQL on EC2. Their one database admin must schedule backups, test restores, apply security patches, and write failover scripts. At 3 a.m. the server dies, someone is paged, and the app is down for an hour while the database is rebuilt from backup.
+
+With RDS Multi-AZ, the standby takes over automatically in about a minute or two, patching and backups are handled by AWS, and the team spends its time on the application instead.
+
+#### CODE
+
+```
+# 1. Tell RDS which subnets it may use (private subnets in 2 AZs, from Lesson 23)
+aws rds create-db-subnet-group \
+  --db-subnet-group-name my-db-subnets \
+  --db-subnet-group-description "Private subnets for DB" \
+  --subnet-ids subnet-aaa111 subnet-bbb222
+
+# 2. Create a Multi-AZ MySQL database, private, with 7 days of backups
+aws rds create-db-instance \
+  --db-instance-identifier my-store-db \
+  --engine mysql \
+  --db-instance-class db.t3.micro \
+  --allocated-storage 20 \
+  --master-username admin \
+  --manage-master-user-password \
+  --db-subnet-group-name my-db-subnets \
+  --vpc-security-group-ids sg-0123456 \
+  --multi-az \
+  --no-publicly-accessible \
+  --backup-retention-period 7 \
+  --storage-encrypted
+
+# 3. Add a Read Replica to offload read traffic
+aws rds create-db-instance-read-replica \
+  --db-instance-identifier my-store-db-replica \
+  --source-db-instance-identifier my-store-db
+```
+
+`--multi-az` adds the failover standby, `--no-publicly-accessible` keeps it private, and `--manage-master-user-password` lets AWS store the password securely instead of you typing it into scripts.
+
+#### Interview questions with answers
+
+**“A team enables Multi-AZ to fix slow queries during peak hours. Nothing improves. Why, and what should they do?”**  
+→ In the standard Multi-AZ setup the standby exists only for failover and doesn’t serve queries, so it adds no capacity. Multi-AZ solves _availability_, not _performance_. For read-heavy slowness, add **Read Replicas** and send read queries there, or use a larger instance class or add caching.
+
+**“At 2:14 p.m. a developer runs a `DELETE` with no filter and wipes a table. Backups run nightly at 2 a.m. Can you recover data as of 2:13 p.m.?”**  
+→ Yes, via **point-in-time recovery** (automated backups plus transaction logs, within the retention window). One catch: the restore creates a **new database instance** with a new endpoint. It doesn’t undo the damage in place, so you either repoint the app to the restored instance or copy the lost data back.
+
+**“After a Multi-AZ failover, an application keeps failing because it was configured with the primary’s IP address. What’s the lesson?”**  
+→ During failover, RDS updates the **DNS name** (the endpoint) to point at the standby; the old IP stops being the primary. Apps must always connect using the **endpoint hostname**, never a hardcoded IP, so they follow the failover automatically.
