@@ -1453,6 +1453,8 @@ sudo mount -t efs fs-0123456789abcdef0:/ /mnt/shared
 
 the **mount target** step. EFS isn’t reached by “attaching” like EBS. Each AZ gets a mount target (a network endpoint inside your VPC), and a **security group on that mount target must allow NFS traffic (port 2049)** from your instances. A missing rule there is the most common real-world reason a mount hangs and times out.
 
+PORT- a numbered “door” on a server for one kind of traffic (80 = web, 443 = secure web, 2049 = NFS, 3306 = MySQL)
+
 #### Interview questions with answers (leveled up)
 
 **“A team mounts EFS on their EC2 instances and it works perfectly in `us-east-1a`, but instances launched by their ASG in `us-east-1b` hang forever when trying to mount. Same file system ID, same command. What’s the most likely cause?”**
@@ -1461,7 +1463,7 @@ the **mount target** step. EFS isn’t reached by “attaching” like EBS. Each
 
 **“Why would you NOT use EFS as the storage for a high-performance transactional database, even though it’s shared and durable?”**  
 
-→ EFS is network-based file storage, so every operation has network latency, and it’s designed for shared file access, not the ultra-low-latency, high-IOPS random block access databases need. A database on EFS would face higher latency and weaker performance consistency than on EBS (especially `io2`). Also, most databases are single-writer by design, so EFS’s main advantage (many concurrent mounts) goes unused. Match the tool to the access pattern: databases on EBS, shared file content on EFS.
+→ EFS is network-based file storage, so every operation has network latency, and it’s designed for shared file access, not the ultra-low-latency, high-IOPS(input/output operations per second, i.e. how many reads/writes a disk handles each second) random block access databases need. A database on EFS would face higher latency and weaker performance consistency than on EBS (especially `io2`). Also, most databases are single-writer by design, so EFS’s main advantage (many concurrent mounts) goes unused. Match the tool to the access pattern: databases on EBS, shared file content on EFS.
 
 **“A company’s Windows-based application servers need a shared file system. A junior engineer proposes EFS. What’s wrong, and what’s the right service?”**  
 
@@ -1476,4 +1478,18 @@ A company stores 20 TB of data on EFS Standard. Cost review shows the bill is mu
 **If you to S3 instead, the applications must change.** EFS is a _file system_: apps open, append to, rename, and lock files at paths like `/mnt/shared/report.pdf`, as if it were a local disk. S3 is _object storage_: apps call an API to upload or download whole objects (PUT/GET), and there’s no mounting it like a disk, no editing part of a file in place, and no file locking. Every piece of code that touches those files would need rewriting to use the S3 SDK, and permissions move from file permissions to IAM and bucket policies. S3 may be cheaper per GB, but that rewrite cost is why lifecycle-to-IA comes first, and S3 makes sense only if the data is write-once, read-rarely and you’re willing to change the apps.
 
 ---
+
+### VPC (Virtual Private Cloud)
+
+AWS is a giant city shared by millions of customers. A **VPC** is your own **fenced private estate** inside that city. Nobody else can walk in, and you decide the layout:
+
+- **Subnets** are separate buildings on your estate.
+- The **Internet Gateway** is the main gate to the public road. If a building has no path to that gate, it’s effectively indoors-only.
+- **Route tables** are the signposts that say “traffic going to the internet, take this path.”
+- **Security groups** are bouncers at each room’s door. They check who may enter that specific server.
+
+#### Definition
+
+A **VPC** is a logically isolated virtual network that you define inside an AWS Region. You choose its private IP address range, split it into subnets, and control what can talk to what.
+
 
