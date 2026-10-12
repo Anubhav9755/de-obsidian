@@ -1546,3 +1546,47 @@ aws ec2 associate-route-table --route-table-id rtb-0123456 --subnet-id subnet-01
 ```
 
 `0.0.0.0/0` means “any address on the internet.” Steps 4 and 5 are the whole difference between a public and a private subnet: the same subnet without that route is private.
+
+#### Interview questions with answers (leveled up)
+
+**“Instances in a private subnet need to download OS patches from the internet, but must never be reachable _from_ the internet. How do you set this up, and why not just route them to the Internet Gateway?”**  
+→ Put a **NAT Gateway** in a _public_ subnet and add a route in the _private_ subnet’s route table sending `0.0.0.0/0` to the NAT. Instances can start outbound connections, but the internet can’t start connections to them. Routing to the IGW directly would make the subnet public, and with a public IP the instances would be reachable from outside.
+
+**“A team’s EC2 instance is in a subnet they tagged ‘public,’ has a security group allowing port 80 from anywhere, yet the site is unreachable from the internet. Name three things to check.”**  
+→ (1) The subnet’s **route table** must have a route to an **Internet Gateway** (the tag means nothing). (2) The IGW must be **attached** to the VPC. (3) The instance needs a **public IP or Elastic IP**, since a private IP alone isn’t reachable from outside. Also check the NACL isn’t denying the traffic.
+
+**“A security group allows inbound port 443, and nobody wrote an outbound rule for the replies, yet HTTPS works. Why? Would the same setup work with a NACL?”** 
+→ Security groups are **stateful**: if inbound traffic is allowed, the response is automatically allowed out. A NACL is **stateless**, so replies are treated as new traffic and need their own outbound rule (for the high-numbered “ephemeral” ports the client uses, 1024-65535). With only an inbound rule, a NACL would block the replies and the connection would fail.
+
+#### Scenario question
+
+A company launched its MySQL database in a **public subnet** “so developers can connect from home,” and the database’s security group allows port 3306 from `0.0.0.0/0`. A security reviewer flags this as critical. What exactly is wrong, and how would you redesign the network so developers can still reach the database safely?
+
+**What’s wrong:** two separate problems stack on top of each other.
+
+1. **The database is in a public subnet.** That subnet’s route table points to the Internet Gateway, so the database sits on a network path that anyone on the internet can reach.
+2. **The security group allows port 3306 from `0.0.0.0/0`** (“any address in the world”). Port 3306 is MySQL’s door, and the rule leaves it open to everyone. Bots scan the internet for open database ports constantly, so the only thing standing between attackers and customer data is a password.
+
+**The redesign:**
+
+- Move the database into a **private subnet** (no route to the IGW, no public IP).
+- Change its security group so port 3306 is allowed **only from the app servers’ security group**, not from IP ranges.
+- For developers working from home, give them a controlled way in:
+    - **Bastion host**: a small, hardened server in a public subnet. Its security group allows SSH only from known IP ranges (e.g., the company’s), and developers tunnel through it to reach the database.
+    - **VPN**: a private encrypted connection into the VPC, so developers’ laptops behave as if they’re inside the network. This is the cleaner long-term option.
+
+Now even a leaked password is useless without a network path to the database.
+
+---
+
+### RDS (Relational Database Service)
+
+Running your own database on EC2 is like owning a **restaurant and also being the building’s maintenance crew**: you cook (manage the data) _and_ fix the plumbing, replace burnt-out lights, and do the nightly security checks. **RDS** is leasing space in a managed building: the landlord handles plumbing, power, and maintenance (hardware, operating system, patching, backups, failover), and you just run the restaurant.
+
+#### Definition 
+
+**RDS** is a managed service for running relational databases. You choose an **engine**: MySQL, PostgreSQL, MariaDB, Oracle, SQL Server, or Amazon’s own **Aurora** (its own lesson later). AWS runs the servers and database software, and you manage your data and who can reach it.
+
+**DNS**: the internet’s phone book, translating a name (`mydb.abc.us-east-1.rds.amazonaws.com`) into the current IP address behind it.
+
+Connect this to **Lesson 4 (Shared Responsibility)**: with RDS, AWS secures and patches the hardware, operating system, and database software. You’re responsible for your data, schema (table design), queries, user access, and the security group. You **cannot SSH into an RDS server**; the OS is AWS’s job.
