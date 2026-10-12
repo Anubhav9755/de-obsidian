@@ -1465,4 +1465,15 @@ the **mount target** step. EFS isn’t reached by “attaching” like EBS. Each
 
 **“A company’s Windows-based application servers need a shared file system. A junior engineer proposes EFS. What’s wrong, and what’s the right service?”**  
 
-→ EFS speaks **NFS** and is built for **Linux (POSIX)** clients, so it doesn’t natively support Windows SMB file shares or Windows-specific features like NTFS permissions and Active Directory integration. The right service is **Amazon FSx for Windows File Server**, which provides native SMB shares with AD integration, essentially the managed equivalent of a Windows file server.
+→ EFS speaks **NFS**(the protocol (set of rules) a computer uses to mount a shared folder over a network) and is built for **Linux (POSIX)** clients, so it doesn’t natively support Windows SMB file shares or Windows-specific features like NTFS permissions and Active Directory integration. The right service is **Amazon FSx for Windows File Server**, which provides native SMB shares with AD integration, essentially the managed equivalent of a Windows file server.
+
+#### Scenario question
+
+A company stores 20 TB of data on EFS Standard. Cost review shows the bill is much higher than expected, but an analysis shows roughly 85% of those files haven’t been accessed in over 90 days. Meanwhile, a different team proposes moving the whole thing to S3 to save money. What’s the better first step using EFS’s own features, and what would have to change in the applications if you _did_ migrate to S3 instead?
+
+**Better first step: turn on EFS lifecycle management.** With 85% of the files untouched for 90+ days, a lifecycle policy that moves files not accessed for 90 days (the period is configurable) into **EFS Infrequent Access (IA)** is the lowest-risk fix. IA costs a fraction of Standard per GB. In exchange, you pay a small fee each time an IA file is read, which is fine for files that are almost never read. Applications see no difference: same mount, same file paths, same commands. Only about 3 TB stays on Standard.
+
+**If you to S3 instead, the applications must change.** EFS is a _file system_: apps open, append to, rename, and lock files at paths like `/mnt/shared/report.pdf`, as if it were a local disk. S3 is _object storage_: apps call an API to upload or download whole objects (PUT/GET), and there’s no mounting it like a disk, no editing part of a file in place, and no file locking. Every piece of code that touches those files would need rewriting to use the S3 SDK, and permissions move from file permissions to IAM and bucket policies. S3 may be cheaper per GB, but that rewrite cost is why lifecycle-to-IA comes first, and S3 makes sense only if the data is write-once, read-rarely and you’re willing to change the apps.
+
+---
+
