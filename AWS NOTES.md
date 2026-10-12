@@ -1383,4 +1383,43 @@ Notice the last command — this is the actual mechanism for the "EBS is AZ-lock
 
 A company's finance database runs on EC2 with a `gp3` EBS volume. One morning, the volume's performance suddenly degrades badly, but CloudWatch shows the instance's CPU is low and there's no unusual traffic. A teammate checks and finds the application has been doing far more random small-write operations than usual due to a recent code change. What's the most likely EBS-specific explanation for the slowdown, and what would you check or change?
 
+The most likely EBS-specific cause is **running out of IOPS (or throughput) the `gp3` volume is provisioned for.**
+A `gp3` volume comes with a baseline of **3,000 IOPS and 125 MB/s** regardless of size. Anything above that has to be provisioned (and paid for) separately. A code change that suddenly generates far more random small writes pushes the IOPS demand past that ceiling. Once that happens, I/O requests queue up and latency spikes, even though CPU is idle and traffic looks normal. The CPU is low precisely _because_ it’s sitting around waiting on storage.
 
+**What I’d check:**
+
+- CloudWatch EBS metrics: `VolumeQueueLength` (a persistently high queue means the volume can’t keep up), `VolumeReadOps`/`VolumeWriteOps` against the provisioned IOPS, and `VolumeThroughputPercentage`/`BurstBalance`-style indicators depending on the volume type.
+
+**What I’d change:**
+
+- Raise the provisioned IOPS/throughput on the `gp3` volume (it can be modified live with no downtime via `modify-volume`), or
+- Move to `io2`/`io2 Block Express` if the workload needs guaranteed, consistent high IOPS (typical for a finance database), and
+- Confirm the instance’s EBS-optimized bandwidth limit isn’t the next bottleneck (from yesterday’s interview question).
+
+Note that `gp2` is the classic version of this trap. It uses a burst-credit model, and once credits are exhausted performance collapses to baseline. `gp3` removed credits in favor of a fixed baseline, but the “demand exceeded provisioned performance” principle is the same.
+
+---
+
+### Lesson 22: EFS (Elastic File System)
+
+EBS (last lesson) was an external hard drive plugged into **one** laptop. Now imagine instead a **shared network drive in an office**: dozens of employees’ laptops, all connected at the same time, all reading and writing the same folders. Someone saves a file from their desk and a colleague across the floor sees it instantly. The drive also grows automatically as people add files, so nobody ever has to ask IT to “increase the size.” That’s EFS.
+
+#### Definition
+
+**EFS (Elastic File System)** is a fully managed, **shared, elastic file storage** service that uses the **NFS protocol** and can be mounted by **many EC2 instances simultaneously**, across **multiple AZs**.
+
+Key properties:
+
+- **Shared access:** thousands of instances can mount the same file system at once (contrast with EBS, which attaches to one instance at a time in one AZ).
+
+- **Multi-AZ by design:** data is stored redundantly across multiple AZs in a region. Instances in different AZs all see the same files.
+
+- **Elastic:** no capacity provisioning. It grows and shrinks automatically as you add or delete files, and you pay for what you actually store.
+
+- **Linux-oriented (POSIX):** EFS is built for Linux workloads. For Windows file shares, the equivalent is **Amazon FSx for Windows File Server**, a favorite exam distinction.
+
+- **Storage classes and lifecycle management:** EFS Standard for frequently accessed files, **EFS Infrequent Access (IA)** for rarely accessed ones at lower cost, and a lifecycle policy can automatically move files that haven’t been touched for N day
+
+**Quick comparison of the three storage types:**
+
+![[Pasted image 20261012120107.png|581]]
