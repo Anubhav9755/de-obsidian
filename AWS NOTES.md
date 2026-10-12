@@ -1423,3 +1423,46 @@ Key properties:
 **Quick comparison of the three storage types:**
 
 ![[Pasted image 20261012120107.png|581]]
+
+#### The industry problem this solves
+
+A media company runs a **content management system (CMS)** on an Auto Scaling group of 6 web servers behind a load balancer (Lessons 19 and 20). Editors upload images and documents through the site. With EBS, each instance has its **own private disk**, so an upload that lands on Server A isn’t visible on Server B. The next page load, routed by the ELB to Server B, shows a broken image. You’d have to build custom syncing logic between servers, a fragile and slow mess.
+
+With EFS: every web server mounts the **same shared file system**. An upload written by Server A is instantly readable by Servers B through F, and when the ASG launches a brand-new instance during a traffic spike, it mounts the same EFS and immediately sees all existing content with no copying step. Shared state lives in EFS while the instances stay disposable.
+
+#### CODE 
+
+```
+# Create an EFS file system
+aws efs create-file-system \
+  --performance-mode generalPurpose \
+  --throughput-mode elastic \
+  --tags Key=Name,Value=shared-cms-files
+
+# Create a mount target in each AZ's subnet (how instances in that AZ reach EFS)
+aws efs create-mount-target \
+  --file-system-id fs-0123456789abcdef0 \
+  --subnet-id subnet-abc123 \
+  --security-groups sg-0123456
+
+# On each EC2 instance: install the helper and mount it
+sudo yum install -y amazon-efs-utils
+sudo mkdir /mnt/shared
+sudo mount -t efs fs-0123456789abcdef0:/ /mnt/shared
+```
+
+the **mount target** step. EFS isn’t reached by “attaching” like EBS. Each AZ gets a mount target (a network endpoint inside your VPC), and a **security group on that mount target must allow NFS traffic (port 2049)** from your instances. A missing rule there is the most common real-world reason a mount hangs and times out.
+
+#### Interview questions with answers (leveled up)
+
+**“A team mounts EFS on their EC2 instances and it works perfectly in `us-east-1a`, but instances launched by their ASG in `us-east-1b` hang forever when trying to mount. Same file system ID, same command. What’s the most likely cause?”**
+
+→ A mount target must exist **in each AZ** where instances need to reach EFS (instances reach EFS through the mount target in their own AZ’s subnet). If a mount target was only created in `us-east-1a`, or the security group on the `us-east-1b` mount target doesn’t allow inbound NFS (TCP 2049) from those instances, the mount request in 1b has nowhere to land and times out. The file system itself is multi-AZ, but network access to it is configured per-AZ.
+
+**“Why would you NOT use EFS as the storage for a high-performance transactional database, even though it’s shared and durable?”**  
+
+→ EFS is network-based file storage, so every operation has network latency, and it’s designed for shared file access, not the ultra-low-latency, high-IOPS random block access databases need. A database on EFS would face higher latency and weaker performance consistency than on EBS (especially `io2`). Also, most databases are single-writer by design, so EFS’s main advantage (many concurrent mounts) goes unused. Match the tool to the access pattern: databases on EBS, shared file content on EFS.
+
+**“A company’s Windows-based application servers need a shared file system. A junior engineer proposes EFS. What’s wrong, and what’s the right service?”**  
+
+→ EFS speaks **NFS** and is built for **Linux (POSIX)** clients, so it doesn’t natively support Windows SMB file shares or Windows-specific features like NTFS permissions and Active Directory integration. The right service is **Amazon FSx for Windows File Server**, which provides native SMB shares with AD integration, essentially the managed equivalent of a Windows file server.
