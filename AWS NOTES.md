@@ -1655,3 +1655,19 @@ aws rds create-db-instance-read-replica \
 
 **“After a Multi-AZ failover, an application keeps failing because it was configured with the primary’s IP address. What’s the lesson?”**  
 → During failover, RDS updates the **DNS name** (the endpoint) to point at the standby; the old IP stops being the primary. Apps must always connect using the **endpoint hostname**, never a hardcoded IP, so they follow the failover automatically.
+
+#### Scenario question
+
+A company’s RDS database runs in **us-east-1** (Multi-AZ). They now have many users in Europe who need fast reads, and leadership also wants a plan in case the **entire us-east-1 Region** goes down. Which RDS features would you use for each goal, and what are the limits of that plan (what could still go wrong)?
+
+**Goal 1: fast reads for European users.** Create a **cross-Region Read Replica** in a European Region (e.g., Ireland or Frankfurt). European apps send their read queries to the replica’s endpoint, so reads travel a short distance instead of crossing the Atlantic. The replica is read-only, so all **writes** still go to the primary in us-east-1.
+
+**Goal 2: surviving the loss of the entire us-east-1 Region.** Use that same replica as your disaster plan: if us-east-1 goes down, you **promote** the replica to a standalone, writable database and point the application at it. Copying snapshots/backups to another Region is a good extra safety net.
+
+**The limits of this plan:**
+
+- **Possible data loss.** Replication is **asynchronous** (a small delay), so the last few seconds or minutes of writes may not have reached Europe when the Region fails. The “how much data can we lose” number is called the **RPO** (recovery point objective), and here it’s above zero.
+- **Not automatic.** Unlike Multi-AZ failover, promoting a cross-Region replica is a manual step (or one you script). Downtime lasts from detection through the decision, the promotion, and repointing the apps. That downtime number is the **RTO** (recovery time objective).
+- **Multi-AZ doesn’t help here.** Its AZs are all inside the same Region (Lesson 8), so a Region-wide failure takes out both the primary and the standby.
+- **Stale reads and latency.** European reads can be slightly behind the primary, and European _writes_ still travel to the US until a failover happens.
+- **Cost.** You pay for the extra instance and cross-Region data transfer.
