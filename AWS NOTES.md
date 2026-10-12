@@ -1492,4 +1492,57 @@ AWS is a giant city shared by millions of customers. A **VPC** is your own **fen
 
 A **VPC** is a logically isolated virtual network that you define inside an AWS Region. You choose its private IP address range, split it into subnets, and control what can talk to what.
 
+Key building blocks:
 
+- **CIDR block**: the range of private IP addresses your VPC owns, written like `10.0.0.0/16`. The `/16` says how big the range is (about 65,000 addresses). A bigger number after the slash means a _smaller_ range.
+
+- **Subnet**: a slice of the VPC’s range that lives in **one single AZ**. A subnet can’t span AZs, which is why Lesson 19’s ASG listed several subnets (one per AZ) for fault tolerance.
+    - **Public subnet**: its route table has a route to the Internet Gateway.
+    - **Private subnet**: no direct route to the internet. Instances here can’t be reached from outside.
+
+- **Internet Gateway (IGW)**: the door connecting your VPC to the public internet.
+
+- **Route table**: a list of rules, “traffic for destination X goes to target Y,” attached to a subnet. **A subnet is public only if its route table points to an IGW.** The name or tag doesn’t matter.
+
+- **NAT Gateway**: lets instances in a _private_ subnet make outbound requests (e.g., download software updates) without letting the internet start connections _to_ them. It sits in a public subnet.
+
+- **Security group**: a firewall attached to an instance (or load balancer). It contains _allow_ rules only, and it’s **stateful**: if inbound traffic is allowed, the reply is automatically allowed back out.
+
+- **Network ACL (NACL)**: a firewall at the _subnet_ boundary. It supports allow _and_ deny rules, and it’s **stateless**: replies need their own explicit rule.
+
+- **Safe access into private resources**: a **bastion host** (a small, hardened server in a public subnet that you connect through) or a **VPN**
+
+This is the picture behind Lesson, the ALB sits in public subnets, and the app servers sit in private subnets. and EFS mount targets were network endpoints placed in your subnets, which is why they needed a security group allowing port 2049.
+
+#### The industry problem this solves
+
+A company runs a web app and a customer database. Without network isolation, the database would sit on an address reachable by anyone on the internet, protected only by a password. One weak password or an unpatched bug, and customer data is exposed.
+
+With a VPC, the team builds three layers: a **public subnet** (load balancer only), a **private subnet** for app servers, and another **private subnet** for the database. The database’s security group allows port 3306 **only from the app servers’ security group**. Even a leaked database password is useless to an attacker on the internet, because there’s no network path to the database at all.
+
+#### CODE
+
+```
+# 1. Create the VPC (your private network, ~65k addresses)
+aws ec2 create-vpc --cidr-block 10.0.0.0/16
+
+# 2. Create a subnet in one AZ (256 addresses)
+aws ec2 create-subnet \
+  --vpc-id vpc-0123456 \
+  --cidr-block 10.0.1.0/24 \
+  --availability-zone us-east-1a
+
+# 3. Create an Internet Gateway and attach it to the VPC
+aws ec2 create-internet-gateway
+aws ec2 attach-internet-gateway --internet-gateway-id igw-0123456 --vpc-id vpc-0123456
+
+# 4. Create a route table, add a route "all internet traffic (0.0.0.0/0) -> IGW"
+aws ec2 create-route-table --vpc-id vpc-0123456
+aws ec2 create-route --route-table-id rtb-0123456 \
+  --destination-cidr-block 0.0.0.0/0 --gateway-id igw-0123456
+
+# 5. Associate the route table with the subnet: THIS step makes the subnet public
+aws ec2 associate-route-table --route-table-id rtb-0123456 --subnet-id subnet-0123456
+```
+
+`0.0.0.0/0` means “any address on the internet.” Steps 4 and 5 are the whole difference between a public and a private subnet: the same subnet without that route is private.
