@@ -1686,3 +1686,77 @@ RDS is a **well-organized filing cabinet**: linked folders, and you can ask comp
 
 **DynamoDB** is a fully managed, **serverless** NoSQL database. It stores **key-value and document data** and delivers consistently fast responses (single-digit milliseconds) at almost any scale.
 
+Key points:
+
+- **Serverless**: no instances to size, patch, or place in subnets. Unlike RDS, you don’t choose a server class. You create a **table** and call it through an API, with access controlled by **IAM** (Lesson 5), not security groups.
+
+- **Built-in resilience**: data is automatically replicated across multiple AZs in the Region.
+
+- **Primary key**: every item needs one. It’s either a **partition key** alone, or a partition key plus a **sort key**. The partition key decides where the item is stored.
+
+- **Flexible schema**: apart from the key, each item can have different attributes.
+
+- **Two capacity modes**:
+    - **On-demand**: you pay per request and DynamoDB absorbs spikes. Best for unpredictable traffic.
+    - **Provisioned**: you set read and write capacity in advance, optionally with auto scaling. Cheaper for steady, predictable traffic.
+
+- **Global secondary index (GSI)**: a second way to look up the same data by a different key.
+
+- **DynamoDB Streams**: a time-ordered log of changes to items. It can trigger a **Lambda** function (Lesson 17) whenever data changes.
+
+- **DAX**: an in-memory cache for DynamoDB, serving reads in microseconds.
+
+- **Global Tables**: replicate a table across multiple Regions, with writes accepted in each Region. Replication is asynchronous, and if the same item is written in two Regions at once, **the last write wins**.
+
+- **TTL (time to live)**: automatically deletes items after an expiry time, useful for sessions.
+
+- **Backups**: on-demand backups and point-in-time recovery. Encryption at rest is on by default.
+
+**Limits to remember:** an item can be at most **400 KB**; there are **no joins**; reads are eventually consistent by default, with a **strongly consistent** option that costs more.
+
+#### The industry problem this solves
+
+An online store runs a **flash sale**. Its shopping-cart service runs on one RDS database. When traffic jumps 20x, the database runs out of connections and slows down, and someone has to resize it before the next sale. A cart is a simple lookup: “get the cart for user 4821.” It doesn’t need joins.
+
+On DynamoDB, with the table keyed on `userId`, each lookup stays fast whether 1,000 or 10 million shoppers arrive. With on-demand mode there is no capacity planning, and the team pays per request rather than for idle servers.
+
+#### CODE
+
+```
+# 1. Create a table: partition key = userId, sort key = productId
+aws dynamodb create-table \
+  --table-name Carts \
+  --attribute-definitions AttributeName=userId,AttributeType=S AttributeName=productId,AttributeType=S \
+  --key-schema AttributeName=userId,KeyType=HASH AttributeName=productId,KeyType=RANGE \
+  --billing-mode PAY_PER_REQUEST
+
+# 2. Add an item (S = string, N = number)
+aws dynamodb put-item --table-name Carts \
+  --item '{"userId":{"S":"4821"},"productId":{"S":"p-100"},"qty":{"N":"2"}}'
+
+# 3. Fast lookup by exact key
+aws dynamodb get-item --table-name Carts \
+  --key '{"userId":{"S":"4821"},"productId":{"S":"p-100"}}'
+
+# 4. Query: everything in one user's cart (efficient, uses the partition key)
+aws dynamodb query --table-name Carts \
+  --key-condition-expression "userId = :u" \
+  --expression-attribute-values '{":u":{"S":"4821"}}'
+```
+
+`HASH` is the partition key and `RANGE` is the sort key. `PAY_PER_REQUEST` is on-demand mode. A **Query** goes straight to one user’s items. A **Scan** (reading the whole table) is the slow, expensive operation to avoid.
+
+#### Interview questions with answers (leveled up)
+
+**“A team migrates an orders database from RDS to DynamoDB ‘for scale.’ Now the report ‘all orders from last week across every customer’ is slow and expensive. Why?”**  
+→ DynamoDB is built for **key-based access patterns**. If the table is keyed by customer, a report across all customers has no efficient path and falls back to a **Scan** of the whole table, which reads (and bills for) every item. The fix is to design around access patterns up front: add a **GSI** keyed on order date, or export the data to an analytics store for reporting. DynamoDB asks you to know your questions _before_ you design the table, unlike RDS.
+
+**“Total table capacity is plentiful, yet one very popular product’s page gets throttled. What’s happening?”**  
+→ A **hot partition**. Items with the same partition key live together, and capacity is spread per partition, so a flood of requests for one key can overwhelm its partition even when the table overall is idle. Fixes: choose a key with better spread, split the hot key (for example by adding a random suffix), or put **DAX** in front to absorb repeated reads.
+
+**“A user updates their profile, then immediately reloads and sees the old value. Is DynamoDB broken?”**  
+→ No. Reads are **eventually consistent** by default: for a brief moment after a write, a read may hit a copy that hasn’t caught up. If the app needs the latest value, request a **strongly consistent read** for that call. It costs more read capacity and has slightly higher latency, so use it only where freshness matters.
+
+#### Scenario question
+
+A mobile game stores player sessions and leaderboards in RDS MySQL. At a new-season launch, traffic jumps 50x: the database runs out of connections and latency soars. The company also has players in three continents who need fast access. Which DynamoDB features would you use for the scale problem and the global problem, and what trade-offs or risks come with that design?
