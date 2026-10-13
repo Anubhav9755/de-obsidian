@@ -1760,3 +1760,30 @@ aws dynamodb query --table-name Carts \
 #### Scenario question
 
 A mobile game stores player sessions and leaderboards in RDS MySQL. At a new-season launch, traffic jumps 50x: the database runs out of connections and latency soars. The company also has players in three continents who need fast access. Which DynamoDB features would you use for the scale problem and the global problem, and what trade-offs or risks come with that design?
+
+**For the scale problem (50x traffic, connections maxing out):**
+
+- Move player sessions and leaderboard entries to **DynamoDB in on-demand mode**. There are no connections to exhaust, because apps call it through an API. On-demand absorbs a sudden 50x spike with no capacity planning.
+- Key the sessions table on `playerId` so every session lookup is a fast key-based read.
+- For the leaderboard, don’t scan the table to rank players. Add a **GSI** (a second key, e.g. `seasonId` as partition key and `score` as sort key) so “top players this season” is an efficient query.
+- Put **DAX** (the in-memory cache) in front for the hottest reads, such as the global top 100 that thousands of players refresh constantly. It also protects against a hot partition.
+- Use **TTL** to expire old sessions automatically.
+
+**For the global problem (players on three continents):**
+
+- Use **Global Tables**, so each Region has its own replica that accepts both reads and writes. Players connect to the nearest Region and get low latency.
+
+**Trade-offs and risks:**
+
+- **Conflicting writes:** replication between Regions is asynchronous, and if the same item is updated in two Regions at nearly the same moment, **the last write wins**. A player’s score could be silently overwritten. Design so conflicts are rare (for example, route each player to a “home” Region) or so writes are safe to merge.
+
+- **Eventual consistency:** a player may briefly see a slightly stale leaderboard, especially across Regions. That’s fine for rankings, but not for something like a purchase balance.
+
+- **Access patterns must be designed up front:** no joins and no flexible ad-hoc queries. A new question like “players who bought item X” needs a new index or an export to an analytics system.
+
+- **Hot keys:** a celebrity player or a “global” leaderboard key can still overload one partition. Spread the key (for example, shard it) or cache with DAX.
+
+- **Cost:** Global Tables multiply write costs across Regions, and on-demand is pricier than provisioned for steady traffic. Once the launch spike settles, consider switching to provisioned with auto scaling.
+
+---
+
