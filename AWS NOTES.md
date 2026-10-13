@@ -1789,3 +1789,9 @@ A mobile game stores player sessions and leaderboards in RDS MySQL. At a new-sea
 
 ### Amazon Aurora
 
+Think of a **normal RDS database** as a shop where each branch keeps its own full copy of the ledger. When the head office records a sale, it must copy that entry to every branch’s ledger. If a branch is slow, everyone waits. If a branch burns down, you rebuild its ledger from backups.
+
+**Aurora** is the same chain with **one shared, fireproof vault** that holds the ledger. The branches (database servers) are just counters that read from and write to that same vault. The vault keeps six copies of every page, spread across three buildings. Adding a counter takes minutes, because nothing needs to be copied. If a counter dies, another one starts serving the same vault.
+#### Definition
+
+**Amazon Aurora** is AWS’s own relational database engine. It is **compatible with MySQL and PostgreSQL**, so your existing code and drivers work unchanged. It is part of the RDS family, but its storage layer was redesigned for the cloud.
