@@ -1787,3 +1787,5 @@ A mobile game stores player sessions and leaderboards in RDS MySQL. At a new-sea
 
 ---
 
+### Amazon Aurora
+
