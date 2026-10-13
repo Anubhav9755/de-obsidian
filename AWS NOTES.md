@@ -2104,9 +2104,32 @@ The old data never moves into Redshift. It stays in cheap S3 and is queried when
 - Right now, the analysts run these queries directly on the Aurora database, and the live app slows down whenever they do.
 - The CTO wants this fixed and wants costs controlled.
 
-Design the solution using what we’ve covered. Specifically:
+QUESTION - 
 
 1. Where do the analytics queries run instead, and why?
-2. How does data get from Aurora and S3 into that system?
+
+On **Redshift**, not Aurora. The workload is OLAP: scans and aggregations over billions of rows (watch time by genre, country and device). Aurora is built for OLTP and stores rows together, so these queries read far more data than needed and compete with the live app for resources. Redshift’s **columnar storage and MPP** are built for exactly this, and moving analytics there **isolates the live app** from analyst queries. This also fixes the CTO’s main complaint.
+
+2. How does data get from Aurora and S3 into Redshift?
+
+- **From S3 (viewing events):** use the **`COPY` command** to load recent data in parallel. Store the files as **compressed Parquet or split CSV files**, and schedule the load daily (for example with an orchestrated job or AWS Glue). Load only the **new day’s partition** each time, not everything.
+- **From Aurora (subscription data):** the finance report needs subscription data next to viewing data. Use **AWS DMS (Database Migration Service)** for ongoing replication, or a nightly export to S3 followed by `COPY`. Subscription tables are small compared with 2 TB/day of events, so a daily refresh is usually enough.
+- Once both are in Redshift, the monthly finance report is a normal **SQL `JOIN`** inside Redshift, with zero load on Aurora.
+
 3. How do you handle the 4-year-old raw data without overspending?
-4. Would you choose **Redshift provisioned** or **Redshift Serverless**, and why?
+
+Four years at 2 TB/day is roughly **2,900 TB (about 2.9 PB)** of raw data. Loading all of it into Redshift would be very expensive when it’s queried only a few times a year. So:
+
+- Keep **recent data** (for example, the last 60 to 90 days, which powers the daily dashboard) **inside Redshift** for speed.
+- Keep **older raw events in S3** as **partitioned Parquet** (partitioned by date), queried through **Redshift Spectrum** when the data scientists need it. Parquet plus partitioning means Spectrum scans only the date ranges and columns a query needs, which keeps both time and cost down.
+- Apply **S3 lifecycle policies** (Lesson 7) to move very old data to cheaper storage classes. One caution: data in Glacier-type classes can’t be queried directly, so choose a class (like Standard-IA or Glacier Instant Retrieval) that still allows direct reads, or restore the data before a query.
+
+ 4. Redshift provisioned or Serverless?
+
+I’d choose **Redshift Serverless**, with a **usage limit** to cap spending, for these reasons:
+
+- The workload is **uneven**: a daily dashboard refresh, a monthly finance report and occasional data-science runs. Serverless suits intermittent workloads because compute scales automatically and you pay only for the compute used while queries run.
+- No cluster sizing or node-count guessing is needed, which reduces operational effort.
+- Cost control is built in through **RPU usage limits**.
+
+**When provisioned would win instead:** if the dashboard were queried **constantly all day** with a **steady, predictable load**, a provisioned cluster with **Reserved Nodes** could become cheaper than paying per-use. So the honest answer is: start Serverless, monitor actual usage, and switch if the load turns out to be steady and heavy.
