@@ -1667,7 +1667,22 @@ A company’s RDS database runs in **us-east-1** (Multi-AZ). They now have many 
 **The limits of this plan:**
 
 - **Possible data loss.** Replication is **asynchronous** (a small delay), so the last few seconds or minutes of writes may not have reached Europe when the Region fails. The “how much data can we lose” number is called the **RPO** (recovery point objective), and here it’s above zero.
+
 - **Not automatic.** Unlike Multi-AZ failover, promoting a cross-Region replica is a manual step (or one you script). Downtime lasts from detection through the decision, the promotion, and repointing the apps. That downtime number is the **RTO** (recovery time objective).
+
 - **Multi-AZ doesn’t help here.** Its AZs are all inside the same Region (Lesson 8), so a Region-wide failure takes out both the primary and the standby.
+
 - **Stale reads and latency.** European reads can be slightly behind the primary, and European _writes_ still travel to the US until a failover happens.
+
 - **Cost.** You pay for the extra instance and cross-Region data transfer.
+
+---
+
+### DynamoDB
+
+RDS is a **well-organized filing cabinet**: linked folders, and you can ask complex questions like “all customers in Delhi who ordered twice last month.” DynamoDB is a **giant coat check**. You hand over your ticket number (the key) and get your exact coat back instantly. It takes the same time whether the room holds 100 coats or 100 million. But if you ask “show me every red coat,” the attendant has to check every coat, unless you planned for that question in advance.
+
+### Definition
+
+**DynamoDB** is a fully managed, **serverless** NoSQL database. It stores **key-value and document data** and delivers consistently fast responses (single-digit milliseconds) at almost any scale.
+
