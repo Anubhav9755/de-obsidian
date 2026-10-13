@@ -2060,3 +2060,53 @@ ORDER BY revenue DESC;
 - `COPY` reads all files under that S3 prefix **in parallel**. It uses an **IAM role** so no access keys appear in your SQL. The role must allow reading that bucket.
 - The final query only needs the `category`, `city`, `amount` and `order_date` columns, so columnar storage helps.
 
+Query S3 directly with Spectrum (SQL):
+
+```
+CREATE EXTERNAL SCHEMA lake
+FROM DATA CATALOG DATABASE 'shop_lake'
+IAM_ROLE 'arn:aws:iam::123456789012:role/RedshiftS3ReadRole';
+
+SELECT COUNT(*) FROM lake.old_clickstream WHERE year = 2022;
+```
+
+The old data never moves into Redshift. It stays in cheap S3 and is queried when needed.
+
+#### Interview questions with answers
+
+**Q1. A teammate proposes replacing the company’s Aurora order database with Redshift “because it’s faster.” What’s wrong with this idea?**
+
+**Answer:** “Faster” depends on the workload. Redshift is fast at **scanning and aggregating huge datasets**, but slow at **many small, single-row reads and writes**, which is what an order system does. Columnar storage means updating or inserting one row touches many column blocks. Redshift also has weaker transactional concurrency for that pattern. The right design uses **both**: Aurora for live transactions, Redshift for analytics, with a pipeline between them.
+
+**Q2. A query that touches 3 columns of a 200-column, 10-billion-row table is running quickly in Redshift, but the same query on a row-store database is very slow. Explain exactly why.**
+
+**Answer:** A row store keeps each full row together on disk, so reading 3 columns still drags all 200 columns of every row from disk into memory, which is roughly 60 times more data than needed. Redshift’s columnar layout reads **only the 3 columns’ blocks**. Those blocks also **compress heavily**, since values in one column are similar, which reduces disk reads further. On top of that, **MPP** splits the work across nodes, and **zone maps** skip blocks that can’t match the filter.
+
+**Q3. Loading 500 GB of data row by row with `INSERT` statements takes days. What should be done instead, and why is it faster?**
+
+**Answer:** Put the data into **S3** (split into multiple files, ideally compressed, and ideally around equal-size files) and use the **`COPY` command**. `COPY` loads files **in parallel across all compute slices**, so each slice reads its own files simultaneously. Single-row `INSERT`s go through the leader node one at a time and don’t use that parallelism. File count matters: a multiple of the number of slices gives the best balance, and a single huge file loads on just one slice.
+
+**Q4. The company has 10 years of clickstream logs (200 TB) that are queried only a few times a year. Loading everything into Redshift would be very expensive. What’s your approach?**
+
+**Answer:** Keep the data in **S3** (in a columnar format like **Parquet**, ideally partitioned by date) and query it with **Redshift Spectrum**. Frequently used, recent data (say, the last 90 days) can live inside Redshift for speed, while old data stays in cheap storage. Pay for Spectrum scans only when queries run. You can also move old S3 data to cheaper storage classes with lifecycle policies, keeping in mind that Glacier-class data isn’t directly queryable.
+
+**Q5. Your Redshift dashboards are fast all day, but at 9 AM when 200 analysts log in at once, queries queue up and slow down. Which Redshift feature addresses it, and what’s another approach?**
+
+**Answer:** **Concurrency Scaling** adds temporary extra clusters to handle bursts of concurrent queries, then removes them. This suits a predictable 9 AM spike. Another approach is **Redshift Serverless**, which scales compute automatically with demand, or using **workload management (WLM)** queues to give dashboards priority over heavy ad-hoc queries. For repeated identical dashboard queries, **materialized views** can precompute the results.
+
+#### Scenario question
+
+**Scenario:** You are the cloud engineer at a streaming-video company.
+
+- Viewing events (play, pause, stop, search) arrive at roughly **2 TB per day** and are stored as files in **S3**.
+- The product team wants a **daily dashboard** of watch time by genre, country and device, and the finance team wants a **monthly report** that joins viewing data with subscription data from the **Aurora** database.
+- The data scientists occasionally need to query the **last 4 years** of raw events, but only a few times a year.
+- Right now, the analysts run these queries directly on the Aurora database, and the live app slows down whenever they do.
+- The CTO wants this fixed and wants costs controlled.
+
+Design the solution using what we’ve covered. Specifically:
+
+1. Where do the analytics queries run instead, and why?
+2. How does data get from Aurora and S3 into that system?
+3. How do you handle the 4-year-old raw data without overspending?
+4. Would you choose **Redshift provisioned** or **Redshift Serverless**, and why?
