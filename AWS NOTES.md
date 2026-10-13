@@ -1890,3 +1890,77 @@ with reader.cursor() as cur:
     cur.execute("SELECT status FROM orders WHERE user_id = %s", (42,))
 ```
 
+Because of the split, the writer stays free for transactions and the readers absorb the read load. If the writer fails over, the `cluster-` hostname follows the new writer and your code doesn’t change.
+
+#### Interview question answers
+
+**Q1. “Aurora replicas copy data from the writer, just like RDS read replicas.”**
+
+That statement is wrong. A standard RDS read replica has its **own copy of the data** and must **replay every write** that the primary makes, so it falls behind when write load is heavy. An Aurora replica has **no copy of its own**. It reads the **same shared storage volume** as the writer. When the writer commits a change, the change is already in storage that the replica reads from. The replica only has to refresh its in-memory cache.
+
+This is why Aurora replica lag is typically in **milliseconds**, and why adding a replica takes minutes: no data has to be copied first.
+
+**Q2. The AZ holding the writer goes down. What happens?**
+
+- **(a) Data:** Nothing is lost. Aurora keeps **6 copies across 3 AZs** (2 per AZ). Losing one AZ removes 2 copies, and 4 remain. Writes need 4 of 6 and reads need 3 of 6, so the storage layer can still write and read.
+- **(b) Writes:** The writer instance is gone, so Aurora **promotes one of the replicas** (in a surviving AZ) to be the new writer. Writes are interrupted for roughly **30 seconds or less**, then resume. Replicas have a failover priority (tier), and you can set which one is preferred.
+- **(c) Connection string:** It doesn’t change, if the app uses the **cluster (writer) endpoint**. That DNS name automatically points to the new writer. The app might see a short burst of connection errors, so it should have **retry logic** and short DNS caching.
+
+A subtlety worth mentioning: if you had **no replicas at all**, Aurora would need to create a new instance, which is much slower. That’s why production clusters should have at least one replica in a different AZ.
+
+**Q3. The hard-coded instance endpoint of the writer.**
+
+An **instance endpoint** points to **one specific instance**, not to “whoever is the writer”. After the failover, the old writer instance either is down or has become a **reader** (read-only). The app keeps connecting to it and every write fails with a read-only error.
+
+They should have used the **cluster (writer) endpoint**, which always follows the current writer. Instance endpoints are for debugging and special cases only.
+
+**Q4. Analytics team running huge queries without hurting production reads.**
+
+Use a **custom endpoint**. Steps:
+
+1. Add one or two **larger replicas** (for example `db.r6g.4xlarge`) to the cluster.
+2. Create a custom endpoint that includes **only those replicas**.
+3. Give the analytics team that endpoint. Production traffic continues to use the standard reader endpoint, which maps to the other replicas.
+
+Their heavy queries now land on dedicated replicas, so production reads are unaffected, and there’s no second database to maintain, because they all read the same storage. For extremely heavy analytical workloads, **Aurora Parallel Query** can also push query processing down into the storage layer.
+
+**Q5. `DELETE FROM customers` with no WHERE clause, 10 minutes ago.**
+
+Two options:
+
+1. **Backtrack** (MySQL-compatible only): rewind the **existing cluster** to a point just before the mistake. It happens **in place**, takes minutes, and doesn’t create a new cluster. This is the faster option. The caveat is that it rewinds the **whole database**, so any legitimate writes made in the last 10 minutes are also undone. It has to be enabled on the cluster before the incident happens, and it has a limited window.
+2. **Point-in-time restore (PITR)** from the continuous backup: this creates a **new cluster** at the chosen time. It’s slower, because you then have to switch your application to the new cluster endpoint or copy the lost rows back. Its advantage is that the original cluster stays untouched, so you can export just the deleted rows and merge them back without losing the last 10 minutes of other changes.
+
+For a surgical fix, a good alternative is to **create a clone** from before the delete (or restore with PITR), copy the `customers` table back into production, and delete the clone.
+
+---
+
+### Scenario answer: the ticketing company
+
+**Problem 1: browsing traffic (90% reads) slows the site.**
+
+Move to **Aurora (MySQL-compatible, to keep their existing code)** with **multiple Aurora Replicas** (up to 15). Send all browsing queries (event pages, search, listings) to the **reader endpoint**, which load-balances across the replicas. Only the booking and payment steps use the **writer endpoint**. Since replicas read shared storage, there’s almost no lag, so event availability stays fresh. For extra relief on the hottest data (event details), a cache like **ElastiCache** in front of the database would help. We’ll cover this in a later lesson, so for now it’s just a pointer.
+
+**Problem 2: over a minute of downtime when the primary crashed.**
+
+Aurora failover is typically **about 30 seconds or less**, compared with 60 to 120 seconds on standard RDS Multi-AZ. Place the replicas in **different AZs** and set the **failover priority** so a well-sized replica is promoted first. Apps connect via the **cluster endpoint**, so no connection string change is needed, and they should have retry logic. For the sale, a replica of the **same size as the writer** is important, because a smaller replica that gets promoted would become the bottleneck.
+
+**Problem 3: European users are slow, and the company wants to survive a Region outage.**
+
+Use **Aurora Global Database**:
+
+- Primary Region (for example, Mumbai) takes all writes.
+- A secondary Region (for example, Frankfurt) holds a **read-only copy** with typical replication lag **under a second**. European users read from their local Region, which fixes latency for browsing.
+- If the primary Region fails entirely, you **promote the secondary Region** to be the new primary, which typically takes about a minute. That covers the **Region-outage** requirement.
+
+An honest limitation: European users’ **writes** (purchases) still go to the primary Region, unless you use write forwarding, which has some limitations. For a ticketing site this is usually acceptable, since most traffic is browsing.
+
+**Serverless v2 or provisioned for sale day?**
+
+I’d choose **provisioned instances** for the **writer and the main replicas**, sized in advance for the expected peak. The reasons:
+
+- The sale day is a **known, scheduled** event, so you can plan capacity (and pre-scale replicas before the sale starts). Predictable load is what provisioned instances are good at.
+- A sudden 20x spike can outrun automatic scaling in the first moments, while a pre-sized provisioned instance is already warm and ready.
+- Running at steady high load, provisioned (especially with **Reserved Instances** for the baseline) is usually cheaper than Serverless.
+
+A sensible hybrid is to use **Serverless v2 replicas for the extra, unpredictable headroom** beyond what you sized, since they scale up and down on their own and you pay only while they’re busy. Serverless v2 would be my first choice for **dev/test environments** and for apps with **unpredictable or spiky** load, which this one isn’t on sale day.
