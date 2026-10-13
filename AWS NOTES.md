@@ -1805,3 +1805,88 @@ Key facts:
 - **Failover is fast**, usually around 30 seconds or less. Aurora promotes a replica to writer.
 - AWS markets it as up to **5x faster than standard MySQL** and **3x faster than standard PostgreSQL**, at about **1/10th the cost of commercial databases** (Oracle, SQL Server). Treat these as AWS claims.
 
+#### The endpoints
+
+| Endpoint                      | Points to                         | Use it for                                                              |
+| ----------------------------- | --------------------------------- | ----------------------------------------------------------------------- |
+| **Cluster (writer) endpoint** | Current writer                    | All writes. After a failover it automatically points to the new writer. |
+| **Reader endpoint**           | Load-balances across all replicas | Read-heavy traffic (reports, dashboards, search)                        |
+| **Custom endpoint**           | A subset you choose               | Sending heavy analytics to big replicas only                            |
+| **Instance endpoint**         | One specific instance             | Debugging and special cases (avoid in app code)                         |
+#### Aurora variants
+
+- **Aurora Serverless v2**: capacity scales up and down automatically in small increments, and you pay for what you use. Good for unpredictable or spiky workloads, dev/test, and new apps whose load is unknown.
+
+- **Aurora Global Database**: one primary Region plus up to 5 read-only secondary Regions, with storage-level replication that usually lags under a second. Used for disaster recovery (a promoted secondary Region can take over within about a minute) and for low-latency local reads worldwide.
+
+- **Backtrack** (MySQL-compatible only): rewind the database to an earlier point in time **in place, without restoring from backup**.
+
+- **Aurora Parallel Query, Cloning and Backups**: cloning creates a fast, space-efficient copy of a big database using copy-on-write. Continuous backups go to S3 with point-in-time restore.
+
+#### The industry problem it solves
+
+**Example: a food-delivery or ticketing platform.**
+
+Traffic is normal most of the day, then spikes 20x during dinner rush or a ticket drop. On standard RDS you face three pains:
+
+1. **Read replicas lag.** Each one has to replay every write, so under heavy load customers see stale order status.
+2. **Failover is slower.** A Multi-AZ promotion on standard RDS typically takes 60-120 seconds, which is a visible outage during dinner rush.
+3. **Scaling storage and replicas is operationally heavy.** You pre-provision storage, and every new replica needs a full data copy first.
+
+With Aurora, replicas read the shared storage, so lag is tiny. Failover is quick, storage grows by itself, and you can add replicas in minutes. For a company running **Oracle or SQL Server licenses costing millions**, migrating to Aurora PostgreSQL is a standard cost-cutting move, and AWS provides the Schema Conversion Tool and Database Migration Service for it.
+
+**Where it is a poor fit:** simple, small, predictable workloads where plain RDS is cheaper, and non-relational data (use DynamoDB).
+
+#### CODE
+
+```
+# 1. Create the cluster (the shared storage + the endpoints)
+aws rds create-db-cluster \
+  --db-cluster-identifier shop-aurora \
+  --engine aurora-postgresql \
+  --master-username admin_user \
+  --manage-master-user-password \
+  --storage-encrypted
+
+# 2. Add the writer instance (the first instance in a cluster becomes the writer)
+aws rds create-db-instance \
+  --db-instance-identifier shop-aurora-writer \
+  --db-cluster-identifier shop-aurora \
+  --engine aurora-postgresql \
+  --db-instance-class db.r6g.large
+
+# 3. Add a reader (an Aurora Replica)
+aws rds create-db-instance \
+  --db-instance-identifier shop-aurora-reader-1 \
+  --db-cluster-identifier shop-aurora \
+  --engine aurora-postgresql \
+  --db-instance-class db.r6g.large
+```
+
+- Step 1 creates the **cluster**. This is the key idea: in Aurora you create a _cluster_ first (storage and endpoints), then add _instances_ into it. In plain RDS, the instance is the database.
+
+- `--manage-master-user-password` makes AWS store the password in **Secrets Manager** (a later lesson). You never write the password anywhere.
+
+- `--storage-encrypted` encrypts the data on disk with KMS (Domain 2).
+
+- Steps 2 and 3 add compute. The first instance becomes the writer, and any later one becomes a reader.
+
+#### How the application uses it (Python):
+
+```
+import psycopg2
+
+# Writes go to the cluster (writer) endpoint
+writer = psycopg2.connect(host="shop-aurora.cluster-xxxx.ap-south-1.rds.amazonaws.com", ...)
+
+# Reads go to the reader endpoint (note the "cluster-ro-")
+reader = psycopg2.connect(host="shop-aurora.cluster-ro-xxxx.ap-south-1.rds.amazonaws.com", ...)
+
+with writer.cursor() as cur:
+    cur.execute("INSERT INTO orders (user_id, total) VALUES (%s, %s)", (42, 499))
+writer.commit()
+
+with reader.cursor() as cur:
+    cur.execute("SELECT status FROM orders WHERE user_id = %s", (42,))
+```
+
