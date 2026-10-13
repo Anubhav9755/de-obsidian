@@ -1964,3 +1964,99 @@ I’d choose **provisioned instances** for the **writer and the main replicas**,
 - Running at steady high load, provisioned (especially with **Reserved Instances** for the baseline) is usually cheaper than Serverless.
 
 A sensible hybrid is to use **Serverless v2 replicas for the extra, unpredictable headroom** beyond what you sized, since they scale up and down on their own and you pay only while they’re busy. Serverless v2 would be my first choice for **dev/test environments** and for apps with **unpredictable or spiky** load, which this one isn’t on sale day.
+
+---
+
+### Amazon Redshift
+
+**Aurora is a cashier** at a supermarket: serves one customer at a time, very fast, thousands of times a day.
+
+**Redshift is the head-office analyst** who must answer: _“What was our total revenue per product category, per state, for the last 3 years?”_ A cashier can’t do that, because it needs scanning every receipt ever printed.
+
+To make the analyst fast, the company does two things:
+
+1. It splits all receipts across **many analysts working in parallel**, each handling a slice (this is **massively parallel processing**).
+2. It files receipts **by column** rather than by receipt: all the “price” values together, all the “date” values together. To compute total revenue, the analyst reads only the price pile and ignores everything else (this is **columnar storage**).
+
+#### Definition
+
+**Amazon Redshift** is AWS’s fully managed **data warehouse**. It’s a database designed for **OLAP**: _online analytical processing_, meaning complex queries that scan and aggregate huge amounts of data for reports, dashboards and business intelligence. It speaks **SQL** and is based on PostgreSQL, but it is not a drop-in PostgreSQL replacement for transactional apps.
+
+#### Why it’s fast: three ideas
+
+1. **Columnar storage**: data is stored by column. A query touching 3 of 100 columns reads only those 3, so it reads far less data from disk. Similar values sit together, so they also compress very well.
+2. **MPP (massively parallel processing)**: the cluster has one **leader node** and several **compute nodes**. The leader receives your SQL, builds a plan and distributes the work. Each compute node processes its own slice of the data in parallel, then results are combined.
+3. **Compression and zone maps**: Redshift compresses columns automatically and skips blocks of data that can’t match your filter.
+
+#### Key terms
+
+- **Cluster**: leader node plus compute nodes.
+- **Leader node**: the front door. Your tools connect here, and it plans the query.
+- **Compute nodes**: store the data and do the heavy work.
+- **Redshift Serverless**: no cluster to size. You run queries and pay for the compute used (measured in RPUs, Redshift Processing Units), and it scales automatically. Good for unpredictable or occasional analytics.
+- **Redshift Spectrum**: query data that stays in **S3** directly, without loading it into Redshift first. This is handy for huge, rarely-queried data (a “data lake” approach).
+- **COPY command**: the standard way to bulk-load data from S3 into Redshift. It loads in parallel and is far faster than inserting row by row.
+- **Distribution style / sort key**: choices about how rows are spread across nodes and in which order they’re stored. Good choices make joins and filters much faster. This is tuning, which the CCP exam won’t test deeply but interviews do.
+- **Snapshots**: backups stored in S3, which can be copied to another Region for disaster recovery.
+- **Concurrency Scaling**: temporarily adds capacity when many users query at the same time.
+- **Data sharing**: share live data between Redshift clusters without copying it.
+
+#### Honest limitations
+
+- It is **not** for transactions. Single-row inserts and updates are slow compared with Aurora.
+- Redshift clusters are mostly **single-AZ**, with **Multi-AZ** available for certain node types (RA3), so check the current option when designing for high availability.
+
+#### The industry problem it solves
+
+**Example: an e-commerce company** with 5 years of orders, clicks and returns.
+
+The company’s order database (Aurora) holds the live data. The analytics team runs a monthly query: _“revenue and return rate per product category, per city, with year-over-year comparison.”_ On Aurora this query:
+
+- scans hundreds of millions of rows,
+- **locks up resources and slows down the live shop**,
+- takes hours.
+
+The standard fix is a **data warehouse pipeline**:
+
+1. The app writes to **Aurora** (OLTP).
+2. A nightly job copies the data into **S3**, then into **Redshift** via `COPY`. (A managed way to build these pipelines is **AWS Glue**, and a way to move database data is **DMS**, the Database Migration Service.)
+3. Analysts and dashboards (Tableau, QuickSight, Power BI) query **Redshift**, so the live shop is never touched.
+
+The same query now runs in seconds to minutes. This separation of “operational database” and “analytics database” is one of the most important patterns in data engineering.
+
+#### CODE
+
+```
+-- 1. Create a table for sales data
+CREATE TABLE sales (
+    order_id    BIGINT,
+    product     VARCHAR(100),
+    category    VARCHAR(50),
+    city        VARCHAR(50),
+    amount      DECIMAL(10,2),
+    order_date  DATE
+)
+DISTSTYLE AUTO
+SORTKEY (order_date);
+
+-- 2. Bulk-load CSV files from S3 using COPY
+COPY sales
+FROM 's3://my-shop-data/sales/2026/'
+IAM_ROLE 'arn:aws:iam::123456789012:role/RedshiftS3ReadRole'
+FORMAT AS CSV
+IGNOREHEADER 1
+REGION 'ap-south-1';
+
+-- 3. An analytical query
+SELECT category, city, SUM(amount) AS revenue
+FROM sales
+WHERE order_date >= '2026-01-01'
+GROUP BY category, city
+ORDER BY revenue DESC;
+```
+
+- `SORTKEY (order_date)` stores rows ordered by date, so the `WHERE order_date >= ...` filter can skip large blocks of data.
+- `DISTSTYLE AUTO` lets Redshift pick how to spread rows across nodes, which is a safe default.
+- `COPY` reads all files under that S3 prefix **in parallel**. It uses an **IAM role** so no access keys appear in your SQL. The role must allow reading that bucket.
+- The final query only needs the `category`, `city`, `amount` and `order_date` columns, so columnar storage helps.
+
