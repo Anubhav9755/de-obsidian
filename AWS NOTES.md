@@ -1795,3 +1795,13 @@ Think of a **normal RDS database** as a shop where each branch keeps its own ful
 #### Definition
 
 **Amazon Aurora** is AWS’s own relational database engine. It is **compatible with MySQL and PostgreSQL**, so your existing code and drivers work unchanged. It is part of the RDS family, but its storage layer was redesigned for the cloud.
+
+Key facts:
+
+- **Storage is separated from compute.** The database servers (instances) are one layer, and a distributed storage layer is another.
+- **Six copies of your data across 3 AZs** (two per AZ). Writes need 4 of 6 copies to acknowledge, and reads need 3 of 6. This is why Aurora can lose a whole AZ and still write.
+- **Storage auto-grows** in 10 GB chunks up to 128 TiB. You never pre-provision it.
+- **One writer instance plus up to 15 Aurora Replicas**, all reading the same shared storage. Replica lag is typically milliseconds, because replicas don’t copy data, they only read it.
+- **Failover is fast**, usually around 30 seconds or less. Aurora promotes a replica to writer.
+- AWS markets it as up to **5x faster than standard MySQL** and **3x faster than standard PostgreSQL**, at about **1/10th the cost of commercial databases** (Oracle, SQL Server). Treat these as AWS claims.
+
