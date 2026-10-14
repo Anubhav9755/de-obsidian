@@ -4107,3 +4107,48 @@ SELECT balance FROM accounts WHERE account_id = 1;
 COMMIT;
 ```
 
+- **Session 1** reads a baseline value (`500.00`).
+
+- **Session 2** updates that row and commits.
+
+- Under `READ COMMITTED`, **Session 1** re-reads the row and sees the newly committed value (`750.00`), demonstrating a **Non-Repeatable Read** because two identical queries within the same transaction returned different results.
+#### Interview Questions & Answers
+
+- **Q1: How does MVCC work under the hood?**
+    
+    - _Answer:_ MVCC stores system-identifier metadata columns on every physical row—specifically `xmin` (the transaction ID that created the row version) and `xmax` (the transaction ID that deleted or superseded the row version). When a transaction reads data, it evaluates these transaction IDs against its own transaction snapshot visibility rules, seeing only rows committed before it started.
+    
+- **Q2: Does MVCC eliminate all locks?**
+    
+    - _Answer:_ No. MVCC eliminates locks between **readers and writers**, but concurrent **writers still lock each other** (exclusive write locks) on the same rows to prevent lost updates and race conditions.
+    
+- **Q3: What is "Bloat" in MVCC databases like PostgreSQL, and how is it resolved?**
+    
+    - _Answer:_ Because MVCC retains old row versions on disk until no active transactions need them, frequent updates and deletes cause **table and index bloat** (wasted storage disk space). This is cleaned up automatically or manually via the background **VACUUM** process.
+
+---
+
+### Locking & Deadlocks (`SELECT ... FOR UPDATE`, `SKIP LOCKED`, and Deadlock Resolution)
+
+#### Definition
+
+While MVCC handles read-write concurrency without blocking, database **locks** are explicit synchronization primitives used to arbitrate conflicting write operations and prevent data corruption.
+
+- **Shared (S) Locks:** Permissive locks acquired during read operations. Multiple transactions can hold Shared locks on the same resource simultaneously.
+
+- **Exclusive (X) Locks:** Restrictive locks acquired during write operations (`INSERT`, `UPDATE`, `DELETE`). Only one transaction can hold an Exclusive lock on a specific row or table, blocking all other conflicting read or write attempts.
+
+- **Row-Level vs. Table-Level Locks:** Row-level locks target fine-grained individual records for maximum concurrency, whereas table-level locks restrict entire table structures (typically during schema alterations or bulk DDL operations).
+
+#### Application and Advanced Locking Clauses
+
+- **`SELECT ... FOR UPDATE`:** Explicitly acquires exclusive row-level locks on selected rows during a read operation, preventing concurrent transactions from updating or deleting those specific rows until our transaction commits.
+
+- **`FOR SHARE`:** Acquires shared locks on selected rows, allowing concurrent reads but blocking external updates until our transaction releases the lock.
+
+- **`NOWAIT`:** Instructs the database engine to fail immediately with an error rather than waiting in line if a target row is already locked by another transaction.
+
+- **`SKIP LOCKED`:** Essential for high-concurrency **Job Queue patterns**. It tells the database to skip over rows currently locked by other workers instead of waiting, allowing multiple background workers to pull independent pending tasks from a queue simultaneously without contention.
+
+- **Optimistic Locking:** A concurrency pattern that avoids database locks entirely. Instead, we include a `version` integer column in our table; when updating a row, we check that `version` has not changed since we read it, aborting the write if a conflict is detected.
+
