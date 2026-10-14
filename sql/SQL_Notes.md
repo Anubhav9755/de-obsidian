@@ -4365,7 +4365,7 @@ INSERT INTO v_active_users (user_id, email, status)
 VALUES (101, 'test@example.com', 'PENDING');
 ```
 
-### Materialized View Maintenance (PostgreSQL/Oracle Style)
+#### Materialized View Maintenance (PostgreSQL/Oracle Style)
 
 **`REFRESH MATERIALIZED VIEW CONCURRENTLY`:** Updates a materialized view in the background without locking read access to the view, provided the materialized view has a unique index defined on it.
 
@@ -4377,3 +4377,86 @@ CREATE UNIQUE INDEX idx_mv_summary_id ON mv_daily_sales(store_id);
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_sales;
 ```
 
+---
+
+# ==🔵Module 15: Statistical & Analytical SQL==
+
+### PERCENTILE_CONT and PERCENTILE_DISC (Percentiles, Medians, and Quartiles)
+
+#### Definition
+
+`PERCENTILE_CONT` and `PERCENTILE_DISC` are analytical window/aggregate functions used to calculate statistical percentiles, medians, and quartiles across a dataset:
+
+- **`PERCENTILE_CONT` (Continuous):** Calculates the exact percentile by interpolating between adjacent data values if the target percentile falls between two physical rows.
+
+- **`PERCENTILE_DISC` (Discrete):** Returns the actual physical value from the dataset whose cumulative distribution matches or exceeds the requested percentile threshold.
+
+- **`WITHIN GROUP (ORDER BY ...)`:** The mandatory clause used with these functions to sort the dataset before computing the percentile rank.
+
+#### Application
+
+- **SLA & Latency Monitoring:** Computing p95, p99, or p99.9 response times for API gateways or server logs.
+
+- **Financial & Salary Analytics:** Finding median household incomes, salary distributions, or customer spending quartiles.
+
+- **Outlier Detection:** Calculating Interquartile Ranges (IQR) to identify anomalous values or fraudulent spikes.
+
+#### Real-World Problem and How Topic Solves It
+
+- **Problem:** An analytics team needs to find the median delivery time for e-commerce orders. Using the standard `AVG()` function is misleading because a few delayed shipments skew the average upward, failing to represent typical customer experiences.
+
+- **Solution:** Using `PERCENTILE_CONT(0.5)` calculates the exact median (50th percentile) value, providing an accurate representation of central tendency unaffected by extreme high or low outliers.
+
+#### Industrial Example
+
+A cloud infrastructure provider tracks API request latency. To meet Service Level Agreements (SLAs), the engineering team runs weekly SQL reports using `PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY latency_ms)` partitioned by service region to monitor p99 latency spikes.
+
+#### Code and Explanation
+
+```
+-- Target Table Setup
+CREATE TABLE order_deliveries (
+    order_id INT PRIMARY KEY,
+    region VARCHAR(50),
+    delivery_days DECIMAL(5, 2)
+);
+
+INSERT INTO order_deliveries VALUES 
+(1, 'North', 2.0), (2, 'North', 3.5), (3, 'North', 4.0),
+(4, 'South', 1.5), (5, 'South', 2.0), (6, 'South', 9.0);
+
+-- 1. Calculating Median and Quartiles using PERCENTILE_CONT and PERCENTILE_DISC
+SELECT 
+    region,
+    -- Continuous Median (interpolated if necessary)
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY delivery_days) AS median_cont,
+    
+    -- Discrete Median (picks actual value from the dataset)
+    PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY delivery_days) AS median_disc,
+    
+    -- First Quartile (Q1 - 25th percentile)
+    PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY delivery_days) AS q1_val,
+    
+    -- Third Quartile (Q3 - 75th percentile)
+    PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY delivery_days) AS q3_val
+FROM order_deliveries
+GROUP BY region;
+```
+
+#### Code Breakdown:
+
+- **`PERCENTILE_CONT(0.5)`:** Requests the 50th percentile (median). If the dataset has an even number of rows, it interpolates the average between the two middle values.
+
+- **`WITHIN GROUP (ORDER BY delivery_days)`:** Sorts the underlying rows in ascending order before the percentile calculation is applied.
+
+- **`GROUP BY region`:** Computes regional statistical benchmarks independently for each geographic territory.
+
+#### Interview Questions
+
+- **Q1: What is the primary difference between `PERCENTILE_CONT` and `PERCENTILE_DISC`?**
+    
+    - _Answer:_ `PERCENTILE_CONT` uses linear interpolation to calculate a precise decimal value between two adjacent rows if the target percentile does not land on an exact row. `PERCENTILE_DISC` restricts its output strictly to an actual value present in the source dataset.
+        
+- **Q2: Can we use `PERCENTILE_CONT` as a window function with `OVER()`?**
+    
+    - _Answer:_ Yes. In modern database engines (like PostgreSQL, Snowflake, and BigQuery), we can write `PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY col) OVER (PARTITION BY category)` to calculate rolling or partitioned medians while retaining row-level details.
