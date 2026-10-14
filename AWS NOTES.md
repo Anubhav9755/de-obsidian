@@ -2600,3 +2600,70 @@ You have a head office (your **data center**) and a warehouse (your **AWS VPC**)
 ### Definition
 
 **AWS Direct Connect (DX)** is a service that creates a **dedicated, private network connection** between your on-premises network (data center, office or colocation facility) and AWS, **bypassing the public internet**.
+
+#### What you get
+
+- **Consistent, lower latency** and more predictable performance than internet-based connections.
+- **High bandwidth**: dedicated connections come in **1 Gbps, 10 Gbps and 100 Gbps** (and 400 Gbps in some locations). Hosted connections from partners can be smaller (from 50 Mbps up).
+- **Lower data-transfer-out cost** than sending the same data over the internet, since DX outbound data is charged at a reduced rate.
+- **Private connectivity** to your VPCs and to AWS public services (like S3) without crossing the public internet.
+
+#### Key terms
+
+- **Direct Connect location**: a colocation facility where AWS has equipment. Your physical link ends here. You must get your network to this location (or use a partner who is already there).
+
+- **Dedicated connection**: a physical Ethernet port allocated to **you** (1, 10, 100 Gbps).
+
+- **Hosted connection**: a smaller slice of capacity provisioned by an **AWS Direct Connect Partner**. Often quicker and cheaper if you don’t need a full port.
+
+- **Virtual interface (VIF)**: a logical connection over the physical link. You create one VIF per destination type:
+    - **Private VIF**: reaches resources inside a **VPC** (private IPs), through a Virtual Private Gateway or Direct Connect Gateway.
+    - **Public VIF**: reaches **AWS public services** (S3, DynamoDB, etc.) using public IP addresses, without going over the internet.
+    - **Transit VIF**: reaches many VPCs through a **Transit Gateway**.
+
+- **Direct Connect Gateway**: lets one Direct Connect connection reach **VPCs in multiple Regions** (and multiple accounts).
+
+- **Virtual Private Gateway (VGW)**: the VPC-side endpoint for a VPN or Direct Connect private connection.
+
+- **Transit Gateway (TGW)**: a central hub that connects many VPCs and on-premises networks, so you don’t need a web of one-to-one links.
+
+- **BGP**: the routing protocol Direct Connect uses to exchange routes between your network and AWS.
+
+- **Link Aggregation Group (LAG)**: bundles several physical connections into one logical connection, for more bandwidth and resilience.
+
+- **MACsec**: optional Layer 2 encryption on dedicated 10, 100 and 400 Gbps connections.
+
+#### The security point that trips people up
+
+**Direct Connect is private, but it is NOT encrypted by default.** Private means the traffic doesn’t traverse the public internet. It does not mean the data is scrambled. If you need encryption (compliance often requires it), you have options:
+
+- Run an **IPsec VPN over the Direct Connect public VIF or transit VIF** (a common pattern), or
+- Use **MACsec** on supported dedicated connections, or
+- Encrypt at the application layer (TLS).
+
+##### Resilience: it’s a physical cable
+
+A single Direct Connect link is a **single point of failure** (a cable cut, a router failure, a problem at one location). AWS recommends redundancy:
+
+- **Two connections at two different Direct Connect locations** for maximum resilience (this is the highest-resiliency model AWS documents).
+- Or a **backup Site-to-Site VPN** over the internet, which is cheaper but has lower performance during failover.
+
+#### Direct Connect vs Site-to-Site VPN 
+
+![[Pasted image 20261014192645.png]]
+
+#### The industry problem it solves
+
+**Example: a bank** moving part of its systems to AWS but keeping core ledgers in its own data center for now (hybrid).
+
+Problems with using only the internet:
+
+1. **Unpredictable latency**: the trading and reporting systems in AWS call the on-premises ledger thousands of times per second. Internet jitter causes timeouts.
+2. **Huge data transfers**: the bank moves terabytes of transaction data every night to AWS for analytics (for example into Redshift, Lesson 27). Over a VPN this is slow and the internet data-transfer charges add up.
+3. **Compliance**: regulators prefer sensitive financial traffic not to traverse the public internet.
+4. **Reliability**: the internet path can degrade without warning.
+
+A Direct Connect link (two links at two locations for resilience, with encryption added over it) gives the bank stable latency, lots of bandwidth, lower transfer costs and a private path. A common supporting setup is a **Site-to-Site VPN as a backup** in case both links fail.
+
+**Where it is a poor fit:** a small startup with light traffic, a short-term project, or a deployment that has to be up next week. A VPN is the better, quicker and cheaper choice there.
+
