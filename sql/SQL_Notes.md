@@ -3999,13 +3999,13 @@ Isolation is the third property of ACID transactions ($I$). It defines the degre
 #### Application
 
 - **Preventing Data Corruption:** Ensuring that simultaneous financial transfers, inventory deductions, or account updates do not overwrite each other's changes.
-    
+
 - **Balancing Consistency vs. Concurrency:** Choosing the correct isolation tier to prevent read/write anomalies while maximizing the number of simultaneous transactions a database engine can process.
 
 #### Real-World Problem and Solution
 
 - **Problem:** Two separate banking representatives simultaneously check a customer's account balance of $500. Representative A applies a $100 debit, while Representative B applies a $50 debit. If both transactions read the initial snapshot of $500 concurrently without proper isolation, Representative A writes $400 ($500 - $100) and Representative B writes $450 ($500 - $50), completely overwriting Representative A's debit. This phenomenon is known as a **Lost Update**, causing the financial institution to lose track of the $100 deduction.
-    
+
 - **Solution:** Enforcing proper transaction isolation ensures that concurrent write transactions either lock conflicting records or abort when modifications collide, preserving all updates accurately.
 
 #### Industrial Example
@@ -4015,13 +4015,13 @@ An e-commerce flash sale processes thousands of concurrent checkout requests for
 #### Concurrency Anomalies Explained
 
 - **Dirty Read:** Transaction A modifies a row without committing. Transaction B reads that uncommitted change. If Transaction A subsequently rolls back, Transaction B has acted on data that never officially existed.
-    
+
 - **Non-Repeatable Read:** Transaction A reads a row. Transaction B updates or deletes that row and commits. If Transaction A reads the exact same row again within the same transaction, we notice modified data or missing records.
-    
+
 - **Phantom Read:** Transaction A queries a range of rows matching a condition (e.g., `WHERE total > 100`). Transaction B inserts a new row that matches Transaction A's search criteria and commits. If Transaction A re-runs the range query, new "phantom" records appear.
-    
+
 - **Lost Update:** Two concurrent transactions read the same base value, compute updates independently, and write back changes, causing one transaction's modifications to be silently overwritten by the other.
-    
+
 - **Write Skew:** Two transactions read overlapping datasets, make independent decisions based on those reads, and modify disjoint subsets of data such that a global business constraint is violated.
 
 #### Isolation Levels and Anomaly Prevention Matrix
@@ -4038,7 +4038,27 @@ An e-commerce flash sale processes thousands of concurrent checkout requests for
 #### Default Isolation Levels Across Databases
 
 - **PostgreSQL:** `READ COMMITTED`
-    
+
 - **MySQL (InnoDB):** `REPEATABLE READ`
-    
+
 - **SQL Server:** `READ COMMITTED` (supports Snapshot Isolation when configured)
+
+#### Code and Explanation
+
+```
+-- 1. Setting Transaction Isolation Level explicitly
+BEGIN TRANSACTION;
+SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+
+-- Execute transactional read/write workloads here...
+SELECT balance FROM accounts WHERE account_id = 1;
+
+COMMIT;
+```
+
+- `SET TRANSACTION ISOLATION LEVEL`: Instructs the database engine to enforce specific concurrency rules for the active session or transaction block.
+
+---
+
+#### MVCC (Multi-Version Concurrency Control), Snapshot Isolation, and Demo
+
