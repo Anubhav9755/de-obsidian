@@ -2135,3 +2135,4 @@ I’d choose **Redshift Serverless**, with a **usage limit** to cap spending, fo
 **When provisioned would win instead:** if the dashboard were queried **constantly all day** with a **steady, predictable load**, a provisioned cluster with **Reserved Nodes** could become cheaper than paying per-use. So the honest answer is: start Serverless, monitor actual usage, and switch if the load turns out to be steady and heavy.
 
 ---
+
