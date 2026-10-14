@@ -67,3 +67,53 @@ Why does `0.1 + 0.2 == 0.3` return `False`? What would you use for money? _(Hint
 **Industrial use:** raw data is messy text: emails with stray spaces, IDs with prefixes, CSV lines, log entries. About 60% of real data cleaning is string handling.
 `"tx_102, user_b,45.30"` has a space after the comma, so after splitting, the user is `" user_b"`, which won’t match `"user_b"` in a join. That’s a real bug source.
 
+
+```python
+line = "  tx_102, user_b ,45.30\n"
+
+print(repr(line.strip()))     # 'tx_102, user_b ,45.30'  (edges cleaned, \n gone)
+
+parts = line.strip().split(",")
+print(parts)                  # ['tx_102', ' user_b ', '45.30']
+
+clean = []
+for p in parts:
+    clean.append(p.strip())
+print(clean)                  # ['tx_102', 'user_b', '45.30']
+
+print(",".join(clean))        # tx_102,user_b,45.30  (join = reverse of split)
+```
+
+**Indexing and slicing** (the end index is _excluded_):
+
+```python
+tx = "tx_102"
+print(tx[0])      # 't'
+print(tx[-1])     # '2'      (negative = from the end)
+print(tx[0:2])    # 'tx'
+print(tx[3:])     # '102'    (from index 3 to the end)
+print(tx[::-1])   # '201_xt' (step -1 = reversed)
+```
+
+**Immutability :**
+
+```python
+name = "  rahul  "
+name.strip()          # returns a NEW string, which we threw away
+print(name)           # still '  rahul  '
+
+name = name.strip()   # reassign to keep the result
+print(name)           # 'rahul'
+```
+
+**Methods:
+
+| Method                               | Does                  | Example → result                      |
+| ------------------------------------ | --------------------- | ------------------------------------- |
+| `.strip()`                           | trims edge whitespace | `" a "` → `"a"`                       |
+| `.lower()` / `.upper()` / `.title()` | changes case          | `"RAHUL"` → `"rahul"`                 |
+| `.split(sep)`                        | string → list         | `"a,b".split(",")` → `["a","b"]`      |
+| `sep.join(list)`                     | list → string         | `"-".join(["a","b"])` → `"a-b"`       |
+| `.replace(old, new)`                 | swaps text            | `"1,200".replace(",", "")` → `"1200"` |
+| `.startswith()` / `.endswith()`      | prefix/suffix check   | `"tx_1".startswith("tx_")` → `True`   |
+| `in`                                 | substring check       | `"@" in "a@b.com"` → `True`           |
