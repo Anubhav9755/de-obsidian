@@ -2136,3 +2136,75 @@ I’d choose **Redshift Serverless**, with a **usage limit** to cap spending, fo
 
 ---
 
+### Amazon Route 53
+
+- **IP address**: the numeric address of a server on the internet, like `203.0.113.25`. Computers find each other with these.
+- **Domain name**: a human-friendly name, like `example.com`. People remember names, not numbers.
+- **DNS (Domain Name System)**: the internet’s phonebook. It translates a domain name into an IP address. When you type `example.com`, your device asks DNS “what’s the IP address?”, gets the answer, then connects.
+- **ELB (Lesson 20)** gives you a load balancer with its own long, ugly DNS name (like `my-alb-123456.ap-south-1.elb.amazonaws.com`). You don’t want customers typing that.
+- **Region and AZ : locations of AWS infrastructure. Health and location matter for DNS routing decisions.
+- **VPC** : your private network in AWS, which can also have private names.
+
+DNS is a **phonebook**, and **Route 53 is a smart receptionist**.
+
+A normal phonebook says “Rahul → 98xxxxx”. A smart receptionist does more: “Rahul is on holiday, so I’ll connect you to his backup.” “You’re calling from Europe, so I’ll connect you to our Frankfurt office.” “Send 10% of callers to the new office to test it out.” Route 53 does exactly this for internet traffic, using the **health** of your servers, the **location** of the caller, and **weights** you choose.
+
+### Definition
+
+**Amazon Route 53** is AWS’s **highly available and scalable DNS service**. It does three things:
+
+1. **Domain registration**: you can buy and manage domain names (like `mycompany.com`).
+2. **DNS routing**: it answers “what IP or resource does this name point to?”
+3. **Health checking**: it monitors your endpoints and stops sending traffic to unhealthy ones.
+
+The name “53” comes from **port 53**, the port DNS uses.
+#### Key terms
+
+- **Hosted zone**: a container for the DNS records of one domain. A **public hosted zone** answers queries from the internet. A **private hosted zone** answers only inside your VPC(s), for internal names like `db.internal.mycompany.com`.
+
+- **Record**: one entry in the phonebook. Common types:
+    - **A**: name → IPv4 address.
+    - **AAAA**: name → IPv6 address.
+    - **CNAME**: name → another name (not allowed at the root domain, like `example.com` itself).
+    - **Alias**: a Route 53 special record that points a name to an **AWS resource** (ELB, CloudFront, S3 website, API Gateway, etc.). It works at the root domain, is **free** for queries to AWS resources, and automatically follows the resource’s changing IPs. Prefer Alias over CNAME for AWS targets.
+    - **MX**: mail servers. **TXT**: text data, often for domain verification.
+
+- **TTL (time to live)**: how long (in seconds) other systems may cache an answer. Low TTL means changes spread quickly but with more queries. High TTL means fewer queries but slow changes.
+
+- **Health check**: Route 53 periodically probes an endpoint (HTTP, HTTPS or TCP). If it fails, Route 53 stops returning that endpoint in answers (when the record is tied to the health check).
+
+#### Routing policies 
+
+| Policy                | What it does                                                                       | Typical use                                             |
+| --------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| **Simple**            | One record, one or more values returned                                            | A single web server                                     |
+| **Weighted**          | Splits traffic by percentage                                                       | Canary release: 5% to the new version, 95% to the old   |
+| **Latency-based**     | Sends users to the Region with the lowest latency                                  | Multi-Region app for global users                       |
+| **Failover**          | Primary and secondary; switches to secondary when the primary’s health check fails | Disaster recovery (active-passive)                      |
+| **Geolocation**       | Routes by the user’s country or continent                                          | Legal or language requirements, content restrictions    |
+| **Geoproximity**      | Routes by geographic distance, with an adjustable bias                             | Shift more load toward one Region                       |
+| **Multivalue answer** | Returns up to 8 healthy records at random                                          | Simple client-side load distribution with health checks |
+| **IP-based**          | Routes by the client’s IP range (CIDR)                                             | Send specific ISPs or networks to specific endpoints    |
+**Key distinction :** **Latency** routing optimizes for _speed_. **Geolocation** routes by _where the user is_, regardless of speed (for compliance or language). They are different goals.
+
+#### Other things worth knowing
+
+- Route 53 is a **global service** (not tied to one Region), and AWS states a **100% availability SLA** for it.
+- It can do **DNS-level failover only**. It does not forward traffic itself. It just answers DNS queries, and the client then connects directly to the endpoint.
+- **Route 53 Resolver** handles DNS queries between your VPC and your on-premises network (hybrid setups).
+
+### The industry problem it solves
+
+**Example: a food-delivery company** running its app in two Regions (Mumbai and Singapore), behind load balancers.
+
+Problems without Route 53:
+
+1. Customers must reach `app.foodco.com`, not the long ELB hostname.
+2. Customers in Southeast Asia should reach Singapore, and Indian customers should reach Mumbai (lower delay).
+3. If the Mumbai Region has an outage at 8 PM on a Friday, traffic must **automatically** move to Singapore, without an engineer manually editing DNS.
+4. For a new app version, the team wants to send 5% of users to it first, to catch bugs before everyone sees them.
+
+Route 53 solves all four: an Alias record for friendly naming, **latency-based routing** for speed, **health checks plus failover** for resilience, and **weighted routing** for the gradual rollout.
+
+#### CODE
+
