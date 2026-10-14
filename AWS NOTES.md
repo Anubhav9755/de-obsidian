@@ -2281,3 +2281,46 @@ aws route53 change-resource-record-sets \
 - If Mumbai is unhealthy, Route 53 stops returning it, and everyone gets Singapore. No human action is needed.
 
 **Weighted example (the 5% canary), as a concept:** two records for the same name, one with `Weight: 95` pointing to the stable version and one with `Weight: 5` pointing to the new version. Set the new one to `0` to turn it off, or raise it step by step.
+
+#### Interview questions with answers
+
+**Q1. Your site is `example.com` (the root domain, also called the zone apex), and you want it to point to your Application Load Balancer. A teammate creates a CNAME record and it’s rejected. Why, and what’s the fix?**
+
+**Answer:** DNS rules **do not allow a CNAME at the root (zone apex)**, because the root already needs other record types (like NS and SOA) and a CNAME can’t coexist with them. The fix is a Route 53 **Alias record** (type A or AAAA with the alias flag) pointing to the ALB. Alias works at the root, is free for queries to AWS resources, and automatically tracks the ALB’s changing IP addresses.
+
+**Q2. You changed an A record to point to a new server, but half your users still reach the old server an hour later. What’s going on, and how should you plan the next change?**
+
+**Answer:** It’s **TTL caching**. Resolvers and browsers cached the old answer for the old record’s TTL (if it was set to, say, 24 hours, some users keep the old IP for up to a day). Planning ahead, **lower the TTL (for example to 60 seconds) well before the change**, wait for the old TTL to expire, make the change, then raise the TTL back afterward. Lowering TTL only helps once the old, longer TTL has expired everywhere.
+
+**Q3. A customer in Germany is being routed to your Mumbai Region even though you have a Frankfurt Region, and the Frankfurt endpoint is healthy. You’re using latency-based routing. Is this a bug?**
+
+**Answer:** Not necessarily. Latency-based routing uses **network latency measurements between the user’s resolver location and AWS Regions**, which is not the same as physical distance. Occasionally a path to another Region is measurably faster, due to how networks are connected. Also check that the Frankfurt record **actually exists with the right Region value** and that its **health check is passing**, because a failing health check removes it from answers. If the goal is “German users must always go to Frankfurt for data-residency reasons,” latency routing is the wrong tool. Use **geolocation routing**, which routes by user location regardless of speed.
+
+**Q4. Explain the difference between geolocation and latency routing with an example where choosing the wrong one causes a real problem.**
+
+**Answer:** **Latency** routing answers “which Region is fastest for this user?” **Geolocation** routing answers “where is this user, and what should users there get?” Example: a streaming service licensed to show a show only in India. Using latency routing, an Indian user may be served from Singapore (faster), which is fine for speed, but it **cannot enforce** the licensing rule, so a user in another country might reach the content. Geolocation lets you serve the licensed catalog only to Indian users and a different catalog elsewhere. You can also set a **default** geolocation record for locations that match no rule, otherwise those users get no answer.
+
+**Q5. Your primary Region fails at night. Route 53 failover is configured with a health check, but the switch took 5 minutes. Name at least three reasons it wasn’t instant, and how you’d tighten it.**
+
+**Answer:** The delay comes from stacked timers:
+
+1. **Health check detection time**: the check interval (30 seconds, or 10 seconds for fast checks) times the failure threshold (for example 3) means detection can take 30 to 90 seconds.
+2. **TTL caching**: resolvers keep serving the old answer until the TTL expires.
+3. **Client and ISP caching**: some resolvers and apps cache longer than the TTL.
+
+To tighten it: use **fast health checks (10-second interval)** with a lower failure threshold, set a **low TTL (such as 30 to 60 seconds)** on failover records, use **Alias records with `EvaluateTargetHealth`** (Alias answers can react to target health without waiting for a separate check), and consider pairing DNS failover with a layer that doesn’t depend on DNS caching at all, such as a global accelerator or CDN-level failover (we’ll cover CloudFront next). Also test failover regularly, since an untested failover plan often doesn’t work.
+
+#### Scenario question
+
+**Scenario:** You are the cloud engineer for an online education company.
+
+- The main app runs in **Mumbai** (primary) and a standby copy runs in **Singapore**, both behind Application Load Balancers.
+- The website is `learnco.com`, and the course videos site is `videos.learnco.com`.
+- Last month, Mumbai had an outage for 40 minutes and the team had to **manually edit DNS** while students couldn’t log in.
+- Students from the **UK** and **Gulf countries** complain the site is slow, so the company is adding a **London** Region.
+- Legal says that **students in the EU must have their account data served only from the London Region**.
+- For the next release, the team wants to **send 10% of traffic to the new version first**, then ramp up.
+- Developers also want internal names like `db.learnco.internal` that only work **inside the VPC**, so nobody hard-codes private IPs.
+
+Design the Route 53 setup. For each requirement, name the **record type or routing policy**
+
