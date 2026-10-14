@@ -118,7 +118,19 @@ print(name)           # 'rahul'
 | `.startswith()` / `.endswith()`      | prefix/suffix check   | `"tx_1".startswith("tx_")` → `True`   |
 | `in`                                 | substring check       | `"@" in "a@b.com"` → `True`           |
 
+**TASK** - raw_id = " TX-2024-0045 "  
+1. strip the spaces  
+2. split on "-"  
+3. year = int of the 2nd part, number = int of the 3rd part  
+4. print: Year: 2024, Number: 45
 
+```python
+raw_id = "  TX-2024-0045 "
+parts = raw_id.strip().split("-")     # ['TX', '2024', '0045']
+year = int(parts[1])
+number = int(parts[2])                # int("0045") -> 45
+print(f"Year: {year}, Number: {number}")   # Year: 2024, Number: 45
+```
 
 ### Interview questions
 
@@ -126,6 +138,68 @@ print(name)           # 'rahul'
 
 2. Predict the output of `"python"[1:4]`, `"python"[::-1]`, `"python"[-3:]`. - `"python"[1:4]` → `"yth"`, `"python"[::-1]` → `"nohtyp"`, `"python"[-3:]` → `"hon"`.
 
-3. What’s the difference between `"a b c".split()` and `"a b c".split(" ")`?
+3. What’s the difference between `"a b c".split()` and `"a b c".split(" ")`? - `"a b c".split()` → `['a', 'b', 'c']` (any run of whitespace counts as one separator). `.split(" ")` → `['a', '', 'b', 'c']` (every single space splits, so you get an empty string).
 
-4. **Scenario:** a customer-name column has `" RAHUL sharma"`, `"rahul SHARMA "`, and `"Rahul Sharma"` (double space inside). You want to treat them as the same customer. What steps do you apply, in what order? _(Hint: Q3 holds the key to the double space.)_
+4. **Scenario:** a customer-name column has `" RAHUL sharma"`, `"rahul SHARMA "`, and `"Rahul Sharma"` (double space inside). You want to treat them as the same customer. What steps do you apply, in what order?  - `" ".join(name.split()).lower()`. The no-argument `split()` removes the edge and double spaces, `join` rebuilds with single spaces, and `lower()` fixes the case.
+
+---
+## Lesson 3: Lists, Tuples & Slicing
+
+- **List**: an ordered, **mutable** collection. You can add, remove, and change items. Written `[1, 2, 3]`.
+- **Tuple**: an ordered, **immutable** collection. Fixed once created. Written `(1, 2, 3)`.
+- **Slicing**: taking a piece of a list: `data[2:5]`
+
+**Industrial use:**
+
+- A list holds a batch of records: 10,000 transaction IDs waiting to be processed.
+- A tuple holds one fixed record, like `("tx_101", "user_a", 150.0)`. When you query a database with `sqlite3`, each row comes back as a tuple.
+
+**Problem it solves:** without lists you’d need `tx1, tx2, tx3...` as separate variables. Without tuples, a record can be changed accidentally by some other part of the code. A tuple says “this record is final.”
+
+### Code
+
+```python
+amounts = [150.0, 45.3, 300.0]
+amounts.append(99.5)        # add one item at the end
+amounts.extend([10, 20])    # add multiple items at the end
+amounts.insert(0, 500)      # add at a position
+amounts.remove(45.3)        # remove by VALUE
+last = amounts.pop()        # remove and return the last item (20)
+print(amounts)              # [500, 150.0, 300.0, 99.5, 10]
+```
+
+**Slicing** (start included, end excluded, same as strings):
+
+```python
+data = [10, 20, 30, 40, 50, 60]
+print(data[:3])     # [10, 20, 30]
+print(data[3:])     # [40, 50, 60]
+print(data[::2])    # [10, 30, 50]   (every 2nd item)
+print(data[-2:])    # [50, 60]       (last two)
+
+# Batching, used constantly in data engineering:
+for i in range(0, len(data), 4):
+    batch = data[i:i + 4]
+    print(batch)            # [10, 20, 30, 40] then [50, 60]
+```
+
+**Tuples and unpacking:**
+
+```python
+record = ("tx_101", "user_a", 150.0)
+tx_id, user, amount = record        # unpacking: 3 names, 3 values
+# record[2] = 99                    # TypeError: tuples can't be changed
+
+first, *rest = [1, 2, 3, 4]         # first=1, rest=[2, 3, 4]
+```
+
+**Looping patterns:**
+
+```python
+names = ["a", "b", "c"]
+for i, name in enumerate(names, start=1):   # index + value together
+    print(i, name)                          # 1 a, 2 b, 3 c
+
+for name, amt in zip(names, [10, 20, 30]):  # walk two lists in parallel
+    print(name, amt)
+```
