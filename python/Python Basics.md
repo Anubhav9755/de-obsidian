@@ -200,6 +200,28 @@ names = ["a", "b", "c"]
 for i, name in enumerate(names, start=1):   # index + value together
     print(i, name)                          # 1 a, 2 b, 3 c
 
-for name, amt in zip(names, [10, 20, 30]):  # walk two lists in parallel
-    print(name, amt)
+names = ["a", "b", "c"]
+amounts = [10, 20, 30]
+
+for name, amt in zip(names, [10,20,30]):  # walk two lists in parallel
+    print(name, amt)                        # a10 b20 c30
 ```
+
+## Python looping functions 
+
+| Function / pattern | What it does                          | Example                             |
+| ------------------ | ------------------------------------- | ----------------------------------- |
+| `enumerate()`      | Gives index/count + value             | `enumerate(names)`                  |
+| `zip()`            | Pairs multiple iterables              | `zip(names, amounts)`               |
+| `range()`          | Generates a sequence of numbers       | `range(0, 10, 2)`                   |
+| `reversed()`       | Iterates in reverse order             | `reversed(names)`                   |
+| `sorted()`         | Returns items in sorted order         | `sorted([3, 1, 2])`                 |
+| `map()`            | Applies a function to each item       | `map(str, [1, 2, 3])`               |
+| `filter()`         | Keeps items matching a condition      | `filter(lambda x: x > 10, amounts)` |
+| `sum()`            | Adds numeric items                    | `sum([10, 20, 30])`                 |
+| `min()`            | Returns the smallest item             | `min([10, 20, 30])`                 |
+| `max()`            | Returns the largest item              | `max([10, 20, 30])`                 |
+| `any()`            | `True` if at least one item is truthy | `any([False, True])`                |
+| `all()`            | `True` if every item is truthy        | `all([True, True])`                 |
+| `iter()`           | Gets an iterator from an iterable     | `iter(names)`                       |
+| `next()`           | Gets the next item from an iterator   | `next(iter(names))`                 |
