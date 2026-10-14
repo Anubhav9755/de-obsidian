@@ -2373,4 +2373,117 @@ Think of a publisher with one big printing press (the **origin**, your S3 bucket
 
 Without a CDN, every reader worldwide orders directly from that press. A reader in Brazil waits for the book to be shipped across the world, every single time.
 
-With **CloudFront**, the publisher sets up **local bookshops (edge locations)** in many cities. The first time someone in Brazil orders a book, the local shop fetches it from the press and **keeps a copy**. The next Brazilian customer is served from the shelf in minutes. The press is also less busy, because the shops absorb most of the demand
+With **CloudFront**, the publisher sets up **local bookshops (edge locations)** in many cities. The first time someone in Brazil orders a book, the local shop fetches it from the press and **keeps a copy**. The next Brazilian customer is served from the shelf in minutes. The press is also less busy, because the shops absorb most of the demand.
+
+### Definition
+
+**Amazon CloudFront** is AWS’s **content delivery network (CDN)**. It caches copies of your content at **edge locations** around the world, and serves users from the nearest one. This lowers latency, reduces load on your origin and can lower data-transfer costs.
+
+#### How a request flows
+
+1. A user requests `https://cdn.example.com/logo.png`. DNS (Route 53) routes them to the **nearest CloudFront edge location**.
+2. **Cache hit**: the edge already has `logo.png` (and it hasn’t expired), so it returns it immediately.
+3. **Cache miss**: the edge fetches it from the **origin**, stores it in cache (per the TTL), and returns it to the user.
+4. Later users near that edge get a cache hit.
+
+There is also a **regional edge cache** layer between the edge locations and the origin, which holds content longer and reduces origin fetches.
+
+#### Key terms
+
+- **Distribution**: the CloudFront configuration object. It has its own domain name, like `d111111abcdef8.cloudfront.net`, and you can attach a custom domain.
+
+- **Origin**: where the original content lives. It can be an **S3 bucket**, an **ALB/EC2**, API Gateway, or any HTTP server (even on-premises).
+
+- **Edge location**: a CloudFront point of presence (hundreds worldwide).
+
+- **Cache behavior**: rules that say “for paths matching `/images/*`, use origin A, cache for 1 day; for `/api/*`, use origin B and don’t cache”.
+
+- **TTL**: how long an object stays cached. You can control it with cache headers from the origin and distribution settings.
+
+- **Invalidation**: manually removes objects from the cache before their TTL expires (for example after you update a file). The first batch of paths each month is free, with charges after that. A better practice is **versioned file names** (like `app.v42.js`), which avoids the need to invalidate.
+
+- **OAC (Origin Access Control)**: lets CloudFront access a **private S3 bucket**, so the bucket doesn’t have to be public, and users can reach files only through CloudFront. This replaces the older OAI (Origin Access Identity).
+
+- **Signed URLs / signed cookies**: give time-limited access to private content (paid videos, subscriber downloads).
+
+- **HTTPS**: CloudFront supports HTTPS with free certificates from **AWS Certificate Manager (ACM)**. For CloudFront, the certificate must be created in **us-east-1**.
+
+- **AWS WAF and Shield**: attach **WAF** (web application firewall) to a distribution to filter malicious requests, and **Shield Standard** provides DDoS protection by default. Absorbing attacks at the edge protects your origin.
+
+- **Lambda@Edge and CloudFront Functions**: run small pieces of code at the edge (rewrite URLs, add headers, redirect, simple auth). CloudFront Functions are lighter and cheaper but more limited.
+
+- **Geo restriction**: allow or block countries.
+
+- CloudFront isn’t only for static files. It can also accelerate **dynamic content**, because requests ride AWS’s private backbone network between the edge and the origin, and connections are reused.
+
+- A CloudFront distribution is a **global service**, but its origin is in a specific Region.
+
+CloudFront **caches content** at the edge. **Global Accelerator** gives you **static anycast IP addresses** and routes TCP/UDP traffic over the AWS network to your endpoints with fast failover, but it **doesn’t cache**. Choose CloudFront for cacheable web content, and Global Accelerator for non-HTTP traffic or when you need fixed IPs.
+
+#### The industry problem it solves
+
+**Example: a news and video website** hosted in Mumbai.
+
+Without a CDN:
+
+1. Readers in the US and Europe wait seconds for images and videos to cross the world.
+2. During a breaking-news spike, millions of requests hit the origin servers, which can crash.
+3. The company pays for a lot of outbound data transfer from the origin Region.
+4. Premium video must only be viewable by paying subscribers, but if the S3 bucket is public, anyone with the link can share it.
+5. Attackers send floods of junk requests directly at the origin.
+
+CloudFront addresses these: users are served from nearby edges, the spike is absorbed by edge caches (the origin sees only the misses), the S3 bucket stays private behind **OAC**, premium content uses **signed URLs**, and **WAF/Shield** blocks bad traffic before it reaches the origin.
+
+#### CODE
+
+Create a private S3 bucket served through CloudFront (CLI, simplified):
+
+```
+# 1. Create a bucket (stays private) and upload a test file
+aws s3 mb s3://learnco-static-demo-12345 --region ap-south-1
+echo "<h1>Hello from the edge</h1>" > index.html
+aws s3 cp index.html s3://learnco-static-demo-12345/
+
+# 2. Create an Origin Access Control (OAC) for CloudFront
+aws cloudfront create-origin-access-control \
+  --origin-access-control-config '{
+    "Name": "learnco-oac",
+    "SigningProtocol": "sigv4",
+    "SigningBehavior": "always",
+    "OriginAccessControlOriginType": "s3"
+  }'
+```
+
+```
+# 3. Create the distribution (config file holds the origin, default behavior, and OAC id)
+aws cloudfront create-distribution --distribution-config file://dist-config.json
+```
+
+**Bucket policy that lets only that CloudFront distribution read the bucket:**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "AllowCloudFrontServicePrincipalReadOnly",
+    "Effect": "Allow",
+    "Principal": { "Service": "cloudfront.amazonaws.com" },
+    "Action": "s3:GetObject",
+    "Resource": "arn:aws:s3:::learnco-static-demo-12345/*",
+    "Condition": {
+      "StringEquals": {
+        "AWS:SourceArn": "arn:aws:cloudfront::123456789012:distribution/EDFDVBD6EXAMPLE"
+      }
+    }
+  }]
+}
+```
+
+**Invalidate cached files after an update:**
+
+```bash
+aws cloudfront create-invalidation \
+  --distribution-id EDFDVBD6EXAMPLE \
+  --paths "/index.html" "/css/*"
+```
+
