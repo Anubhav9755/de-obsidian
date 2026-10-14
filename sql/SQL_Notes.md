@@ -3989,3 +3989,4 @@ SELECT * FROM accounts;
 2. If both UPDATE queries complete without raising an exception, COMMIT permanently persists changes to disk.
 
 3. If an error occurs midway, ROLLBACK wipes all uncommitted mutations made since BEGIN TRANSACTION.
+
