@@ -2271,3 +2271,13 @@ aws route53 change-resource-record-sets \
   --change-batch file://latency-records.json
 ```
 
+**What this does:**
+
+- Step 1 creates the **hosted zone** (the container for your domain’s records). It gives you four **name servers**, and you must set these at your domain registrar so the internet knows Route 53 is in charge.
+- The health check probes `/health` every 30 seconds. After 3 failures it marks the endpoint unhealthy.
+- Both records have the **same name** (`app.foodco.com`) and **different `SetIdentifier`s**, which is how Route 53 tells records of the same name apart in routing policies.
+- `Region` makes this **latency-based**: a user is answered with the record for the Region that gives them the lowest latency.
+- **Alias** records point at the load balancers, and `EvaluateTargetHealth: true` makes Route 53 skip a load balancer whose targets are all unhealthy.
+- If Mumbai is unhealthy, Route 53 stops returning it, and everyone gets Singapore. No human action is needed.
+
+**Weighted example (the 5% canary), as a concept:** two records for the same name, one with `Weight: 95` pointing to the stable version and one with `Weight: 5` pointing to the new version. Set the new one to `0` to turn it off, or raise it step by step.
