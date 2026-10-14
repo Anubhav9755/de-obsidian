@@ -4257,3 +4257,63 @@ UPDATE accounts SET balance = balance + 50 WHERE account_id = 1;
 
 ----
 
+### SAVEPOINT
+
+#### Definition
+
+A `SAVEPOINT` is a structural sub-division marker set inside an active database transaction. It establishes a logical recovery checkpoint, allowing developers to partially roll back a transaction to a specific point without discarding all work completed earlier in the same transaction block.
+
+#### Application
+
+- **Complex Batch Processing:** Executing a series of independent insert or update steps within a single transaction where the failure of one minor step should not abort the entire batch.
+
+- **Conditional Error Recovery:** Gracefully handling optional row insertions or secondary data writes without losing primary transactional progress.
+
+#### Real-World Problem and Solution
+
+- **Problem:** An ETL script processes a batch of 10 customer records inside a single transaction. Records 1 through 5 insert successfully, but Record 6 triggers a check constraint violation due to malformed data. Under standard transactional rules, an error aborts the entire transaction, rolling back records 1 through 5 and wasting valid progress.
+
+- **Solution:** Setting a `SAVEPOINT` before each individual record insertion allows the script to catch errors per record, execute a `ROLLBACK TO SAVEPOINT` for the failed record only, and continue processing records 7 through 10 successfully.
+
+#### Industrial Example
+
+An enterprise order processing pipeline handles multi-item checkouts. When adding optional warranty add-ons to an order, if the warranty inventory table throws an exception, the pipeline rolls back only to the warranty savepoint, preserving the primary product purchase transaction.
+
+#### Code and Explanation
+
+```
+-- Target Table Setup
+CREATE TABLE batch_logs (
+    log_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    message VARCHAR(255) NOT NULL
+);
+
+-- 1. Standard Transaction with SAVEPOINT (PostgreSQL, MySQL, Oracle)
+BEGIN TRANSACTION;
+
+INSERT INTO batch_logs (message) VALUES ('Step 1: Initialized batch pipeline');
+
+-- Set a named savepoint
+SAVEPOINT sp_step1_complete;
+
+INSERT INTO batch_logs (message) VALUES ('Step 2: Processing core records');
+
+-- Simulate an issue or conditional failure requiring partial rollback
+-- ROLLBACK TO SAVEPOINT sp_step1_complete;
+
+-- Release savepoint memory resources when no longer needed
+RELEASE SAVEPOINT sp_step1_complete;
+
+INSERT INTO batch_logs (message) VALUES ('Step 3: Finalizing transaction');
+
+COMMIT;
+```
+
+SQL Server uses SAVE TRANSACTION instead of SAVEPOINT:
+
+- **`SAVEPOINT name`:** Places a marker inside the current transaction log stream.
+
+- **`ROLLBACK TO SAVEPOINT name`:** Reverts all database changes made _after_ the specified savepoint while keeping modifications made _before_ it intact.
+
+- **`RELEASE SAVEPOINT name`:** Destroys the savepoint marker, freeing up internal transaction state memory. (Note: Committing or rolling back the parent transaction destroys all savepoints automatically).
+
