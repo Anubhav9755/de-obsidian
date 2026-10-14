@@ -4062,3 +4062,48 @@ COMMIT;
 
 #### MVCC (Multi-Version Concurrency Control), Snapshot Isolation, and Demo
 
+**MVCC (Multi-Version Concurrency Control)** is an architectural concurrency model used by modern database engines (like PostgreSQL, Oracle, and MySQL InnoDB) to avoid read-write locking conflicts. Instead of locking data rows during read operations, MVCC maintains multiple physical versions (or tuples) of a single logical row.
+
+**Snapshot Isolation:** A specific implementation of MVCC where a transaction reads a consistent point-in-time snapshot of the database as it existed at the exact moment the transaction began, entirely ignoring subsequent uncommitted or committed modifications made by concurrent transactions.
+
+#### Application
+
+- **High-Concurrency Reads:** Allowing long-running analytical read queries to execute concurrently alongside rapid write operations without blocking each other.
+
+- **Eliminating Read Locks:** Preventing readers from blocking writers and writers from blocking readers, drastically improving database throughput.
+
+#### Real-World Problem and Solution
+
+- **Problem:** In legacy locking databases, if an analytical report queries the `orders` table, it acquires shared read locks, blocking all incoming checkout transactions until the report finishes. This causes application timeouts during peak hours.
+
+- **Solution:** MVCC creates a private version snapshot for the reporting transaction. The reporting query reads older row versions directly from storage data pages without acquiring locks, while concurrent checkout transactions write new row versions simultaneously without obstruction.
+
+#### Industrial Example
+
+An e-commerce order tracking dashboard queries real-time item status metrics while warehouse workers update package statuses concurrently. Thanks to MVCC snapshot isolation, neither workflow blocks the other, ensuring zero dashboard lag and zero checkout locks.
+
+#### Code and Demonstration: Reproducing a Non-Repeatable Read
+
+```
+-- SESSION 1: Begins transaction under READ COMMITTED isolation
+BEGIN TRANSACTION;
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+
+-- Step 1: Read initial balance
+SELECT balance FROM accounts WHERE account_id = 1; 
+-- Returns: 500.00
+
+---------------------------------------------------------
+-- SESSION 2 (Concurrently executed in separate window):
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = 750.00 WHERE account_id = 1;
+COMMIT; -- Session 2 commits changes successfully!
+---------------------------------------------------------
+
+-- Step 2: Re-read the exact same row in Session 1
+SELECT balance FROM accounts WHERE account_id = 1; 
+-- Returns: 750.00 (Value changed! This is a Non-Repeatable Read)
+
+COMMIT;
+```
+
