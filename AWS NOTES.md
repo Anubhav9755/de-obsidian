@@ -2224,7 +2224,7 @@ aws route53 create-health-check \
       "ResourcePath": "/health",
       "RequestInterval": 30,
       "FailureThreshold": 3
-  }'
+  }
 ```
 
 Latency-based records with health checks (change batch, JSON):
@@ -2666,4 +2666,73 @@ Problems with using only the internet:
 A Direct Connect link (two links at two locations for resilience, with encryption added over it) gives the bank stable latency, lots of bandwidth, lower transfer costs and a private path. A common supporting setup is a **Site-to-Site VPN as a backup** in case both links fail.
 
 **Where it is a poor fit:** a small startup with light traffic, a short-term project, or a deployment that has to be up next week. A VPN is the better, quicker and cheaper choice there.
+
+#### CODE
+**Create the AWS-side objects (CLI):**
+
+```bash
+# 1. Order a dedicated connection at a Direct Connect location (this starts a real, billable request)
+aws directconnect create-connection \
+  --location EqDC2 \
+  --bandwidth 1Gbps \
+  --connection-name bank-dx-primary
+
+# 2. Create a Direct Connect Gateway (so one link can reach VPCs in several Regions)
+aws directconnect create-direct-connect-gateway \
+  --direct-connect-gateway-name bank-dx-gw \
+  --amazon-side-asn 64512
+
+# 3. Create a private virtual interface on the connection
+aws directconnect create-private-virtual-interface \
+  --connection-id dxcon-xxxxxxxx \
+  --new-private-virtual-interface '{
+      "virtualInterfaceName": "bank-private-vif",
+      "vlan": 101,
+      "asn": 65000,
+      "authKey": "<BGP-auth-key>",
+      "amazonAddress": "169.254.255.1/30",
+      "customerAddress": "169.254.255.2/30",
+      "directConnectGatewayId": "<dx-gateway-id>"
+  }'
+```
+
+**What this does:**
+
+- Step 1 requests the physical port. AWS then issues a **Letter of Authorization (LOA-CFA)** that you give to the colocation provider so they can run the **cross-connect** (the physical cable) to your equipment. This is the slow, human part.
+
+- Step 2 creates the gateway object that can attach to Virtual Private Gateways or Transit Gateways in multiple Regions.
+
+- Step 3 creates the **logical VIF** with a **VLAN** (a tag that separates traffic on the shared cable), **BGP** details (your ASN, the two link-local peering addresses and an authentication key). BGP then advertises your on-premises routes to AWS and AWS’s VPC routes to you.
+
+- Finally you must add **route table entries** in the VPC pointing on-premises address ranges to the gateway, and allow that traffic in **security groups** and **NACLs**. A very common cause of “the link is up but nothing works” is a missing route or a blocked security group.
+
+**Practice-friendly version: Site-to-Site VPN (works in any account):**
+
+```bash
+aws ec2 create-vpn-gateway --type ipsec.1
+aws ec2 attach-vpn-gateway --vpn-gateway-id vgw-xxxx --vpc-id vpc-xxxx
+aws ec2 create-customer-gateway --type ipsec.1 --public-ip <your-router-public-ip> --bgp-asn 65000
+aws ec2 create-vpn-connection --type ipsec.1 \
+  --customer-gateway-id cgw-xxxx --vpn-gateway-id vgw-xxxx
+```
+
+This produces the same **VGW + customer gateway + routing** concepts that Direct Connect uses, over an encrypted internet tunnel.
+
+#### Interview questions with answers
+
+**Q1. A security team states: “We’re using Direct Connect, so our data is encrypted in transit.” Is that correct? What would you tell them, and what are the fixes?**
+
+**Answer:** No. Direct Connect is **private**, not **encrypted by default**. The traffic avoids the public internet, but the data on the wire isn’t scrambled, and anyone with access to the path (for example inside the colocation facility or the carrier network) could in principle read it. To meet an encryption requirement, either run an **IPsec VPN over Direct Connect** (over a public or transit VIF), use **MACsec** on supported dedicated connections (hop-by-hop Layer 2 encryption between your router and the AWS device), or encrypt at the application layer with **TLS**. Many compliance frameworks accept a layered combination.
+
+**Q2. Your company needs connectivity to AWS by next Friday, but Direct Connect takes weeks. The data volumes are modest at first, but will grow big. What do you do?**
+
+**Answer:** Start with a **Site-to-Site VPN**, which can be created within hours, so the project isn’t blocked. In parallel, order Direct Connect. When the physical link is ready, **keep the VPN as a backup path**. With BGP, AWS prefers Direct Connect routes over VPN routes when both exist, so traffic shifts to the dedicated link automatically and falls back to the VPN if the link fails. This is an extremely common phased rollout.
+
+**Q3. A single Direct Connect link has been running for a year with no problems. A construction crew cuts the fiber, and the company’s AWS-hosted app loses all access to the on-premises database for 6 hours. What was the design flaw, and what would you build?**
+
+**Answer:** The flaw was a **single point of failure**: one physical connection at one location. The fix depends on how critical the workload is. For maximum resilience, use **two Direct Connect connections at two different Direct Connect locations** (and ideally different carriers and paths), so even a whole-location failure doesn’t take the service down. A cheaper alternative for less critical workloads is **one Direct Connect link plus a Site-to-Site VPN backup**. Whichever you pick, **test the failover** regularly, because untested failover often doesn’t work, and verify that BGP is configured so the backup path really takes over.
+
+**Q4. You have the same on-premises data center and 12 VPCs spread across 3 Regions and several accounts. How do you connect them without creating 12 separate Direct Connect setups?**
+
+**Answer:** Use **a single Direct Connect connection with a Direct Connect Gateway**, which lets one set of virtual interfaces reach VPCs in **multiple Regions and accounts**. Where there are many VPCs, a **Transit Gateway** acts as the hub, so you attach the VPCs to the Transit Gateway and connect Direct Connect to it through a **transit VIF**, avoiding a mesh of one-to-one connections. Plan address ranges carefully so **VPC CIDRs don’t overlap** with each other or with the on-premises network, because overlapping ranges can’t be routed properly.
 
