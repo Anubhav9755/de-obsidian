@@ -2206,3 +2206,68 @@ Problems without Route 53:
 
 Route 53 solves all four: an Alias record for friendly naming, **latency-based routing** for speed, **health checks plus failover** for resilience, and **weighted routing** for the gradual rollout.
 
+#### CODE
+
+```
+# 1. Create a public hosted zone for your domain
+aws route53 create-hosted-zone \
+  --name foodco.com \
+  --caller-reference "foodco-2026-10-13"
+
+# 2. Create a health check for the Mumbai endpoint
+aws route53 create-health-check \
+  --caller-reference "mumbai-hc-1" \
+  --health-check-config '{
+      "Type": "HTTPS",
+      "FullyQualifiedDomainName": "mumbai-alb-123.ap-south-1.elb.amazonaws.com",
+      "Port": 443,
+      "ResourcePath": "/health",
+      "RequestInterval": 30,
+      "FailureThreshold": 3
+  }'
+```
+
+Latency-based records with health checks (change batch, JSON):
+
+```
+{
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "app.foodco.com",
+        "Type": "A",
+        "SetIdentifier": "mumbai",
+        "Region": "ap-south-1",
+        "HealthCheckId": "<mumbai-health-check-id>",
+        "AliasTarget": {
+          "HostedZoneId": "<ALB hosted zone id for ap-south-1>",
+          "DNSName": "mumbai-alb-123.ap-south-1.elb.amazonaws.com",
+          "EvaluateTargetHealth": true
+        }
+      }
+    },
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "app.foodco.com",
+        "Type": "A",
+        "SetIdentifier": "singapore",
+        "Region": "ap-southeast-1",
+        "AliasTarget": {
+          "HostedZoneId": "<ALB hosted zone id for ap-southeast-1>",
+          "DNSName": "sg-alb-456.ap-southeast-1.elb.amazonaws.com",
+          "EvaluateTargetHealth": true
+        }
+      }
+    }
+  ]
+}
+```
+
+```
+aws route53 change-resource-record-sets \
+  --hosted-zone-id <your-hosted-zone-id> \
+  --change-batch file://latency-records.json
+```
+
