@@ -2736,3 +2736,27 @@ This produces the same **VGW + customer gateway + routing** concepts that Direct
 
 **Answer:** Use **a single Direct Connect connection with a Direct Connect Gateway**, which lets one set of virtual interfaces reach VPCs in **multiple Regions and accounts**. Where there are many VPCs, a **Transit Gateway** acts as the hub, so you attach the VPCs to the Transit Gateway and connect Direct Connect to it through a **transit VIF**, avoiding a mesh of one-to-one connections. Plan address ranges carefully so **VPC CIDRs don’t overlap** with each other or with the on-premises network, because overlapping ranges can’t be routed properly.
 
+**Q5. The Direct Connect link shows “up” and BGP shows established, but your application servers in the VPC still can’t reach the on-premises database. List the checks you’d make.**
+
+**Answer:** A healthy link only means the network layer is up. The problem is usually elsewhere, so I’d check in this order:
+
+1. **VPC route table**: is there a route for the on-premises CIDR pointing at the VGW or Transit Gateway? (Enable **route propagation** or add it manually.)
+2. **Security groups** on the instances: do they allow traffic from the on-premises CIDR on the right port?
+3. **NACLs** on the subnets (Lesson 23): they are stateless, so both inbound and outbound rules (including return ports) must allow the traffic.
+4. **On-premises firewall and routing**: is there a return route back to the VPC CIDR, and does the firewall allow it?
+5. **BGP advertisements**: is the on-premises prefix actually being advertised to AWS, and is the VPC prefix being received by your router (and are any route filters or prefix limits blocking it)?
+6. **Overlapping CIDRs** between the VPC and on-premises.
+7. **MTU issues**: large packets dropped due to mismatched maximum transmission unit settings, especially with VPN over Direct Connect.
+
+#### Scenario question
+
+**Scenario:** You are the cloud engineer at **MediCore**, a healthcare-analytics company.
+
+- Patient records live in a **data center in Pune**. For compliance, the main patient database **must stay on-premises**.
+- A new analytics platform runs in **AWS Mumbai** (EC2 and Redshift) and must read about **2 TB of data from Pune every night**, and the app servers in AWS also call the Pune database in real time during the day, where latency spikes cause timeouts.
+- A regulator requires that **patient data must not travel over the public internet**, and that **data in transit must be encrypted**.
+- The business says the platform must **not go down** because of a single network failure.
+- The company will soon add two more VPCs in **Mumbai** and one in **Hyderabad (ap-south-2)**, which must also reach Pune.
+- The project must **start next week**, but a Direct Connect link normally takes 4 to 6 weeks to provision.
+
+Design the connectivity. For each point, name the AWS features and explain your reasoning:
