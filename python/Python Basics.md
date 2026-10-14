@@ -117,3 +117,15 @@ print(name)           # 'rahul'
 | `.replace(old, new)`                 | swaps text            | `"1,200".replace(",", "")` → `"1200"` |
 | `.startswith()` / `.endswith()`      | prefix/suffix check   | `"tx_1".startswith("tx_")` → `True`   |
 | `in`                                 | substring check       | `"@" in "a@b.com"` → `True`           |
+
+
+
+### Interview questions
+
+1. What does “strings are immutable” mean? What happens on `s = "abc"; s[0] = "X"`? - Immutable means a string can’t be changed in place. `s[0] = "X"` raises `TypeError: 'str' object does not support item assignment`.
+
+2. Predict the output of `"python"[1:4]`, `"python"[::-1]`, `"python"[-3:]`. - `"python"[1:4]` → `"yth"`, `"python"[::-1]` → `"nohtyp"`, `"python"[-3:]` → `"hon"`.
+
+3. What’s the difference between `"a b c".split()` and `"a b c".split(" ")`?
+
+4. **Scenario:** a customer-name column has `" RAHUL sharma"`, `"rahul SHARMA "`, and `"Rahul Sharma"` (double space inside). You want to treat them as the same customer. What steps do you apply, in what order? _(Hint: Q3 holds the key to the double space.)_
