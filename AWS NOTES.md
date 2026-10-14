@@ -2206,5 +2206,3 @@ Problems without Route 53:
 
 Route 53 solves all four: an Alias record for friendly naming, **latency-based routing** for speed, **health checks plus failover** for resilience, and **weighted routing** for the gradual rollout.
 
-#### CODE
-
