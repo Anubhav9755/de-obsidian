@@ -4152,3 +4152,108 @@ While MVCC handles read-write concurrency without blocking, database **locks** a
 
 - **Optimistic Locking:** A concurrency pattern that avoids database locks entirely. Instead, we include a `version` integer column in our table; when updating a row, we check that `version` has not changed since we read it, aborting the write if a conflict is detected.
 
+#### Real-World Problem and Solution
+
+- **Problem:** A background job queue worker processes pending email notifications from a `jobs` table. If multiple worker threads query `SELECT * FROM jobs WHERE status = 'PENDING' LIMIT 1`, they often grab the exact same job row concurrently, resulting in duplicate processing and race conditions.
+    
+- **Solution:** Using `SELECT * FROM jobs WHERE status = 'PENDING' LIMIT 1 FOR UPDATE SKIP LOCKED;` ensures that each worker locks and pulls a distinct, un-claimed job row instantly, bypassing locked rows and eliminating queue contention entirely.
+
+#### Industrial Example
+
+An enterprise flight ticket booking platform uses `SELECT ... FOR UPDATE` when a customer initiates seat selection. This locks the specific seat row immediately so that no other user can book the same seat during checkout payment processing.
+
+#### Code and Explanation
+
+```
+-- Target Table Setup
+CREATE TABLE job_queue (
+    job_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    task_name VARCHAR(100) NOT NULL,
+    status VARCHAR(20) DEFAULT 'PENDING'
+);
+
+-- 1. Job Queue Pattern using SKIP LOCKED (Zero-wait concurrency)
+BEGIN TRANSACTION;
+
+SELECT job_id, task_name 
+FROM job_queue 
+WHERE status = 'PENDING'
+LIMIT 1 
+FOR UPDATE SKIP LOCKED;
+
+-- Update the grabbed job status to 'PROCESSING'
+UPDATE job_queue 
+SET status = 'PROCESSING' 
+WHERE job_id = 1; -- (Using the grabbed ID)
+
+COMMIT;
+
+-- 2. Strict Locking with NOWAIT (Fails instantly if locked)
+BEGIN TRANSACTION;
+SELECT * FROM accounts WHERE account_id = 1 FOR UPDATE NOWAIT;
+COMMIT;
+```
+
+- **`FOR UPDATE`:** Places an exclusive lock on the selected row tuples.
+
+- **`SKIP LOCKED`:** Excludes locked records from the result set dynamically, making it ideal for distributed worker pools.
+
+- **`NOWAIT`:** Replaces the default blocking behavior (which waits indefinitely for locks to release) with an immediate exception throw if a lock conflict is encountered.
+
+#### Blocking vs. Deadlocks and Resolution
+
+- **Blocking:** Occurs naturally when Transaction A holds a lock on a resource and Transaction B is forced to wait in line until Transaction A commits or rolls back. Blocking is normal and healthy in transactional systems.
+    
+- **Deadlock:** A catastrophic circular dependency where **Transaction A** holds a lock on Resource 1 and waits for Resource 2, while **Transaction B** holds a lock on Resource 2 and waits for Resource 1. Neither transaction can proceed.
+    
+- **Detection & Victim Selection:** Database engines run background deadlock detector threads that analyze lock graphs. Once a circular dependency is detected, the engine automatically selects one transaction as the **victim**, rolls back its uncommitted changes, and throws a deadlock error, allowing the surviving transaction to complete successfully.
+
+**Prevention Strategies:**
+
+1. **Consistent Lock Order:** Always access multi-table resources in the exact same logical sequence across all application code paths.
+
+2. **Short Transactions:** Keep transaction blocks as short as possible to minimize lock holding times.
+
+3. **Proper Indexing:** Ensure foreign keys and lookup columns are indexed to prevent unnecessary table-level or range-level lock escalations.
+
+4. **Lock Timeouts:** Configure `lock_timeout` parameters so transactions fail gracefully rather than hanging indefinitely.
+
+#### Demonstration: Creating and Resolving a Deadlock
+
+```
+-- SESSION 1:
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 50 WHERE account_id = 1; -- Locks Account 1
+
+-----------------------------------------------------------------
+-- SESSION 2 (Concurrently executed in separate window):
+BEGIN TRANSACTION;
+UPDATE accounts SET balance = balance - 50 WHERE account_id = 2; -- Locks Account 2
+-----------------------------------------------------------------
+
+-- SESSION 1 tries to access Account 2 (Blocked waiting for Session 2)
+UPDATE accounts SET balance = balance + 50 WHERE account_id = 2;
+
+-----------------------------------------------------------------
+-- SESSION 2 tries to access Account 1 (Blocked waiting for Session 1)
+-- DEADLOCK DETECTED! Database aborts one session automatically.
+UPDATE accounts SET balance = balance + 50 WHERE account_id = 1;
+-----------------------------------------------------------------
+```
+
+#### Interview Questions & Answers
+
+- **Q1: What is the difference between Optimistic Locking and Pessimistic Locking?**
+    
+    - _Answer:_ **Pessimistic locking** (`SELECT ... FOR UPDATE`) assumes conflicts are frequent and locks records immediately when read. **Optimistic locking** assumes conflicts are rare, uses no database locks during reads, and checks a `version` column upon write to detect if another transaction modified the data in the meantime.
+    
+- **Q2: How does `SKIP LOCKED` improve queue performance compared to standard queries?**
+
+	- _Answer:_ Standard queries without `SKIP LOCKED` cause worker threads to block each other waiting for locked rows, creating serialization bottlenecks. `SKIP LOCKED` allows parallel workers to bypass locked tasks instantly, scaling queue processing linearly across multiple threads.
+	
+- **Q3: How can we prevent deadlocks in our application architecture?**
+
+	- _Answer:_ We prevent deadlocks by establishing strict ordering rules for multi-resource acquisitions, keeping transactions small, adding indexes to avoid heavy lock escalations, and implementing application-level retry logic when deadlock exceptions occur.
+
+----
+
