@@ -1,9 +1,3 @@
----
-title: Python Building — Notes
-tags: [python, notes, data-engineering]
-source: Python_building.ipynb
-created: 2026-10-14
----
 
 # Python Building — Notes
 
