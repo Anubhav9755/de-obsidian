@@ -225,3 +225,30 @@ for name, amt in zip(names, [10,20,30]):  # walk two lists in parallel
 | `all()`            | `True` if every item is truthy        | `all([True, True])`                 |
 | `iter()`           | Gets an iterator from an iterable     | `iter(names)`                       |
 | `next()`           | Gets the next item from an iterator   | `next(iter(names))`                 |
+**Two traps:**
+
+```python
+# Trap 1: assignment does NOT copy a list. Both names point to the same list.
+a = [1, 2, 3]
+b = a
+b.append(4)
+print(a)            # [1, 2, 3, 4]   a changed too!
+c = a.copy()        # a real (shallow) copy; also a[:] or list(a)
+
+# Trap 2: .sort() sorts in place and RETURNS None
+nums = [3, 1, 2]
+nums.sort()                 # nums is now [1, 2, 3]
+ordered = sorted(nums)      # sorted() returns a NEW list
+```
+
+### Print each order as `o1 -> 120.00`, then change it to print only the orders above 100: 
+orders = [("o1", 120.0), ("o2", 45.5), ("o3", 300.0)]
+
+```python
+for order_id, amount in orders:        # unpack each tuple right in the loop
+    if amount > 100:
+        print(f"{order_id} -> {amount:.2f}")
+# o1 -> 120.00
+# o3 -> 300.00
+```
+
