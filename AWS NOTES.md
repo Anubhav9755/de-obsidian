@@ -2367,3 +2367,10 @@ Alias records are what make this chaining possible, since an Alias can point to 
 
 ---
 
+### Amazon CloudFront
+
+Think of a publisher with one big printing press (the **origin**, your S3 bucket or server in Mumbai).
+
+Without a CDN, every reader worldwide orders directly from that press. A reader in Brazil waits for the book to be shipped across the world, every single time.
+
+With **CloudFront**, the publisher sets up **local bookshops (edge locations)** in many cities. The first time someone in Brazil orders a book, the local shop fetches it from the press and **keeps a copy**. The next Brazilian customer is served from the shelf in minutes. The press is also less busy, because the shops absorb most of the demand
