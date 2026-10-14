@@ -2581,3 +2581,22 @@ Honest caveat: within the 10-minute window, the signed URL could still be shared
 **us-east-1 (N. Virginia).** CloudFront is a global service, and it only accepts **ACM certificates created in us-east-1**. If you create the certificate in Mumbai, it won’t appear in the CloudFront certificate list. (The ALB in Mumbai needs its own certificate in **ap-south-1** if you want HTTPS between CloudFront and the ALB, which you should.) Also set the distribution’s **alternate domain name (CNAME)** to `www.stylekart.com` and point Route 53 to it with an **Alias record**.
 
 ---
+
+### AWS Direct Connect
+
+- **VPC** is your private network inside AWS. It has subnets, route tables and gateways. Traffic leaves it through an **Internet Gateway (IGW)** or a **NAT gateway**.
+- **On-premises** means servers in your own office or data center, outside AWS.
+- **Hybrid cloud (Lesson 2)** means running part of a workload on-premises and part in AWS.
+- **Region and AZ (Lesson 8)**: AWS infrastructure is grouped into Regions made of AZs.
+- **Latency** is the delay of a request. **Bandwidth** is how much data can flow per second. 
+- **Encryption in transit**: scrambling data while it travels, so interceptors can’t read it. **VPN** (virtual private network) is an encrypted tunnel, usually over the public internet.
+- **Route 53 (Lesson 28)** has a Resolver that helps on-premises and VPC networks resolve each other’s names, which matters in hybrid setups.
+
+You have a head office (your **data center**) and a warehouse (your **AWS VPC**), and trucks carry goods between them every day.
+
+- **Site-to-Site VPN** is sending the trucks over the **public highway** with locked containers. It’s quick to set up and cheap, but traffic is stuck in the same jams as everyone else, so speed and travel time vary.
+- **Direct Connect** is building a **private dedicated road** between your head office and the warehouse. Nobody else uses it, so travel time is steady and predictable, you can run many trucks at once, and the data transfer rates are lower. It takes weeks to build and costs more upfront.
+
+### Definition
+
+**AWS Direct Connect (DX)** is a service that creates a **dedicated, private network connection** between your on-premises network (data center, office or colocation facility) and AWS, **bypassing the public internet**.
