@@ -2324,3 +2324,46 @@ To tighten it: use **fast health checks (10-second interval)** with a lower fail
 
 Design the Route 53 setup. For each requirement, name the **record type or routing policy**
 
+#### 1. Automatic recovery from the Mumbai outage
+
+Use **failover routing with a health check**.
+
+- Create a **health check** on the Mumbai ALB’s `/health` endpoint.
+- Create two records for the same name: Mumbai as **PRIMARY** (tied to the health check) and Singapore as **SECONDARY**.
+- When Mumbai fails its checks, Route 53 stops returning it and answers with Singapore. No human has to edit DNS, which is exactly what went wrong last month.
+- Use **Alias records with `EvaluateTargetHealth`**, a **low TTL (30 to 60 seconds)** and a **fast (10-second) health check** to shorten detection and caching delays, as discussed in Q5.
+
+#### 2. Fast access for UK and Gulf students
+
+Use **latency-based routing**, adding a **London** record alongside Mumbai (and Singapore). UK users will usually be answered with London. Gulf users will be answered with whichever Region measures lowest latency for them, which could be Mumbai or London, and Route 53 decides that from network measurements, so you don’t have to guess. Each latency record gets its own health check so an unhealthy Region is skipped.
+
+#### 3. The EU data rule
+
+Use **geolocation routing**, not latency. This is a **legal requirement based on where the user is**, so speed must not decide it. Create a geolocation record for **Europe (or the specific EU countries)** pointing to London. Also create a **default** geolocation record for everyone else, because users who match no rule would otherwise get no answer.
+
+One honest caveat: DNS routing only controls **which endpoint a user is sent to**. Real data-residency compliance also requires that EU data is **stored only in London** (database and backups) and that the application doesn’t replicate it elsewhere. Route 53 alone doesn’t guarantee that.
+
+#### 4. The 10% gradual rollout
+
+Use **weighted routing**: one record with weight **90** for the stable version and one with weight **10** for the new version. Each should have a health check. Ramp up in steps (10 → 25 → 50 → 100), and set the new version’s weight to **0** to roll back instantly (subject to TTL, so keep the TTL low during the rollout).
+
+#### 5. Internal names for the database
+
+Use a **private hosted zone** for `learnco.internal`, associated with the VPC(s) that need it, and create an **A record** (or an alias/CNAME to the database endpoint) named `db.learnco.internal`. These names resolve only inside the associated VPCs. This also means that when the database endpoint changes after a failover or rebuild, you update one record and nothing is hard-coded in application code. For Aurora, point to the **cluster endpoint** (Lesson 26), which already follows the writer.
+
+#### 6. Does `learnco.com` need a CNAME?
+
+No. The root (zone apex) **cannot** have a CNAME. Use an **Alias record (type A and AAAA)** pointing at the ALB. It’s free for queries to AWS resources and tracks IP changes. `videos.learnco.com` is a subdomain, so a CNAME would be allowed there, but an Alias is still better if it points to an AWS resource such as CloudFront (our next lesson).
+
+##### Can two policies be combined on the same name?
+
+Yes, through **nested records (a routing tree)**. You can’t attach two policies to a single record, but one record can point to another record set. Example for this scenario:
+
+- At the top, a **geolocation** record: Europe → London, default → a “global” name.
+- The “global” name is a **latency** record set that picks the fastest Region.
+- Under each Region’s record, a **weighted** set handles the 90/10 rollout, and **failover** can sit below that.
+
+Alias records are what make this chaining possible, since an Alias can point to another record in the same hosted zone. Keep trees shallow, because complexity makes debugging DNS harder.
+
+---
+
