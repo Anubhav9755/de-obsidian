@@ -4460,3 +4460,122 @@ GROUP BY region;
 - **Q2: Can we use `PERCENTILE_CONT` as a window function with `OVER()`?**
     
     - _Answer:_ Yes. In modern database engines (like PostgreSQL, Snowflake, and BigQuery), we can write `PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY col) OVER (PARTITION BY category)` to calculate rolling or partitioned medians while retaining row-level details.
+
+```
+-- 1. Setup Table and Sample Data
+CREATE TABLE employee_salaries (
+    emp_id INT,
+    emp_name VARCHAR(50),
+    department VARCHAR(50),
+    salary DECIMAL(10, 2)
+);
+
+INSERT INTO employee_salaries VALUES
+(1, 'Amit', 'Data Science', 95000.00),
+(2, 'Neha', 'Engineering', 110000.00),
+(3, 'Ananya', 'Marketing', 70000.00),
+(4, 'Rohan', 'Data Science', 80000.00),
+(5, 'Pooja', 'Engineering', 115000.00),
+(6, 'Vikram', 'Engineering', 105000.00),
+(7, 'Sita', 'Data Science', 105000.00);
+
+-- 2. Execute Query with Windowed PERCENTILE_CONT
+SELECT 
+    emp_name,
+    department,
+    salary,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salary) OVER (PARTITION BY department) AS dept_median_salary
+FROM employee_salaries;
+```
+
+| **emp_name** | **department** | **salary** | **dept_median_salary** |
+| ------------ | -------------- | ---------- | ---------------------- |
+| Rohan        | Data Science   | 80000.00   | 95000.00               |
+| Amit         | Data Science   | 95000.00   | 95000.00               |
+| Sita         | Data Science   | 105000.00  | 95000.00               |
+| Neha         | Engineering    | 110000.00  | 110000.00              |
+| Vikram       | Engineering    | 105000.00  | 110000.00              |
+| Pooja        | Engineering    | 115000.00  | 110000.00              |
+| Ananya       | Marketing      | 70000.00   | 70000.00               |
+
+---
+
+### `STDDEV` / `VARIANCE` / `CORR` (Outlier Detection & Z-Scores)
+
+Statistical functions used to measure data spread, variability, and linear correlation across distributions:
+
+- **`STDDEV_POP` / `STDDEV_SAMP`:** Calculates the population standard deviation vs. sample standard deviation, measuring how widely values deviate from the mean.
+
+- **`VAR_POP` / `VAR_SAMP`:** Calculates population and sample variance (the squared standard deviation).
+
+- **`CORR`:** Measures the statistical correlation coefficient between two numeric columns.
+
+#### Application
+
+- **Anomaly & Fraud Detection:** Flagging transactions or metrics that deviate excessively from baseline patterns.
+
+- **Risk Management:** Measuring market volatility or system performance standard errors.
+
+- **Feature Engineering:** Normalizing variables using **Z-scores** (`(value - mean) / stddev`) for machine learning models or statistical control limits.
+
+#### Real-World Problem and How Topic Solves It
+
+- **Problem:** An e-commerce platform detects a sudden surge in order amounts, but cannot easily tell if it is normal holiday traffic or fraudulent activity because average order values vary widely across different product categories.
+
+- **Solution:** Calculating the **Z-score** for each transaction using population standard deviation (`STDDEV_POP`) identifies transactions that sit more than 3 standard deviations away from the category mean, isolating genuine anomalies automatically.
+
+#### Industrial Example
+
+A cloud infrastructure telemetry pipeline monitors server CPU loads. Using `STDDEV_SAMP` grouped by server cluster, the system flags instances where current CPU utilization exceeds $\mu + 2\sigma$ (two standard deviations above average), triggering automated scaling alerts.
+
+#### Code and Explanation
+
+```
+-- Target Table Setup
+CREATE TABLE server_metrics (
+    server_id INT,
+    metric_hour INT,
+    cpu_load_pct DECIMAL(5, 2)
+);
+
+INSERT INTO server_metrics VALUES 
+(1, 1, 45.0), (1, 2, 47.0), (1, 3, 46.5), (1, 4, 98.0), -- 98.0 is an anomaly
+(2, 1, 20.0), (2, 2, 22.0), (2, 3, 21.5), (2, 4, 23.0);
+
+-- 1. Calculating Standard Deviation, Variance, and Z-Scores
+WITH ServerStats AS (
+    SELECT 
+        server_id,
+        metric_hour,
+        cpu_load_pct,
+        AVG(cpu_load_pct) OVER (PARTITION BY server_id) as mean_load,
+        STDDEV_SAMP(cpu_load_pct) OVER (PARTITION BY server_id) as stddev_load
+    FROM server_metrics
+)
+SELECT 
+    server_id,
+    metric_hour,
+    cpu_load_pct,
+    -- Calculate Z-Score: (Value - Mean) / Standard Deviation
+    CASE 
+        WHEN stddev_load = 0 THEN 0 
+        ELSE (cpu_load_pct - mean_load) / stddev_load 
+    END AS z_score
+FROM ServerStats;
+```
+
+- **`STDDEV_SAMP(...) OVER (PARTITION BY server_id)`:** Computes sample standard deviation independently for each server's historical load logs without collapsing the original rows.
+
+- **`Z-Score Calculation`:** Measures how many standard deviations a specific hourly CPU load sits away from that server's normal operating average. A Z-score greater than 2 or 3 typically indicates a performance anomaly.
+
+#### Interview Questions - 
+
+- **Q1: What is the difference between `STDDEV_POP` and `STDDEV_SAMP`?**
+    
+    - _Answer:_ `STDDEV_POP` computes the population standard deviation dividing by $N$ (total items), whereas `STDDEV_SAMP` computes the sample standard deviation dividing by $N - 1$ (Bessel's correction) to account for sample bias.
+        
+- **Q2: How do we use standard deviation to spot anomalies in SQL?**
+    
+    - _Answer:_ We calculate the mean ($\mu$) and standard deviation ($\sigma$) per group, compute the Z-score for each record, and filter rows where the absolute Z-score exceeds a statistical threshold (such as $\vert{}Z\vert{} > 3$).
+
+---
