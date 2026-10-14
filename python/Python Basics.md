@@ -35,3 +35,7 @@ print("5" * 3)    # "555": a str times an int repeats the string
 print(int("5") + 5)  # 10
 ```
 
+**TASK** - A user typed " Rahul " as name and "21" as age. Print: Rahul is 21 years old. Next year he will be 22. 
+ 1. clean the name (remove spaces) 
+ 2. convert age to int
+ 3. print using f-string
