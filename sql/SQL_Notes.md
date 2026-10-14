@@ -4317,3 +4317,63 @@ SQL Server uses SAVE TRANSACTION instead of SAVEPOINT:
 
 - **`RELEASE SAVEPOINT name`:** Destroys the savepoint marker, freeing up internal transaction state memory. (Note: Committing or rolling back the parent transaction destroys all savepoints automatically).
 
+#### Important Points Related to It
+
+- **Not a Nested Transaction:** Savepoints are **not** independent nested transactions. If the parent transaction rolls back (`ROLLBACK`), everything—including all work protected by savepoints—is undone.
+
+- **Dialect Differences:**
+    
+    - **PostgreSQL / Oracle / MySQL / SQLite:** Uses `SAVEPOINT name` and `ROLLBACK TO SAVEPOINT name`.
+    
+    - **SQL Server:** Uses `SAVE TRANSACTION name` and `ROLLBACK TRANSACTION name`.
+
+#### Interview Questions & Answers
+
+- **Q1: Does rolling back to a savepoint automatically commit the preceding operations?**
+    
+    - _Answer:_ No. Rolling back to a savepoint only undoes changes made _after_ that savepoint within the active transaction. The entire transaction remains uncommitted ntil an explicit `COMMIT` statement is executed.
+    
+- **Q2: Can we roll back to a savepoint after the parent transaction has already been committed?**
+    
+    - _Answer:_ No. Committing or rolling back a transaction destroys all savepoints and releases their associated resources automatically.
+
+---
+
+### Autocommit, Updatable Views & Materialized Views 
+
+#### Autocommit vs. Explicit Transactions
+
+- **Autocommit Mode:** The default behavior in most relational databases where every single SQL statement (`INSERT`, `UPDATE`, `DELETE`) is automatically treated as an independent, fully committed transaction.
+    
+- **Explicit Transactions:** Initiated using `BEGIN` or `START TRANSACTION`, requiring an explicit `COMMIT` to persist changes or `ROLLBACK` to discard them.
+
+#### Updatable Views and `WITH CHECK OPTION`
+
+- **Updatable Views:** Simple views that permit `INSERT`, `UPDATE`, or `DELETE` operations directly against underlying base tables through the view interface.
+    
+- **`WITH CHECK OPTION`:** A constraint applied to a view definition that prevents updates or inserts if the resulting data rows violate the view's own `WHERE` clause filter criteria.
+
+```
+CREATE VIEW v_active_users AS
+SELECT user_id, email, status
+FROM users
+WHERE status = 'ACTIVE'
+WITH CHECK OPTION;
+
+-- This INSERT will fail because status is 'PENDING', violating the view filter rule!
+INSERT INTO v_active_users (user_id, email, status) 
+VALUES (101, 'test@example.com', 'PENDING');
+```
+
+### Materialized View Maintenance (PostgreSQL/Oracle Style)
+
+**`REFRESH MATERIALIZED VIEW CONCURRENTLY`:** Updates a materialized view in the background without locking read access to the view, provided the materialized view has a unique index defined on it.
+
+```
+-- Unique index required for CONCURRENTLY refreshing in PostgreSQL
+CREATE UNIQUE INDEX idx_mv_summary_id ON mv_daily_sales(store_id);
+
+-- Refresh without blocking readers
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_sales;
+```
+
