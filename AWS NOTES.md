@@ -2487,3 +2487,97 @@ aws cloudfront create-invalidation \
   --paths "/index.html" "/css/*"
 ```
 
+**What this does:**
+
+- The bucket is **not public**. The **bucket policy** trusts only the CloudFront service acting on behalf of **your specific distribution** (the `SourceArn` condition), so nobody can bypass CloudFront with a direct S3 URL.
+- The **OAC** makes CloudFront sign its requests to S3.
+- Visiting `https://<distribution-domain>.cloudfront.net/index.html` returns your page from the nearest edge. The first request is a cache miss, and later ones are hits (check the `X-Cache` response header: `Miss from cloudfront` vs `Hit from cloudfront`).
+- Invalidation clears the edge copies so users get the updated file before the TTL ends.
+
+#### Interview questions  with answers
+
+**Q1. You updated `style.css` on your origin, but users still see the old styles hours later. What’s happening, and what are your options to fix it now and to prevent it next time?**
+
+**Answer:** The old file is **cached at the edge** and its **TTL hasn’t expired**. To fix now, run an **invalidation** for that path (`/style.css`). To prevent it, use **versioned file names** (such as `style.v43.css` or content hashes like `style.a1b2c3.css`) so each release is a new URL, and the old cached copy is irrelevant. This is faster, free of per-path invalidation costs and avoids any lag between edges. Also set sensible TTLs and keep `index.html` on a short TTL, since it references the versioned assets.
+
+**Q2. A company hosts premium course videos in a private S3 bucket. A student shares a CloudFront link on social media and now everyone can watch the videos for free. How do you stop this?**
+
+**Answer:** Make the distribution **require signed URLs or signed cookies**, so links work only with a valid signature and an **expiry time** (and optionally restricted to an IP range). The application generates a short-lived signed URL after verifying the student has paid. A shared link then stops working when it expires. Keep the S3 bucket private with **OAC** so there’s no way around CloudFront. Signed **cookies** are better when many files need access (a whole course), and signed **URLs** suit single files. For stronger protection against sharing, add short expiry times and consider DRM for high-value content, because a signed URL alone can still be shared during its valid window.
+
+**Q3. Your origin is a dynamic API (an ALB), and responses differ per logged-in user. A developer enables caching with a long TTL on the API path, and users start seeing each other’s data. Explain the bug and the fix.**
+
+**Answer:** The cache key didn’t include what distinguishes users, so CloudFront served **one user’s cached response to another**. That’s a serious data leak. Fixes: for personalized endpoints, set the cache behavior to **not cache** (TTL 0, or the caching-disabled policy), or include the **Authorization header or the session cookie in the cache key** so each user gets a separate cache entry (usually inefficient). Better still, cache only what is truly shared (public product lists, static assets) on separate paths, with `Cache-Control: private` or `no-store` set by the origin for personalized responses. CloudFront can still help here by accelerating the request over the AWS backbone, even with no caching.
+
+**Q4. A teammate says “CloudFront is just for static files like images, so it’s no use for our dynamic website.” Do you agree?**
+
+**Answer:** Only partly. It’s best at caching static and cacheable content, but it helps dynamic sites too. Requests travel from the edge to the origin over the **AWS global network**, which is usually faster and more stable than the public internet, and the edge keeps **persistent, reused connections** to the origin and terminates TLS close to the user, reducing handshake time. CloudFront also provides **WAF, Shield and edge functions**, so it protects the origin even when nothing is cached. And many “dynamic” pages have cacheable parts (public pages for a few seconds or minutes can absorb big spikes). For non-HTTP traffic or when fixed IPs are required, Global Accelerator is the better fit.
+
+**Q5. Your S3 bucket is public so CloudFront can read it. A security reviewer objects. What’s the problem and what’s the right design?**
+
+**Answer:** A public bucket lets anyone bypass CloudFront with a direct S3 URL, so signed URLs, WAF rules, geo restrictions and caching controls can all be circumvented, and it exposes data and increases costs. The right design: keep the bucket **private with Block Public Access on**, and use **Origin Access Control (OAC)** with a bucket policy that allows only the CloudFront service principal for the **specific distribution ARN**. If the bucket uses SSE-KMS encryption, the KMS key policy must also allow CloudFront to decrypt. Mention that OAC replaces the older **OAI**, which doesn’t support all newer features (like SSE-KMS and all Regions).
+
+#### Scenario question
+
+**Scenario:** You are the cloud engineer for a regional fashion e-commerce company, **StyleKart**, whose website is hosted in **Mumbai** (ALB and EC2 for the app, S3 for product images).
+
+- A flash sale is planned. Last sale, product images loaded slowly for customers abroad, and the origin servers nearly crashed because every image request hit them.
+- Product images are in an S3 bucket that is **currently public**.
+- Customers log in, and the **cart and account pages** are personalized.
+- **Invoices** (PDFs) are stored in S3 and each must be downloadable **only by its owner, for 10 minutes** after clicking “Download”.
+- Bots have been hammering the site with junk requests.
+- The marketing team updates product images and prices several times a day, and wants changes to appear quickly.
+
+Design the CloudFront setup. For each point, name the feature
+
+#### 1. Speeding up images and protecting the origin from the spike
+
+Put a **CloudFront distribution** in front of everything, with **S3 as the origin for `/images/*`** and the **ALB as the origin for the app**, using separate **cache behaviors** per path.
+
+- Images are cacheable, so edges around the world serve them after the first request (a cache miss). Customers abroad get nearby copies, which fixes the slow loading.
+- During the flash sale, millions of image requests are absorbed by edge caches and the **regional edge cache**. The origin sees only misses, which protects it from the spike.
+- Use a **long TTL** for images, combined with versioned file names (see point 6).
+- Serving cacheable pages (like public product listing pages) with a **short TTL** (even 30 to 60 seconds) can also take significant pressure off the app servers during the sale.
+
+#### 2. Securing the S3 buckets
+
+- **Turn on Block Public Access** and make the image bucket **private**. The current public bucket lets anyone bypass CloudFront with direct S3 URLs, which defeats WAF, caching and cost control.
+- Use **Origin Access Control (OAC)** and a bucket policy that allows only the CloudFront service principal, restricted with a **`SourceArn` condition for this specific distribution**.
+- If the bucket uses SSE-KMS, update the **KMS key policy** so CloudFront can decrypt.
+- Do the same for the invoices bucket (or serve both through the same distribution under different paths).
+
+#### 3. Personalized cart and account pages
+
+- **Do not cache** the cart and account pages, using a behavior for paths like `/cart/*` and `/account/*` with the **caching-disabled policy** (TTL 0), forwarding the cookies and headers the app needs. Caching them with a shared cache key would show one customer’s data to another, which is the leak we discussed in Q3.
+- The origin should also send `Cache-Control: private, no-store` on personalized responses, as a second safety net.
+- **Do cache** the genuinely shared content: images, CSS and JS, public product pages and category listings (short TTL).
+- Requests to the uncached paths still benefit from the edge: TLS terminates near the user, connections to the origin are reused, and traffic travels over the AWS backbone.
+
+#### 4. Delivering invoices
+
+Keep the invoices bucket private and use **signed URLs** (or **S3 pre-signed URLs**, which are the S3 equivalent):
+
+- When a logged-in customer clicks “Download”, the **application first checks that the invoice belongs to that user**.
+- It then generates a **CloudFront signed URL with a 10-minute expiry**. After 10 minutes the link stops working, so sharing it is of limited use.
+- A signed URL fits here because it’s one file per click. **Signed cookies** are better when a user needs access to many files (like a whole course).
+- The signing private key must be kept safe (for example in **Secrets Manager**, which is coming up in our list), and CloudFront is set up with a trusted key group.
+
+Honest caveat: within the 10-minute window, the signed URL could still be shared by its owner. You can narrow this by also restricting to the customer’s IP address, if that’s acceptable, though IP restriction can break for mobile users whose IP changes.
+
+#### 5. Dealing with the bots
+
+- Attach **AWS WAF** to the distribution. Use **rate-based rules** (block an IP making too many requests in 5 minutes), **AWS managed rule groups** (known bad inputs, bot control) and, if needed, CAPTCHA challenges on sensitive paths like login.
+- **Shield Standard** is included automatically and covers common network and transport-layer DDoS attacks. Shield Advanced is optional for higher-risk workloads.
+- Blocking at the edge means bad requests are rejected **before they reach the origin**, which also keeps the servers available for real customers during the sale.
+- Make sure the ALB only accepts traffic from CloudFront, for example with a **custom secret header** that CloudFront adds and the ALB checks (or the managed prefix list for CloudFront in the ALB’s security group). Otherwise bots can bypass the edge and hit the ALB directly.
+
+#### 6. Letting marketing see updates quickly without causing problems
+
+- For images: use **versioned file names** (for example `shirt-red.v17.jpg` or a hash), so each update is a **new URL** and no cache clearing is needed. This is the preferred approach.
+- For pages that reference those images (and for prices): keep a **short TTL** on the HTML and price data so changes appear within seconds to minutes, and use **invalidations** for urgent fixes (for example a wrong price), keeping paths specific rather than invalidating `/*` repeatedly, because invalidations beyond the free monthly allowance are charged.
+- Better still, render prices **dynamically from an API (uncached or short TTL)** rather than baking them into cached images or pages, so a price change doesn’t depend on cache clearing at all.
+
+#### 7. Which Region for the HTTPS certificate?
+
+**us-east-1 (N. Virginia).** CloudFront is a global service, and it only accepts **ACM certificates created in us-east-1**. If you create the certificate in Mumbai, it won’t appear in the CloudFront certificate list. (The ALB in Mumbai needs its own certificate in **ap-south-1** if you want HTTPS between CloudFront and the ALB, which you should.) Also set the distribution’s **alternate domain name (CNAME)** to `www.stylekart.com` and point Route 53 to it with an **Alias record**.
+
+---
