@@ -341,6 +341,43 @@ n[0].append(9)
 
 **Problem it solves:** finding a record in a list means scanning it item by item. A dict jumps straight to the item through hashing, which is O(1) on average. With 5 million records, that’s the difference between instant and minutes.
 
+## Important dictionary methods
+
+| Method         | What it does                              | Example                          | Output                   |
+| -------------- | ----------------------------------------- | -------------------------------- | ------------------------ |
+| `get()`        | Gets a value safely                       | `totals.get("user_a", 0)`        | `450`                    |
+| `keys()`       | Returns all keys                          | `totals.keys()`                  | `user_a, user_b, user_c` |
+| `values()`     | Returns all values                        | `totals.values()`                | `450, 265.30, 80`        |
+| `items()`      | Returns key-value pairs                   | `totals.items()`                 | `("user_a", 450), ...`   |
+| `update()`     | Adds or updates entries                   | `totals.update({"user_d": 100})` | Adds `user_d`            |
+| `pop()`        | Removes a key and returns its value       | `totals.pop("user_c")`           | `80`                     |
+| `setdefault()` | Returns value; inserts default if missing | `totals.setdefault("user_e", 0)` | `0`                      |
+| `copy()`       | Creates a shallow copy                    | `totals.copy()`                  | A copy of the dictionary |
+| `clear()`      | Removes all entries                       | `totals.clear()`                 | `{}`                     |
+
+```python
+totals = {"user_a": 450, "user_b": 265.30, "user_c": 80}
+
+print(totals.get("user_a", 0))
+print(list(totals.keys()))
+print(list(totals.values()))
+print(list(totals.items()))
+
+totals.update({"user_d": 100})
+print(totals)
+
+totals.pop("user_c")
+print(totals)
+
+# 450
+# ['user_a', 'user_b', 'user_c']
+# [450, 265.3, 80]
+# [('user_a', 450), ('user_b', 265.3), ('user_c', 80)]
+# {'user_a': 450, 'user_b': 265.3, 'user_c': 80, 'user_d': 100}
+# {'user_a': 450, 'user_b': 265.3, 'user_d': 100}
+```
+
+`.get()` is a dictionary method that retrieves a value for a key. If the key doesn't exist, it returns a default value instead of giving an error.
 ### Code:
 
 ```python
@@ -449,7 +486,9 @@ stock.pop("banana")                 # or del stock["banana"]
 print(stock)  
 ```
 
-**TASK** - transactions = [
+**TASK** - 
+```
+transactions = [
     ("tx_1", "user_a", 150.0),
     ("tx_2", "user_b", 45.3),
     ("tx_3", "user_a", 300.0),
@@ -459,17 +498,9 @@ print(stock)
 1. create an empty dict called totals
 2. loop over transactions, unpacking each into tx_id, user, amount
 3. add the amount to that user's running total
-		(use the counting pattern: totals.get(user, 0) + amount)
 4. print each user and total with 2 decimals, e.g. "user_a: 450.00"
 5. print the user with the highest total
-	  (copy this pattern: max(totals, key=totals.get))
-
-# expected:
-# user_a: 450.00
-# user_b: 265.30
-# user_c: 80.00
-# top user: user_a
-
+```
 
 ```python
 totals = {}
@@ -481,6 +512,7 @@ for user, total in totals.items():
 
 top_user = max(totals, key=totals.get)
 print(f"top user: {top_user}")
+
 # user_a: 450.00
 # user_b: 265.30
 # user_c: 80.00
