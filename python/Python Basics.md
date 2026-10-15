@@ -448,3 +448,35 @@ stock["mango"] = 7
 stock.pop("banana")                 # or del stock["banana"]
 print(stock)  
 ```
+
+totals = {}
+for tx_id, user, amount in transactions:
+	totals.get(user,0)+ amount
+for users in transations:
+	print(f"{user}:{amount:.2f})
+
+for 
+max(totals, key=totals.get)
+
+
+### Find the bug
+
+```python
+inventory = {"apple": 10, "banana": 0, "cherry": 5}
+for item in inventory:
+    if inventory[item] == 0:
+        del inventory[item]
+```
+
+**Answer:** it raises `RuntimeError: dictionary changed size during iteration`. You can’t add or delete keys from a dict while looping over it. Fix it by looping over a **copy** of the keys, or by building a new dict:
+
+python
+
+```python
+for item in list(inventory):                        # list() makes a snapshot of the keys
+    if inventory[item] == 0:
+        del inventory[item]
+
+# or build a new dict instead of mutating:
+inventory = {k: v for k, v in inventory.items() if v != 0}   # (comprehension, comin
+```
