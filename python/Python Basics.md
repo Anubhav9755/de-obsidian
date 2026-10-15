@@ -625,3 +625,60 @@ while attempts < 3:           # retry pattern
     print("attempt", attempts)
 ```
 
+**Preview of `try/except`**
+
+```python
+try:
+    amount = float("abc")       # this fails...
+except ValueError:              # ...so Python jumps here instead of crashing
+    amount = None
+```
+
+**Comprehensions:**
+
+```python
+amounts = [150.0, -20.0, 300.0, 0.0, 80.0]
+
+# loop way (4 lines):
+valid = []
+for a in amounts:
+    if a > 0:
+        valid.append(a)
+
+# comprehension way (1 line):
+valid = [a for a in amounts if a > 0]                 # [150.0, 300.0, 80.0]
+with_tax = [round(a * 1.18, 2) for a in valid]        # [177.0, 354.0, 94.4]
+```
+
+**The recipe:** `[ expression for item in iterable if condition ]`. Read it as: “give me _expression_, for each _item_, if _condition_.” The filter goes at the end.
+
+```python
+totals = {"user_a": 450.0, "user_b": 265.5, "user_c": 80.0}
+big = {u: t for u, t in totals.items() if t > 100}    # dict comprehension
+# {'user_a': 450.0, 'user_b': 265.5}
+#new_dict = {key: value for key, value in old_dict.items() if condition}
+
+emails = ["A@x.com", "a@x.com", "B@x.com"]
+unique = {e.lower() for e in emails}                  # set comprehension
+# {'a@x.com', 'b@x.com'}
+
+print(any(a < 0 for a in amounts))    # True   at least one bad value?
+print(all(a > 0 for a in valid))      # True   every value good?
+```
+
+**When NOT to use a comprehension:** if it needs two conditions plus a nested loop, or you’re running it for a side effect like printing, use a normal loop. If a teammate would have to squint, split it up.
+
+**TASK 1: modify.** From this list, build `["Alice", "Bob", "Carol"]`: trimmed, title-cased, with the empty entries dropped.
+
+```python
+raw = ["  Alice ", "BOB", "", "  ", "carol"]
+```
+
+**Answer:**
+
+```python
+clean = [n.strip().title() for n in raw if n.strip()]
+```
+
+`if n.strip()` works because `""` is falsy, so entries that are empty after stripping (`""` and `" "`) are dropped. Then the expression cleans the survivors.
+
