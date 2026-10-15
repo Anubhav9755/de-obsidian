@@ -3070,3 +3070,38 @@ Use a **dead-letter queue** on the photo-processing queue with a **redrive polic
 - Set the DLQ’s **retention period longer** than the source queue’s, so messages don’t expire before anyone examines them.
 - Better still, **catch exceptions in the worker and validate files early** (for example, check each image before heavy processing), so the common failure produces a clean “bad photo” result immediately instead of a crash. The DLQ remains the safety net for unexpected failures.
 
+#### 6. Handling the 20x spike and protecting the print shop’s 10-request limit
+
+**For the spike:**
+
+- The queue absorbs it: orders accumulate instead of crashing servers. The web tier only has to do the fast part (charge, save, enqueue).
+- Scale the workers with **Auto Scaling driven by backlog per instance** (queue depth divided by the number of workers), or use **Lambda** if the processing fits (see the caveat below). Set a **maximum** on scale-out to protect downstream systems.
+- Customers see slightly longer processing times during the peak, which is a good trade-off compared with failures. Show an honest status (“We’re processing your order, you’ll get an email in about X”).
+
+**For the print shop’s limit of 10 concurrent requests:** give the “send to print shop” step **its own queue with a limited number of consumers**. With **Lambda**, set **reserved concurrency (or the SQS event source’s maximum concurrency)** to 10 or a bit less, so no more than 10 calls are in flight. With EC2 workers, run a fixed small pool. The rest wait safely in the queue. The queue works as a **buffer between a fast producer and a slow, limited consumer**, which is a core use case. If the print shop rejects a request anyway (for example, a 429 error), the worker doesn’t delete the message, and it retries after the visibility timeout. Backing off with increasing delays is a good practice here.
+
+A caveat on Lambda for photo processing: Lambda has a **maximum 15-minute runtime** and limited memory and temporary storage, which is fine for 1 to 3 minute jobs in many cases, but if 200 high-resolution photos exceed those limits, use containers or EC2 workers (or split the order into one message per photo, see point 7).
+
+#### 7. Passing 200 photos through the system when messages are small
+
+Use the **claim-check pattern**. SQS messages are limited to 1 MiB (and large payloads are wasteful anyway), so:
+
+- The photos are **uploaded to S3** (most likely already the case, for example via pre-signed upload URLs).
+- The queue message contains only **small metadata**: order ID, customer ID, and the **S3 bucket and prefix** (or a list of keys).
+- The worker reads the message, downloads photos from S3, processes them, and writes the results (resized images, the PDF) back to S3, updating the order record in the database.
+
+An optional improvement is to **fan out one message per photo** (or per batch of photos) so many workers process a big order in parallel and finish faster. That needs a way to know when all pieces are done (for example, a counter in the database that triggers the PDF step when it reaches 200). This is more complex, so start simple and move to it only if processing time requires it.
+
+#### One queue or several?
+
+|Queue|Type|Why separate|
+|---|---|---|
+|Photo processing|Standard + DLQ|Heavy, scalable, poison-message risk|
+|Email|Standard (+ DLQ)|Cheap and light, shouldn’t wait behind photo jobs|
+|Print shop|Standard (+ DLQ), limited consumers|Concurrency capped at the print shop’s limit|
+|Order status updates|**FIFO**|Ordering per customer|
+
+Separate queues give each step its **own scaling, visibility timeout, retry and DLQ settings**, and one slow or failing step can’t block the others. A related improvement, which SNS makes possible in our next lesson, is **publishing one “order placed” event that fans out to all these queues**, instead of the web app sending several separate messages.
+
+---
+
