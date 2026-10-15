@@ -2768,3 +2768,77 @@ Design the connectivity. For each point, name the AWS features and explain your 
 5. How do you connect the extra VPCs in Mumbai and Hyderabad without building many separate links?
 6. What checks would you do if the link is up but the servers can’t reach Pune?
 
+#### 1. Getting started next week, before Direct Connect is ready
+
+Use a **Site-to-Site VPN** as a bridge. Create a **Virtual Private Gateway** (or a Transit Gateway, see point 5) attached to the VPC, a **Customer Gateway** representing the Pune router, and a **VPN connection**. It can be running in hours and gives two encrypted IPsec tunnels. Use **BGP (dynamic routing)** so that when Direct Connect arrives, AWS prefers the Direct Connect routes and the VPN becomes the backup automatically.
+
+**Does this violate the regulator’s rule?** Honestly, **it depends on how the rule is read, and you must not assume**. A VPN is **encrypted**, which satisfies “encrypted in transit”, but its packets **travel across the public internet**, which conflicts with a strict reading of “must not travel over the public internet.” I would handle it this way:
+
+- **Ask the compliance team or regulator** (in writing) whether an encrypted VPN is acceptable as a **temporary** measure.
+- If it is **not** acceptable, don’t move real patient data over it. Start the project with **synthetic or de-identified test data** during the first weeks, and build and test the pipeline and applications. Real patient data starts flowing only when Direct Connect is live.
+- Document the decision either way, since this is a compliance matter and not just a technical one.
+
+I wouldn’t quietly run patient data over the VPN and hope nobody notices.
+
+#### 2. Target connectivity design
+
+- **Dedicated Direct Connect connections** (for example 10 Gbps, since the nightly 2 TB transfer needs to complete in a reasonable window and real-time traffic needs headroom), terminating at **Direct Connect locations in or near Mumbai**, with a carrier path from the Pune data center to those locations.
+- A **private VIF** (or a **transit VIF** if using a Transit Gateway) for reaching VPC resources by private IP. Nightly data and daily app calls both use this private path.
+- A **Direct Connect Gateway** so one connection can reach VPCs in more than one Region.
+- **BGP** for route exchange, with a **Site-to-Site VPN kept as a backup path**.
+
+Why: Direct Connect gives **stable low latency** (fixing the daytime timeouts), plenty of **bandwidth** for 2 TB nightly, and **lower data-transfer cost** than the internet.
+
+Note: sizing should be checked against reality. 2 TB in a 4-hour window needs roughly 1.1 Gbps sustained (2 TB ≈ 16,000 Gb, divided by 14,400 seconds), so a 1 Gbps link would be too tight and 10 Gbps leaves comfortable headroom. A hosted connection of a few Gbps from a partner could also work if a full port is more than needed, so compare costs.
+
+#### 3. Satisfying both “no public internet” and “encrypted in transit”
+
+These are **two separate requirements, and Direct Connect only meets the first**. It is private but **not encrypted by default**. To add encryption, choose one or combine:
+
+- **IPsec VPN over Direct Connect** (the VPN runs over a public or transit VIF, so traffic is encrypted and still stays off the public internet). This is a common pattern. Mind that VPN throughput per tunnel is limited (about 1.25 Gbps), so for the 2 TB nightly job you may need multiple tunnels, ECMP with a Transit Gateway, or a different option.
+- **MACsec** (Layer 2 encryption) on a **dedicated 10 Gbps or higher** connection, if the locations and your equipment support it. It’s highly performant, but it protects only the link between your router and the AWS device.
+- **Application-level TLS** to the database and to the data transfer jobs. This is the simplest to apply and is usually done in addition to the network-level controls (defense in depth).
+
+I’d combine **TLS end to end** with a network-level control chosen with the compliance team, and verify exactly what the regulator accepts as proof
+
+#### 4. Resilience to a single failure, including a full location outage
+
+- Provision **two Direct Connect connections at two different Direct Connect locations**, ideally with **separate carriers and physical paths** from Pune. This covers a cable cut, a device failure and a full location outage. This is the maximum-resiliency pattern AWS recommends.
+- Keep the **Site-to-Site VPN as a third path** (lower performance, used only if both Direct Connect links fail).
+- Configure **BGP routing preferences** (for example, local preference and AS-path prepending) so the primary link carries traffic normally and the others take over on failure.
+- **Test failover regularly** (for example, deliberately shutting down one link during a maintenance window), since untested failover often fails when needed.
+- On the AWS side, the application should be in **multiple AZs** (Lessons 8 and 19), and the on-premises side shouldn’t be a single point of failure either (redundant routers).
+
+Honest note: the question says the platform shouldn’t go down from a single network failure. Direct Connect resilience covers the **network path**, but the Pune database itself is still a single data center, so a data-center outage would still break the real-time calls. That’s worth flagging to the business as a separate risk.
+
+#### 5. Connecting the extra VPCs in Mumbai and Hyderabad
+
+- Use a **Transit Gateway (TGW)** in Mumbai as the hub. Attach all the Mumbai VPCs to it, and attach the Direct Connect through a **transit VIF** via a **Direct Connect Gateway**.
+- For the **Hyderabad VPC (a different Region)**, create a Transit Gateway there too and use **Transit Gateway peering** between the two Transit Gateways, or associate the Direct Connect Gateway with the Transit Gateways in both Regions (a Direct Connect Gateway can associate with Transit Gateways in multiple Regions), so Pune can reach both Regions through the same link.
+- Plan **non-overlapping CIDR ranges** across all VPCs and Pune from the start, because overlapping ranges can’t be routed.
+- Be careful that if TGW is used for VPC-to-VPC traffic, you control which VPCs can talk to each other through **TGW route tables**, because for a healthcare workload you don’t want every VPC to reach every other VPC by default.
+
+One more honest point: patient data **leaving the Mumbai Region for Hyderabad** may have its own compliance implications, so confirm that moving data between Regions is allowed.
+
+#### 6. Checks if the link is up but the servers can’t reach Pune
+
+In this order:
+
+1. **VPC route tables**: is there a route to the Pune CIDR pointing at the VGW or Transit Gateway (propagation enabled)? For TGW, check the **TGW route tables** as well.
+2. **Security groups**: do they allow the Pune CIDR on the database port?
+3. **NACLs**: stateless, so check both directions including ephemeral return ports.
+4. **BGP**: is the session established, is Pune advertising its prefix, and is AWS advertising the VPC prefixes back? Check for prefix limits or filters.
+5. **Pune firewall and routing**: is there a return route to the VPC CIDRs, and are they allowed?
+6. **Overlapping CIDRs** and **MTU mismatches** (especially when a VPN runs over Direct Connect).
+7. If a **Direct Connect Gateway** is used, check the **allowed prefixes** on the gateway association.
+
+---
+
+### Amazon SQS (Simple Queue Service)
+
+- **Lambda   runs your code in response to an event, without you managing servers. It scales by running more copies in parallel.
+- **EC2 and Auto Scaling (Lessons 6 and 19)**: servers you manage, and the feature that adds or removes them with demand.
+- **DynamoDB (Lesson 25)** and **RDS/Aurora (Lessons 24 and 26)**: databases that can slow down or reject requests when they’re overloaded.
+- **IAM roles (Lesson 5)**: how one AWS service gets permission to call another.
+- **Synchronous call**: you ask and **wait** for the answer (like a phone call). **Asynchronous call**: you leave a message and **move on** (like a text message).
+- **Tight coupling**: component A calls component B directly, so if B is slow or down, A breaks too. **Loose coupling**: they communicate through something in between, so each can fail or scale independently.
