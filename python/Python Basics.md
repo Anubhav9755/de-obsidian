@@ -678,7 +678,55 @@ raw = ["  Alice ", "BOB", "", "  ", "carol"]
 
 ```python
 clean = [n.strip().title() for n in raw if n.strip()]
+
+# if n.strip() - Checks whether the string contains anything besides whitespace.
+# n.strip().title() - Actually cleans the string that will be added to the list.
 ```
 
 `if n.strip()` works because `""` is falsy, so entries that are empty after stripping (`""` and `" "`) are dropped. Then the expression cleans the survivors.
 
+**TASK 2: BUILD** -
+
+```
+raw_rows = [
+    "tx_1, user_a, 150.50",
+    "tx_2, user_b, abc",
+    "tx_3, user_a, 300",
+    "",
+    "tx_4, user_c, -20",
+    "tx_5, user_b, 220.25",
+]
+
+# Goal: build a list of clean tuples (tx_id, user, amount) for VALID rows only.
+# 1. create an empty list called clean
+# 2. loop over raw_rows
+# 3. strip the line; if it's empty, continue
+# 4. split on "," and strip each part, unpacking into tx_id, user, amount_raw
+#    (hint: parts = [p.strip() for p in line.split(",")])
+# 5. convert amount_raw to float; if that fails, skip the row. Pattern:
+#       try:
+#           amount = float(amount_raw)
+#       except ValueError:
+#           continue
+# 6. if amount <= 0, continue
+# 7. append the tuple (tx_id, user, amount) to clean
+# 8. print(clean)
+
+# expected: [('tx_1', 'user_a', 150.5), ('tx_3', 'user_a', 300.0), ('tx_5', 'user_b', 220.25)]
+```
+
+### Find the bug
+
+```python
+nums = [2, 4, 6, 1]
+for n in nums:
+    if n % 2 == 0:
+        nums.remove(n)
+print(nums)        # expected [1]
+```
+
+**Answer:** it prints `[4, 1]`. Removing items while looping shifts the list under the loop, so it skips elements. The rule: **never change a collection while looping over it. Build a new one instead.**
+
+```python
+nums = [n for n in nums if n % 2 != 0]     # [1]
+```
