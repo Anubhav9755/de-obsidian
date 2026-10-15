@@ -35,6 +35,21 @@ print("5" * 3)    # "555": a str times an int repeats the string
 print(int("5") + 5)  # 10
 ```
 
+## Useful character and number methods
+
+| Function  | What it does                 | Example             | Output     |
+| --------- | ---------------------------- | ------------------- | ---------- |
+| `ord()`   | Character → Unicode number   | `ord('A')`          | `65`       |
+| `chr()`   | Unicode number → character   | `chr(65)`           | `'A'`      |
+| `str()`   | Converts to string           | `str(123)`          | `'123'`    |
+| `int()`   | Converts to integer          | `int('123')`        | `123`      |
+| `float()` | Converts to decimal number   | `float('3.5')`      | `3.5`      |
+| `bin()`   | Integer → binary string      | `bin(10)`           | `'0b1010'` |
+| `oct()`   | Integer → octal string       | `oct(8)`            | `'0o10'`   |
+| `hex()`   | Integer → hexadecimal string | `hex(255)`          | `'0xff'`   |
+| `abs()`   | Returns absolute value       | `abs(-10)`          | `10`       |
+| `round()` | Rounds a number              | `round(3.14159, 2)` | `3.14`     |
+
 **TASK** - A user typed " Rahul " as name and "21" as age. Print: Rahul is 21 years old. Next year he will be 22. 
  1. clean the name (remove spaces) 
  2. convert age to int
@@ -715,6 +730,13 @@ raw_rows = [
 # expected: [('tx_1', 'user_a', 150.5), ('tx_3', 'user_a', 300.0), ('tx_5', 'user_b', 220.25)]
 ```
 
+**CODE-**
+
+```python
+
+
+```
+
 ### Find the bug
 
 ```python
@@ -729,4 +751,35 @@ print(nums)        # expected [1]
 
 ```python
 nums = [n for n in nums if n % 2 != 0]     # [1]
+```
+
+### Interview questions 
+
+**Q1. FizzBuzz:** for 1 to 15, print “Fizz” for multiples of 3, “Buzz” for multiples of 5, “FizzBuzz” for both, otherwise the number.
+
+```python
+for i in range(1, 16):
+    if i % 15 == 0:
+        print("FizzBuzz")      # the combined case MUST be checked first
+    elif i % 3 == 0:
+        print("Fizz")
+    elif i % 5 == 0:
+        print("Buzz")
+    else:
+        print(i)
+```
+
+If you check `% 3` first, 15 prints “Fizz” and never reaches the combined case. That ordering mistake is what the question is testing.
+
+**Q3. What’s the difference between `[x*x for x in range(10**7)]` and `(x*x for x in range(10**7))`? When do you pick each?**  
+The square brackets build all 10 million items in memory, hundreds of MB. The round brackets make a **generator expression** that produces one item at a time, so it uses almost no memory. Use a list when you need to reuse, index, or sort the results. Use a generator when you only loop once, like `sum(x*x for x in data)`. 
+
+**What’s wrong with `[print(x) for x in data]`?**  
+A comprehension exists to **build a collection**. This one builds a useless list of `None` values just to run `print`. For side effects, use a plain `for` loop.
+
+```PYTHON
+data = [10, 20, 30]
+[print(x) for x in data]     # 10 20 30
+
+# print() returns None, so the list comprehension also creates a list of None values: [None, None, None]
 ```
