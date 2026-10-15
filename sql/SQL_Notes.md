@@ -4040,7 +4040,7 @@ An e-commerce flash sale processes thousands of concurrent checkout requests for
 
 #### Code and Explanation
 
-```
+```sql
 -- 1. Setting Transaction Isolation Level explicitly
 BEGIN TRANSACTION;
 SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
@@ -4079,7 +4079,7 @@ An e-commerce order tracking dashboard queries real-time item status metrics whi
 
 #### Code and Demonstration: Reproducing a Non-Repeatable Read
 
-```
+```sql
 -- SESSION 1: Begins transaction under READ COMMITTED isolation
 BEGIN TRANSACTION;
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
@@ -4159,7 +4159,7 @@ An enterprise flight ticket booking platform uses `SELECT ... FOR UPDATE` when a
 
 #### Code and Explanation
 
-```
+```sql
 -- Target Table Setup
 CREATE TABLE job_queue (
     job_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -4215,7 +4215,7 @@ COMMIT;
 
 #### Demonstration: Creating and Resolving a Deadlock
 
-```
+```sql
 -- SESSION 1:
 BEGIN TRANSACTION;
 UPDATE accounts SET balance = balance - 50 WHERE account_id = 1; -- Locks Account 1
@@ -4276,7 +4276,7 @@ An enterprise order processing pipeline handles multi-item checkouts. When addin
 
 #### Code and Explanation
 
-```
+```sql
 -- Target Table Setup
 CREATE TABLE batch_logs (
     log_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -4348,7 +4348,7 @@ SQL Server uses SAVE TRANSACTION instead of SAVEPOINT:
     
 - **`WITH CHECK OPTION`:** A constraint applied to a view definition that prevents updates or inserts if the resulting data rows violate the view's own `WHERE` clause filter criteria.
 
-```
+```sql
 CREATE VIEW v_active_users AS
 SELECT user_id, email, status
 FROM users
@@ -4364,7 +4364,7 @@ VALUES (101, 'test@example.com', 'PENDING');
 
 **`REFRESH MATERIALIZED VIEW CONCURRENTLY`:** Updates a materialized view in the background without locking read access to the view, provided the materialized view has a unique index defined on it.
 
-```
+```sql
 -- Unique index required for CONCURRENTLY refreshing in PostgreSQL
 CREATE UNIQUE INDEX idx_mv_summary_id ON mv_daily_sales(store_id);
 
@@ -4408,7 +4408,7 @@ A cloud infrastructure provider tracks API request latency. To meet Service Leve
 
 #### Code and Explanation
 
-```
+```sql
 -- Target Table Setup
 CREATE TABLE order_deliveries (
     order_id INT PRIMARY KEY,
@@ -4456,7 +4456,7 @@ GROUP BY region;
     
     - _Answer:_ Yes. In modern database engines (like PostgreSQL, Snowflake, and BigQuery), we can write `PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY col) OVER (PARTITION BY category)` to calculate rolling or partitioned medians while retaining row-level details.
 
-```
+```sql
 -- 1. Setup Table and Sample Data
 CREATE TABLE employee_salaries (
     emp_id INT,
@@ -4525,7 +4525,7 @@ A cloud infrastructure telemetry pipeline monitors server CPU loads. Using `STDD
 
 #### Code and Explanation
 
-```
+```sql
 -- Target Table Setup
 CREATE TABLE server_metrics (
     server_id INT,
@@ -4574,3 +4574,5 @@ FROM ServerStats;
     - _Answer:_ We calculate the mean ($\mu$) and standard deviation ($\sigma$) per group, compute the Z-score for each record, and filter rows where the absolute Z-score exceeds a statistical threshold (such as $\vert{}Z\vert{} > 3$).
 
 ---
+## Cohort, Retention & Funnel Queries
+
