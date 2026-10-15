@@ -256,6 +256,8 @@ Ans- Lambda functions get an **execution role**, and that role's policy would gr
 
 ---
 
+---
+
 #### EC2 — Elastic Compute Cloud
 
 #### Definition
@@ -3269,3 +3271,42 @@ sns.publish(
 
 **Answer:** Use **SQS** when work must be **buffered and handled by one consumer** (for example, a pool of workers processing jobs), and use **SNS** when **one event must reach many different receivers** at once. SNS alone has a weakness: it **doesn’t store messages** for a subscriber that’s down or slow beyond its delivery retries, and subscribers can’t control their own pace. SQS alone has the limit that each message goes to a single consumer. Combining them (**SNS topic → multiple SQS queues**) gives you **broadcast plus durable buffering**: every team gets its own copy of the event, and each processes it at its own speed with its own retries and DLQ, and a slow or failed consumer never affects the others.
 
+**Q2. You subscribed an SQS queue to an SNS topic and published a test message. The subscription shows “Confirmed,” but the queue stays empty. What would you check?**
+
+**Answer:** Most likely the **SQS queue policy** doesn’t allow the SNS topic to send messages. The queue needs a policy statement allowing `sqs:SendMessage` from the SNS service, restricted by `aws:SourceArn` to the topic’s ARN. Other checks: the **filter policy** on the subscription might be filtering the message out (a message without the expected attribute is dropped); the message may have been published **to a different topic or Region**; the **queue’s encryption (KMS key) policy** may not allow SNS to use the key if the queue is encrypted with a customer-managed key; and a **DLQ on the subscription** can reveal delivery failures, along with SNS delivery-status logging or CloudWatch metrics such as `NumberOfNotificationsFailed`.
+
+**Q3. Your worker reads messages from the queue that is subscribed to an SNS topic, and the code crashes on `message["order_id"]`, but when you published directly to the queue it worked fine. What’s going on?**
+
+**Answer:** SNS wraps the message in an **envelope**. The queue receives a JSON object with fields such as `Type`, `MessageId`, `TopicArn`, `Message` (a string containing your original payload) and `Timestamp`, and your actual data is a **JSON string inside the `Message` field**. The worker must parse the outer JSON, then parse the inner `Message` string. Alternatively, enable **raw message delivery** on the subscription, so the queue receives your payload exactly as published. Note that with raw delivery, message attributes arrive as SQS message attributes instead of inside the envelope.
+
+**Q4. One topic receives all company events (orders, refunds, signups). The refund team’s queue is being flooded with order messages they don’t need, wasting their processing and money. How do you fix it without creating separate topics?**
+
+**Answer:** Use **subscription filter policies**. Publishers attach a message attribute such as `eventType` (`order`, `refund`, `signup`), and the refund team’s subscription has a filter policy like `{"eventType": ["refund"]}`. SNS then delivers only matching messages to that queue. Filtering happens inside SNS, so the unwanted messages never reach the queue and incur no processing cost. You can also filter on **message body** content (by setting the filter policy scope), and use operators like prefix, numeric ranges and “anything-but”. Separate topics are sometimes the better design when event types are very different or need different access control, but filter policies are the lightweight answer here.
+
+**Q5. A payment event must be delivered to multiple services **in the exact order** it occurred (authorize → capture → refund) for each payment. A standard SNS topic sometimes delivers them out of order. What are the options?**
+
+**Answer:** Use an **SNS FIFO topic** with **FIFO SQS queues** as subscribers. Set the **message group ID** to the payment ID, so ordering is guaranteed within each payment while different payments are processed in parallel, and use a deduplication ID (or content-based deduplication) to drop duplicates in the 5-minute window. The trade-offs: FIFO topics have **lower throughput limits** than standard topics, and they only support **SQS and Lambda** style subscriptions (not email or SMS). Also, SNS FIFO ordering applies per message group, so choose the group ID carefully (too coarse and you lose parallelism, too fine and you lose the ordering you need). A design alternative is to make events self-describing (sequence numbers or timestamps) so consumers can detect and ignore out-of-order or stale events, even on standard topics.
+
+### 6. Scenario question
+
+**Scenario:** You are the cloud engineer at **ShopEasy**, an online marketplace.
+
+- When a customer places an order, **six different systems** must react: the **warehouse** system, the **invoice** generator, the **email/SMS notification** service, the **analytics** pipeline, the **fraud-detection** service, and, soon, a new **loyalty-points** service.
+- Right now the checkout service calls each of them directly. Adding the loyalty service would mean changing and redeploying checkout, and **when the invoice service is down, checkout fails**.
+- The fraud team only wants orders **above ₹50,000**. The loyalty team only wants orders from **registered members**. Everyone else wants all orders.
+- The warehouse system is slow and processes about **5 orders per second**, while peak order volume is **200 per second**. It must **never lose** an order.
+- The warehouse team’s workers expect plain order JSON, but today the messages they receive from the test setup have extra fields wrapped around the data, and they ask what went wrong.
+- The **operations team** must receive an **email and an SMS** when the order-processing system raises a serious alarm (for example, error rate above 5%), and an **automatic remediation function** should run at the same time.
+- **Refund events** must be applied in the correct order for each order (refund requested → approved → paid).
+
+Design the solution with SNS (and whatever else we’ve covered). For each point, name the features and explain your reasoning:
+
+1. How do you restructure the order flow so checkout doesn’t depend on each downstream system?
+2. How do you give the fraud and loyalty teams only the orders they need?
+3. How do you protect the slow warehouse system from the 200-per-second peak without losing orders?
+4. What do you tell the warehouse team about the wrapped message, and what do you change?
+5. How do you set up the operations alerting with email, SMS and automatic remediation?
+6. How do you handle ordered refund events?
+7. What do you do about deliveries that fail repeatedly for one subscriber?
+
+ **what would you need to change to add the loyalty service later, and why is that better than before?**
