@@ -3263,3 +3263,9 @@ sns.publish(
 
 - A message with amount 72,000 goes to both the email subscriber and the fraud queue. A message with amount 900 goes only to the email subscriber.
 
+### Interview questions with answers
+
+**Q1. When would you use SNS, when SQS, and why is the answer often “both together”?**
+
+**Answer:** Use **SQS** when work must be **buffered and handled by one consumer** (for example, a pool of workers processing jobs), and use **SNS** when **one event must reach many different receivers** at once. SNS alone has a weakness: it **doesn’t store messages** for a subscriber that’s down or slow beyond its delivery retries, and subscribers can’t control their own pace. SQS alone has the limit that each message goes to a single consumer. Combining them (**SNS topic → multiple SQS queues**) gives you **broadcast plus durable buffering**: every team gets its own copy of the event, and each processes it at its own speed with its own retries and DLQ, and a slow or failed consumer never affects the others.
+
