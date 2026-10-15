@@ -4688,3 +4688,74 @@ FROM funnel_logs;
 
 Time-series patterns involve manipulating temporal data to align events into consistent chronological intervals, fill missing calendar gaps, compute running totals, and calculate growth velocities across comparative periods:
 
+- **`DATE_TRUNC`:** Truncates a timestamp down to a specified precision unit (e.g., `'month'`, `'week'`, `'day'`).
+
+- **`generate_series`:** A set-returning function used to generate continuous sequences of dates or numbers over a specified range.
+
+- **Period-over-Period (PoP):** Comparing metrics across relative historical windows (such as Year-over-Year or Month-over-Month growth) using window offset functions like `LAG`.
+
+### Application
+
+- **Filling Temporal Gaps:** Ensuring charts and dashboards do not distort trends when specific days or months record zero transactions.
+
+- **Financial & Operational Auditing:** Calculating Year-to-Date (YTD) running totals, moving averages, and growth deltas.
+
+- **Trend Analysis:** Smoothing out daily volatility to uncover long-term seasonal or cyclical trajectories.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** An analytics dashboard plots daily sales. If a store records zero sales on a specific Tuesday, the database drops that date entirely from the query output. When rendered on a line graph, the chart connects Monday directly to Wednesday, misrepresenting the timeline scale and creating a misleading visual drop.
+
+- **Solution:** Generating a continuous calendar table using `generate_series` and performing a `LEFT JOIN` against actual sales data ensures that missing dates are preserved and populated with a `0` value instead of disappearing.
+
+### Industrial Example
+
+A retail banking platform tracks monthly transaction volumes. To present a clean executive report, the data pipeline uses `DATE_TRUNC('month', transaction_date)` to aggregate raw timestamps, pairs it with `LAG(revenue, 12)` to compare performance against the exact same month last year, and computes the Year-over-Year (YoY) growth percentage.
+
+```sql
+
+-- 1. Filling Missing Dates using generate_series and LEFT JOIN (PostgreSQL style)
+WITH DateCalendar AS (
+    -- Generates a continuous sequence of dates between start and end bounds
+    SELECT generate_series(
+        DATE '2026-07-01', 
+        DATE '2026-07-05', 
+        INTERVAL '1 day'
+    )::DATE AS calendar_date      -- `::` is a type-casting operator. It converts a value from one data type to another. `::DATE`: Converts the generated timestamp into a date.
+)
+
+SELECT 
+    c.calendar_date,
+    -- COALESCE replaces missing sales gaps with 0.00 instead of NULL
+    COALESCE(s.revenue, 0.00) AS revenue,
+    -- Calculates a cumulative running total without collapsing the daily rows.
+    SUM(COALESCE(s.revenue, 0.00)) OVER (ORDER BY c.calendar_date)   
+AS running_total
+FROM DateCalendar c
+LEFT JOIN daily_sales s ON c.calendar_date = s.sale_date;
+
+
+-- 2. Period-over-Period (MoM) Growth Calculation using LAG
+WITH MonthlyRevenue AS (
+    SELECT 
+	    -- DATE_TRUNC(): Groups dates into their respective months.
+        DATE_TRUNC('month', sale_date) AS month_start,
+        SUM(revenue) AS total_revenue
+    FROM daily_sales
+    GROUP BY DATE_TRUNC('month', sale_date)
+)
+SELECT 
+    month_start,
+    total_revenue,
+    -- LAG() fetches the previous month's revenue for comparison.
+    LAG(total_revenue, 1) OVER (ORDER BY month_start) AS prev_month_revenue,
+    -- Month-over-Month Growth Percentage Calculation
+    ROUND(
+        (total_revenue - LAG(total_revenue, 1) OVER (ORDER BY month_start)) * 100.0 / 
+        NULLIF(LAG(total_revenue, 1) OVER (ORDER BY month_start), 0), 2
+        -- 
+    ) AS mom_growth_pct
+FROM MonthlyRevenue;
+
+```
+
