@@ -51,14 +51,14 @@ print(f"{name} is {age} years old. Next year he will be {age + 1}.")
 
 #### Interview Question - 
 
-Why does `0.1 + 0.2 == 0.3` return `False`? What would you use for money? _(Hint: the `Decimal` module. We’ll cover it soon.)_
+Why does `0.1 + 0.2 == 0.3` return `False`? What would you use for money? 
 **Ans.** Floats are stored in binary, and 0.1 can’t be represented exactly, so `0.1 + 0.2` is `0.30000000000000004`. For money, use `Decimal` or store integer paise/cents. To compare floats, use `math.isclose()`.
 
 **Scenario:** an `amount` column has the values `"1,200.50"`, `"N/A"`, and `""`. Calling `float()` on each of them crashes. How would you handle this safely? _(Just describe your approach for now, no code needed.)_
 **Ans.**	Remove the comma with `.replace(",", "")`, then wrap `float()` in `try/except ValueError` and store `None` for bad values. Log those rows instead of crashing. That’s fail-soft with a paper trail, and it’s what real pipelines do. We’ll do `try/except` properly soon.
 
 ---
-## Lesson 2: Strings (the cleaning toolkit)
+## Lesson 2: Strings 
 
 - **String**: an ordered, **immutable** sequence of characters. Immutable means you can never change one in place. Every “change” creates a new string.
 - **Indexing and slicing**: pull out parts: `s[0]`, `s[-1]`, `s[2:5]`.
