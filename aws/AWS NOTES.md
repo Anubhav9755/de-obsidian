@@ -3021,3 +3021,14 @@ Design the solution with SQS. For each point, name the SQS features and explain 
 6. How do you handle the 20x spike, and how do you protect the print shop’s 10-request limit?
 7. How do you pass 200 photos through the system when messages are small?
 
+#### 1. Restructuring the flow for a fast response and no lost orders
+
+Split the request into a **fast synchronous part** and a **slow asynchronous part**.
+
+- **Synchronous (what the customer waits for):** validate the order, **charge the card**, save the order to the database with status `RECEIVED`, put a message on an SQS queue, and return “Order placed” within a second or two.
+- **Asynchronous (queue-driven workers):** resize and watermark photos, generate the PDF proof, email the customer, and send the job to the print shop.
+
+SQS stores messages **redundantly across multiple AZs**, so once the message is accepted, it survives server crashes. The “lose orders” problem disappears because the order is saved and queued **before** the response goes back. If the processing servers are down, messages simply wait in the queue (retention up to 14 days) and are processed when workers return. That meets the requirement that orders are still accepted while processing is down.
+
+One honest caveat: “save the order to the database” and “send the message to the queue” are two separate operations, and one could succeed while the other fails. A common safeguard is the **transactional outbox pattern** (write the message into the database in the same transaction, then a small process publishes it to the queue), or at minimum a reconciliation job that finds orders stuck in `RECEIVED` with no processing started.
+
