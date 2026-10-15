@@ -3146,4 +3146,120 @@ It handles two kinds of use:
 
 - **Dead-letter queue for subscriptions**: an SQS queue attached to a **subscription** (not the topic) that captures messages SNS couldn’t deliver to that endpoint.
 
+#### Two topic types
+
+![[Pasted image 20261015201216.png]]
+
+Use FIFO topics when order matters across many subscribers.
+
+### SNS vs SQS: SNS tells everyone, SQS holds work for someone.
+
+![[Pasted image 20261015201309.png]]
+
+#### The most important pattern: SNS + SQS fan-out
+
+Publish **once** to an SNS topic, and subscribe **several SQS queues** to it. Each queue gets its own copy, and each team’s workers process their copy independently, at their own speed, with their own retries and DLQs. You get the **broadcast** of SNS **plus** the **durability and buffering** of SQS. It’s the standard design for event-driven systems.
+
+#### Other things worth knowing
+
+- **Encryption**: server-side encryption with KMS and TLS in transit.
+
+- **Access control**: IAM policies and **topic policies** (needed, for example, to let an S3 bucket or another account publish, or to let SNS write to an SQS queue; the queue also needs a policy allowing the topic).
+
+- **Many AWS services publish to SNS**: CloudWatch alarms (to alert people), S3 event notifications, Auto Scaling events, AWS Budgets, CloudFormation and more.
+
+- **SMS** has costs and country-specific regulations (sender registration, opt-outs), and it’s often **sandboxed** at first in a new account, which is a frequent real-world surprise.
+
+- **Email via SNS** is for **notifications to a few people (like an operations team)**, and **not** for bulk marketing or transactional customer email. Use a dedicated email service for that (Amazon SES).
+
+- It’s priced per request, per delivery (differs by protocol, SMS being the most expensive), with a free tier.
+
+### The industry problem it solves
+
+**Example: an online store**, again.
+
+When an order is placed, many things must happen: the warehouse is told, the invoice is generated, the customer gets an email, the analytics system records a sale, the fraud-detection service scores the order, and (soon) a loyalty-points service awards points.
+
+If the checkout service **calls each of these directly**:
+
+1. Checkout must **know about every downstream system** and be changed each time a new one is added (the loyalty service means a new deployment of checkout).
+2. If one downstream is slow or down, **checkout is affected**.
+3. Adding or removing a consumer is a risky change to the core system.
+
+With **SNS**, checkout publishes **one** “OrderPlaced” event to a topic. The warehouse, invoice, email, analytics, fraud and loyalty services each **subscribe independently** (usually through their own SQS queue). Adding a new service means **adding a subscription**, with zero change to checkout. Filter policies let each subscriber see only what it needs (for example, fraud checks only for orders over ₹50,000).
+
+A second common use: **operations alerts**. A CloudWatch alarm (“CPU above 90% for 5 minutes”) publishes to an SNS topic, which emails the on-call team, sends an SMS to the manager and triggers a Lambda function that runs automated remediation.
+
+**Where it is a poor fit:** when you need messages **stored** until a consumer is ready (use SQS, or SNS with SQS), when you need **replayable history** (use a streaming service), or when the sender needs a **direct response** (use a synchronous call).
+
+## CODE
+
+Create a topic, subscribe a queue and an email, and publish (CLI):
+
+```bash
+# 1. Create the topic
+aws sns create-topic --name order-placed
+
+# 2. Subscribe an email address (the person must click the confirmation link)
+aws sns subscribe \
+  --topic-arn arn:aws:sns:ap-south-1:123456789012:order-placed \
+  --protocol email \
+  --notification-endpoint ops-team@example.com
+
+# 3. Subscribe an SQS queue (with a filter so it only gets large orders)
+aws sns subscribe \
+  --topic-arn arn:aws:sns:ap-south-1:123456789012:order-placed \
+  --protocol sqs \
+  --notification-endpoint arn:aws:sqs:ap-south-1:123456789012:fraud-queue \
+  --attributes '{"FilterPolicy": "{\"amount\": [{\"numeric\": [\">\", 50000]}]}", "RawMessageDelivery": "true"}'
+
+# 4. Publish a message with attributes
+aws sns publish \
+  --topic-arn arn:aws:sns:ap-south-1:123456789012:order-placed \
+  --message '{"order_id": 8841, "amount": 72000}' \
+  --message-attributes '{"amount": {"DataType": "Number", "StringValue": "72000"}}
+```
+
+**The queue policy that lets the topic write to the queue (this step is the one people forget):**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": { "Service": "sns.amazonaws.com" },
+    "Action": "sqs:SendMessage",
+    "Resource": "arn:aws:sqs:ap-south-1:123456789012:fraud-queue",
+    "Condition": {
+      "ArnEquals": { "aws:SourceArn": "arn:aws:sns:ap-south-1:123456789012:order-placed" }
+    }
+  }]
+}
+```
+
+**Publishing from Python (boto3):**
+
+```python
+import boto3, json
+
+sns = boto3.client("sns", region_name="ap-south-1")
+
+sns.publish(
+    TopicArn="arn:aws:sns:ap-south-1:123456789012:order-placed",
+    Message=json.dumps({"order_id": 8841, "amount": 72000}),
+    MessageAttributes={
+        "amount": {"DataType": "Number", "StringValue": "72000"}
+    },
+)
+```
+
+- Step 1 creates the topic. Step 2 subscribes an email address, which stays **pending** until the recipient confirms. Step 3 subscribes an SQS queue with a **filter policy**, so this queue only receives messages whose `amount` attribute is above 50,000.
+
+- **`RawMessageDelivery: true`** delivers just your message body to the queue. Without it, SQS receives an **SNS envelope (JSON wrapper)** with metadata, and your worker must unwrap it. Knowing about this wrapper saves a lot of debugging.
+
+- The **queue policy** lets SNS write to the queue. Without it, the subscription is created but **messages silently don’t arrive**. This is one of the most common real-world problems.
+
+- The publish call includes a **message attribute**, which is what the filter policy checks. **Filter policies apply to attributes by default** (SNS also supports filtering on the message body if you set the filter scope to `MessageBody`).
+
+- A message with amount 72,000 goes to both the email subscriber and the fraud queue. A message with amount 900 goes only to the email subscriber.
 
