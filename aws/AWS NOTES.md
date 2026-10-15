@@ -273,7 +273,28 @@ arn:aws:sqs:ap-south-1:123456789012:orders-queue
 | region     | `ap-south-1`   | Which Region (Mumbai)                                                               |
 | account-id | `123456789012` | The 12-digit AWS account that owns it                                               |
 | resource   | `orders-queue` | The resource itself (its format varies by service)                                  |
+**Some variations to know:**
 
+- **Global services leave the Region blank.** IAM and S3 are examples:
+    - An S3 bucket: `arn:aws:s3:::my-bucket` (no Region and no account ID, because bucket names are globally unique).
+    - An S3 object: `arn:aws:s3:::my-bucket/reports/report.pdf`.
+    - An IAM role: `arn:aws:iam::123456789012:role/RedshiftS3ReadRole` (no Region).
+- **The resource part can have a type prefix**, like `role/...`, `instance/...`, or `function:my-function`.
+
+**Where ARNs matter in practice:**
+
+1. **IAM policies** say which resources an action applies to:
+
+```json
+   "Resource": "arn:aws:sqs:ap-south-1:123456789012:orders-queue"
+```
+
+A `*` wildcard can cover many resources (`arn:aws:s3:::my-bucket/*` means every object in that bucket).  
+2. **Linking services together**: when you subscribed the SQS queue to the SNS topic, you passed the topic’s ARN and the queue’s ARN.  
+3. **Conditions** like `aws:SourceArn`, which we used in the CloudFront and SQS policies to say “only this specific distribution or topic may do this”. That is a security best practice, because it stops a different resource, possibly in another account, from using the permission.  
+4. **Finding the ARN**: it’s shown on the resource’s page in the console, and CLI `create-*` or `describe-*` commands return it.
+
+**A quick way to remember it:** the **name** is what you call the resource, and the **ARN** is its full postal address, including country (partition), city (Region) and house owner (account).
 
 ---
 
@@ -2602,7 +2623,34 @@ Honest caveat: within the 10-minute window, the signed URL could still be shared
 **us-east-1 (N. Virginia).** CloudFront is a global service, and it only accepts **ACM certificates created in us-east-1**. If you create the certificate in Mumbai, it won’t appear in the CloudFront certificate list. (The ALB in Mumbai needs its own certificate in **ap-south-1** if you want HTTPS between CloudFront and the ALB, which you should.) Also set the distribution’s **alternate domain name (CNAME)** to `www.stylekart.com` and point Route 53 to it with an **Alias record**.
 
 ---
+## EXTRA - Boto3
 
+**Boto3 is the official AWS SDK for Python.** An SDK (software development kit) is a library that lets your code talk to a service. Instead of writing raw HTTP requests to AWS and signing them yourself, you call Python functions, and boto3 handles the authentication, request signing, retries and response parsing.
+
+Everything you can click in the AWS Console, or run with the AWS CLI, can also be done from Python:
+
+```python
+import boto3
+
+# Create a "client" for a service
+s3 = boto3.client("s3", region_name="ap-south-1")
+
+# Call a function that maps to an AWS API action
+s3.upload_file("report.pdf", "my-bucket", "reports/report.pdf")
+```
+
+**The pieces you’ll see in every lesson:**
+
+- **`boto3.client("service")`** gives you a low-level interface where each method maps directly to an AWS API call (`sqs.send_message`, `sns.publish`). The responses are plain dictionaries.
+- **`boto3.resource("service")`** gives a higher-level, object-style interface for some services (like S3 and DynamoDB). AWS has stopped adding new features to resources, so most new code uses clients.
+- **Credentials**: you never hard-code keys in your script. Boto3 looks for credentials automatically, in this order of common sources: environment variables, the `~/.aws/credentials` file (created by `aws configure`), and, when your code runs on AWS itself (EC2, Lambda), the **IAM role** attached to that resource (Lesson 5). On AWS, always prefer the role.
+- **Permissions still apply**: boto3 doesn’t bypass IAM. If your role isn’t allowed to call `sqs:SendMessage`, boto3 raises an `AccessDenied`-type error (`botocore.exceptions.ClientError`).
+
+Install it with `pip install boto3`. The name comes from a freshwater dolphin in the Amazon river, which is the same naming spirit as the original library.
+
+**Where you’ve seen it:** the SQS worker loop (`sqs.receive_message`, `sqs.delete_message`) and the SNS publish call in the last two lessons were boto3. The CLI commands in the other examples do the same job from the terminal.
+
+---
 ### AWS Direct Connect
 
 - **VPC** is your private network inside AWS. It has subnets, route tables and gateways. Traffic leaves it through an **Internet Gateway (IGW)** or a **NAT gateway**.
