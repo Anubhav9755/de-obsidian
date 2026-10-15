@@ -2916,3 +2916,108 @@ With SQS, the checkout service does the **essential** work (take the payment, sa
 
 ## CODE 
 
+**Create a queue with a dead-letter queue, then send and receive (CLI):**
+
+```bash
+# 1. Create the dead-letter queue first
+aws sqs create-queue --queue-name orders-dlq
+
+# Get its ARN
+aws sqs get-queue-attributes \
+  --queue-url https://sqs.ap-south-1.amazonaws.com/123456789012/orders-dlq \
+  --attribute-names QueueArn
+
+# 2. Create the main queue, pointing at the DLQ after 3 failed attempts
+aws sqs create-queue --queue-name orders-queue \
+  --attributes '{
+    "VisibilityTimeout": "60",
+    "ReceiveMessageWaitTimeSeconds": "20",
+    "RedrivePolicy": "{\"deadLetterTargetArn\":\"arn:aws:sqs:ap-south-1:123456789012:orders-dlq\",\"maxReceiveCount\":\"3\"}"
+  }'
+
+# 3. Send a message
+aws sqs send-message \
+  --queue-url https://sqs.ap-south-1.amazonaws.com/123456789012/orders-queue \
+  --message-body '{"order_id": 8841, "task": "send_invoice"}'
+```
+
+**A worker in Python (boto3):**
+
+
+```python
+import boto3, json
+
+sqs = boto3.client("sqs", region_name="ap-south-1")
+queue_url = "https://sqs.ap-south-1.amazonaws.com/123456789012/orders-queue"
+
+while True:
+    resp = sqs.receive_message(
+        QueueUrl=queue_url,
+        MaxNumberOfMessages=10,
+        WaitTimeSeconds=20          # long polling
+    )
+    for msg in resp.get("Messages", []):
+        try:
+            order = json.loads(msg["Body"])
+            process_order(order)    # your logic; must be safe to run twice
+            sqs.delete_message(     # delete ONLY after success
+                QueueUrl=queue_url,
+                ReceiptHandle=msg["ReceiptHandle"]
+            )
+        except Exception as e:
+            print("Failed, will retry after visibility timeout:", e)
+```
+
+**What this does:**
+
+- The **DLQ** is created first, because the main queue’s **redrive policy** needs its ARN. After 3 failed receives (`maxReceiveCount`), a message moves to the DLQ instead of looping forever.
+- `VisibilityTimeout: 60` gives a worker 60 seconds to finish before the message reappears. It should be longer than your slowest normal processing.
+- `ReceiveMessageWaitTimeSeconds: 20` makes **long polling** the default, which reduces empty responses and cost.
+- In the worker, `delete_message` is called **only after success**. If `process_order` raises an error, the message isn’t deleted, becomes visible again after the timeout, and is retried (and eventually lands in the DLQ).
+- Because delivery is at-least-once, `process_order` should be **idempotent**: for example, check whether invoice 8841 already exists before creating it.
+
+**With Lambda (no polling code needed):** you attach the queue as an **event source mapping**, and Lambda polls, invokes your function with a batch of messages, and deletes them when the function succeeds. If the function fails, the messages return to the queue. Set the queue’s visibility timeout to **at least 6 times the function timeout**, which AWS recommends for this integration.
+
+### Interview questions with answers
+
+**Q1. Your workers process each order and charge a customer. After a deployment, customers report being **charged twice**. The queue is a Standard queue. What happened, and how do you fix it?**
+
+**Answer:** Standard queues guarantee **at-least-once** delivery, so the same message can legitimately be delivered **more than once**. It can also happen when processing takes **longer than the visibility timeout**, so the message becomes visible again while the first worker is still working, and a second worker picks it up. The fixes: make the processing **idempotent** (for example, store a unique order or payment ID, and skip the charge if it was already done, or pass an idempotency key to the payment provider), **increase the visibility timeout** above the maximum processing time (and extend it dynamically with `ChangeMessageVisibility` for long jobs), and, if strict de-duplication is needed, consider a **FIFO queue** with a deduplication ID (while still keeping idempotent logic, since de-duplication only covers a 5-minute window).
+
+**Q2. One message in your queue contains malformed data that crashes the worker every time. The queue keeps retrying it, workers keep crashing, and the queue’s backlog is growing behind it. What’s the problem and the standard solution?**
+
+**Answer:** That is a **poison message**. It fails, becomes visible again, and is retried endlessly, wasting capacity (and in a FIFO queue it can even **block the entire message group** behind it). The solution is a **dead-letter queue**: set a **redrive policy** with a sensible `maxReceiveCount` (for example 3 to 5), so after repeated failures the message moves to the DLQ. Then **set a CloudWatch alarm** on the DLQ depth so someone is alerted, inspect and fix the message or the bug, and use **DLQ redrive** to send fixed messages back to the source queue. Also validate the input in the worker, and make the DLQ’s retention period longer than the source queue’s so the messages aren’t expired before anyone looks at them.
+
+**Q3. Your queue is a Standard queue, and an engineer insists “SQS keeps messages in order, so it’s safe to process ‘create account’ then ‘update account’ in sequence.” Is that true?**
+
+**Answer:** No. Standard queues give **best-effort ordering only**, so “update account” could be delivered before “create account,” especially with multiple consumers. If ordering matters, use a **FIFO queue**, with the same **message group ID** for all messages about the same account (ordering is guaranteed **within a group**, while different accounts can be processed in parallel in different groups). Note the trade-off: FIFO has lower throughput than Standard and a message group is processed **sequentially**, so one slow or failing message holds up its group. An alternative is to **design the messages to be order-independent** (for example, each message carries a version number, and the consumer ignores stale updates).
+
+**Q4. Messages are piling up during a traffic spike, and the on-call engineer wants to add EC2 workers. How would you automate this, and what metric would you scale on?**
+
+**Answer:** Use **EC2 Auto Scaling** (Lesson 19) driven by queue metrics. The raw `ApproximateNumberOfMessagesVisible` isn’t ideal on its own, because the right worker count depends on **how fast each worker processes**. The AWS-recommended approach is a **“backlog per instance”** custom metric: queue depth divided by the number of running instances, and a **target tracking** policy that keeps it at an acceptable level (derived from your processing time and the latency you can tolerate). If using Lambda as the consumer, it scales out automatically with the queue (subject to concurrency limits, which can also be set to protect downstream databases from being overwhelmed). Also set a **maximum** on scale-out so a spike doesn’t overwhelm the database downstream, which is the same problem the queue was meant to prevent.
+
+**Q5. A teammate wants to put a 50 MB video file into an SQS message body. Is that possible, and what should you do instead?**
+
+**Answer:** Not directly, because the message size limit is **1 MiB**. The standard pattern (the **claim-check pattern**) is to **upload the file to S3** and send a small message containing the **S3 bucket and key** (and any metadata). The consumer reads the message, downloads the object from S3, and processes it. AWS also provides an **Extended Client Library** (for Java and Python) that automates this approach. This also keeps queue costs down and avoids pushing large payloads through the queue.
+
+### Scenario question
+
+**Scenario:** You are the cloud engineer at **QuickPrint**, a service where customers upload photos and order printed photo books.
+
+- When a customer clicks “Place order”, the web app currently does everything in one request: charges the card, resizes and watermarks up to 200 photos, generates a PDF proof, emails the customer, and tells the print shop’s system. Sometimes this takes **90 seconds**, and the browser times out. On festival weekends, order volume is **20 times** normal and the servers crash, **losing orders**.
+- The **card charge** must happen exactly once per order, and customers must never be double-charged.
+- Photo processing is heavy, takes **1 to 3 minutes per order**, and the print shop’s system can accept only **10 requests at a time** before it starts rejecting them.
+- Some orders contain corrupted photo files that **crash the processing code** every time.
+- Order status updates for a **single customer** (for example “processing” then “shipped”) must be applied in the correct order.
+- Orders should still be accepted even if the processing servers are **temporarily down**.
+
+Design the solution with SQS. For each point, name the SQS features and explain your reasoning:
+
+1. How do you restructure the flow so customers get a fast response and no orders are lost?
+2. Which parts go into a queue, and which parts do **not**?
+3. How do you protect against double charging and duplicate processing?
+4. Standard or FIFO queue, for which messages, and why?
+5. How do you handle the corrupted photo files?
+6. How do you handle the 20x spike, and how do you protect the print shop’s 10-request limit?
+7. How do you pass 200 photos through the system when messages are small?
+
