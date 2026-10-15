@@ -3044,4 +3044,18 @@ One honest caveat: “save the order to the database” and “send the message 
 - Sending the job to the print shop.
 - Order status updates.
 
+#### 3. Protecting against double charging and duplicate processing
+
+Two different problems:
+
+- **Double charging** is prevented **outside the queue**, because the charge isn’t queued. Send an **idempotency key** (such as the order ID) to the payment provider, so a retried request (for example the customer double-clicking, or the browser retrying) can’t create a second charge. Also store the payment status against the order, and check it before charging.
+- **Duplicate processing** inside the queue: SQS guarantees at-least-once delivery for Standard queues, so the same message can be delivered twice, and it also reappears if processing outlasts the **visibility timeout**. So:
+    - Make every worker **idempotent**: before processing, check the order’s status in the database (for example, “if proof already generated, skip”), or use a conditional update so only one worker can move the order from `RECEIVED` to `PROCESSING`.
+    - Set the **visibility timeout longer than the longest processing time** (more than 3 minutes here, so something like 5 to 10 minutes), and extend it with `ChangeMessageVisibility` for unusually large orders.
+
+#### 4. Standard or FIFO, for which messages?
+
+- **Photo processing and proof generation: Standard queue.** Orders are independent of each other, order doesn’t matter, and the festival spike needs the high throughput Standard offers. Duplicates are handled by idempotent workers.
+- **Order status updates: FIFO queue**, with the **customer ID (or order ID) as the message group ID**. This guarantees “processing” is applied before “shipped” **for the same customer**, while different customers’ updates are still processed in parallel. Use a **deduplication ID** (for example order ID plus status) so repeated sends are dropped within the 5-minute window.
+- The **email** and **print shop** messages can be Standard queues too, since order doesn’t matter there, although the email should be idempotent so customers don’t get duplicates.
 
