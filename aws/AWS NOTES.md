@@ -255,6 +255,25 @@ _"You're building a Lambda function (as part of a data pipeline) that needs to r
 Ans- Lambda functions get an **execution role**, and that role's policy would grant `s3:GetObject` on the source bucket and `dynamodb:PutItem` on the target table.
 
 ---
+## ARN (Amazon Resource Name)
+
+An **ARN is the unique, full address of any resource in AWS**. Names like `orders-queue` can repeat across accounts and Regions, so AWS needs an unambiguous identifier, and the ARN is it. IAM policies, SNS subscriptions, Lambda triggers and cross-service permissions all refer to resources by ARN.
+
+A real example, from the SQS lesson:
+
+```
+arn:aws:sqs:ap-south-1:123456789012:orders-queue
+```
+
+| Part       | Value here     | Meaning                                                                             |
+| ---------- | -------------- | ----------------------------------------------------------------------------------- |
+| `arn`      | `arn`          | Always starts with this                                                             |
+| partition  | `aws`          | Normally `aws`. Special ones exist for China (`aws-cn`) and GovCloud (`aws-us-gov`) |
+| service    | `sqs`          | Which AWS service                                                                   |
+| region     | `ap-south-1`   | Which Region (Mumbai)                                                               |
+| account-id | `123456789012` | The 12-digit AWS account that owns it                                               |
+| resource   | `orders-queue` | The resource itself (its format varies by service)                                  |
+
 
 ---
 
