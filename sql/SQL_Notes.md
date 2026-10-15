@@ -4576,3 +4576,28 @@ FROM ServerStats;
 ---
 ## Cohort, Retention & Funnel Queries
 
+- **Cohort Analysis:** Grouping users or entities based on a shared characteristic or initial timeline (such as their sign-up month or first purchase date) and tracking their behavior over subsequent time periods.
+
+- **Retention Analysis:** Measuring the percentage of users from a specific cohort who return to perform key actions (like logging in or making a purchase) across consecutive periods (Period 0, Period 1, Period 2...).
+
+- **Funnel Analysis:** Tracking user progression through a sequential series of steps (e.g., View Product $\rightarrow$ Add to Cart $\rightarrow$ Checkout $\rightarrow$ Purchase) to measure conversion rates and identify drop-off points.
+
+### Application
+
+- **Product Health Tracking:** Evaluating whether new user cohorts retain better or worse than previous product releases.
+
+- **Marketing ROI Optimization:** Identifying which acquisition channels yield users with long-term retention versus short-lived engagement.
+
+- **Conversion Rate Optimization (CRO):** Pinpointing exact friction points in multi-step user workflows where users abandon the process.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** An e-commerce platform notices total monthly active users remain flat, but management cannot tell if the business is successfully retaining older customers or just frantically replacing high churn with expensive new sign-ups.
+
+- **Solution:** Grouping customers into monthly signup cohorts and tracking their retention percentages over time separates true product stickiness from raw acquisition growth, exposing actual user lifecycle retention trends.
+
+### Industrial Example
+
+A subscription-based SaaS platform tracks monthly user retention. By extracting each user's signup month (`DATE_TRUNC('month', signup_date)`) as their cohort anchor and joining it against subsequent activity logs, the analytics team builds a retention matrix heatmap to monitor churn rate trends.
+
+
