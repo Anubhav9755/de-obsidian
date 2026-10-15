@@ -4753,9 +4753,53 @@ SELECT
     ROUND(
         (total_revenue - LAG(total_revenue, 1) OVER (ORDER BY month_start)) * 100.0 / 
         NULLIF(LAG(total_revenue, 1) OVER (ORDER BY month_start), 0), 2
-        -- 
+        -- NULLIF() avoids division by zero, and ROUND() formats the percentage to two decimal places.
     ) AS mom_growth_pct
 FROM MonthlyRevenue;
 
 ```
+
+- **`generate_series(...)`:** Dynamically builds a complete reference calendar sequence so no dates are omitted from analysis.
+
+- **`COALESCE(s.revenue, 0.00)`:** Ensures missing transaction days evaluate cleanly to zero rather than dropping out or turning into `NULL`.
+
+- **`LAG(total_revenue, 1)`:** Retrieves the revenue value from the immediately preceding row (previous month) to compute relative growth deltas side-by-side.
+
+### Interview Corner: Time-Series Patterns
+
+- **Q1: Why do we use `generate_series` with a `LEFT JOIN` in time-series queries?**
+    - _Answer:_ Base tables only store rows where events actually occurred. If we want to report metrics over continuous intervals (like every day of the month), a `LEFT JOIN` against a generated calendar sequence ensures that days with zero activity are included rather than missing.
+
+- **Q2: How do we calculate Month-over-Month (MoM) growth percentage in SQL?**
+    - _Answer:_ We aggregate metrics by month, use the `LAG()` window function to fetch the prior month's value, and compute the percentage difference using the formula: `((Current - Previous) / Previous) * 100`.
+
+---
+
+## Semi-structured & Modern Data — JSON Querying
+
+JSON (JavaScript Object Notation) data types allow relational databases to store unstructured or semi-structured key-value document payloads natively inside standard table columns. Specialized operators are used to traverse, extract, and cast nested data directly within SQL statements:
+
+- **`->` (Arrow Operator):** Extracts a JSON object or field, retaining its JSON data type (returns JSON/JSONB).
+
+- **`->>` (Double Arrow Operator):** Extracts a JSON field and casts it directly into text (or scalar value).
+
+- **`#>` and `#>>`:** Extracts nested JSON objects or text fields using a path array (e.g., `{address, city}`).
+
+### Application
+
+- **Dynamic Schema Storage:** Storing flexible user profile settings, form submissions, or third-party API webhook payloads where column schemas change frequently.
+
+- **Hybrid Modeling:** Combining structured relational metadata (like `user_id` and `created_at`) with flexible document attributes inside a single table.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** An e-commerce system captures diverse product specifications (such as shoe sizes, clothing colors, laptop RAM capacities, and camera resolutions). Creating separate relational columns for every possible product attribute results in a sparse table with hundreds of `NULL` columns.
+
+- **Solution:** Storing variable product specifications inside a single JSON/JSONB column allows the system to store flexible attributes without altering table schemas, while JSON extraction operators query specific nested keys instantly.
+
+### Industrial Example
+
+An enterprise telemetry system ingests user app logs containing nested device information. The analytics pipeline uses `->>` operators to filter and group query results based on device operating systems extracted dynamically from the raw JSON payload.
+
+## QUERY
 
