@@ -1,6 +1,4 @@
 
-# SQL Notes
-
 
 SELECT: Tells the database which columns you want to look at.
 

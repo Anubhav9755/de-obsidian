@@ -771,10 +771,10 @@ for i in range(1, 16):
 
 If you check `% 3` first, 15 prints “Fizz” and never reaches the combined case. That ordering mistake is what the question is testing.
 
-**Q3. What’s the difference between `[x*x for x in range(10**7)]` and `(x*x for x in range(10**7))`? When do you pick each?**  
+**Q2. What’s the difference between `[x*x for x in range(10**7)]` and `(x*x for x in range(10**7))`? When do you pick each?**  
 The square brackets build all 10 million items in memory, hundreds of MB. The round brackets make a **generator expression** that produces one item at a time, so it uses almost no memory. Use a list when you need to reuse, index, or sort the results. Use a generator when you only loop once, like `sum(x*x for x in data)`. 
 
-**What’s wrong with `[print(x) for x in data]`?**  
+**Q3. What’s wrong with `[print(x) for x in data]`?**  
 A comprehension exists to **build a collection**. This one builds a useless list of `None` values just to run `print`. For side effects, use a plain `for` loop.
 
 ```PYTHON
@@ -783,3 +783,26 @@ data = [10, 20, 30]
 
 # print() returns None, so the list comprehension also creates a list of None values: [None, None, None]
 ```
+
+**Q4. Two Sum (a placement classic):** given `nums` and a `target`, return the indices of the two numbers that add up to the target. `two_sum([2, 7, 11, 15], 9)` → `(0, 1)`.  
+
+```python
+def two_sum(nums, target):
+    seen = {}                          # value -> index
+    for i, n in enumerate(nums):
+        need = target - n
+        if need in seen:               # O(1) lookup
+            return seen[need], i
+        seen[n] = i
+    return None
+```
+
+Input: `nums = [2, 7, 11, 15]`, `target = 9`
+
+|`i`|`n`|`need = target - n`|Is `need` in `seen`?|`seen` after iteration|
+|---|---|---|---|---|
+|0|2|7|No|`{2: 0}`|
+|1|7|2|Yes!|Returns `(0, 1)`|
+
+---
+
