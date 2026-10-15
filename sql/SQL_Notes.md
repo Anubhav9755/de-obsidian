@@ -4600,4 +4600,86 @@ FROM ServerStats;
 
 A subscription-based SaaS platform tracks monthly user retention. By extracting each user's signup month (`DATE_TRUNC('month', signup_date)`) as their cohort anchor and joining it against subsequent activity logs, the analytics team builds a retention matrix heatmap to monitor churn rate trends.
 
+**QUERY**
 
+``` sql
+-- Target Schema Setup
+CREATE TABLE users (
+    user_id INT PRIMARY KEY,
+    signup_date DATE
+);
+
+CREATE TABLE user_events (
+    event_id INT PRIMARY KEY,
+    user_id INT,
+    event_date DATE
+);
+
+-- 1. Cohort & Retention Matrix Query
+WITH UserCohorts AS (
+    SELECT 
+        user_id,
+        DATE_TRUNC('month', signup_date) AS cohort_month
+    FROM users
+),
+ActivityPeriods AS (
+    SELECT DISTINCT
+        u.user_id,
+        u.cohort_month,
+        DATE_TRUNC('month', e.event_date) AS activity_month,
+        -- Calculate month offset (Period 0, 1, 2...)
+        (EXTRACT(YEAR FROM e.event_date) - EXTRACT(YEAR FROM u.signup_date)) * 12 +
+        (EXTRACT(MONTH FROM e.event_date) - EXTRACT(MONTH FROM u.signup_date)) AS period_number
+    FROM UserCohorts u
+    JOIN user_events e ON u.user_id = e.user_id
+)
+SELECT 
+    cohort_month,
+    period_number,
+    COUNT(DISTINCT user_id) AS active_users
+FROM ActivityPeriods
+GROUP BY cohort_month, period_number
+ORDER BY cohort_month, period_number;
+
+
+-- 2. Conversion Funnel Query using Conditional Aggregation
+CREATE TABLE funnel_logs (
+    user_id INT,
+    step_name VARCHAR(50),
+    event_time TIMESTAMP
+);
+
+SELECT 
+    COUNT(DISTINCT user_id) AS total_visitors,
+    COUNT(DISTINCT CASE WHEN step_name = 'VIEW_PRODUCT' THEN user_id END) AS viewed_product,
+    COUNT(DISTINCT CASE WHEN step_name = 'ADD_TO_CART' THEN user_id END) AS added_to_cart,
+    COUNT(DISTINCT CASE WHEN step_name = 'PURCHASE' THEN user_id END) AS completed_purchase,
+    -- Conversion Rate Calculation
+    ROUND(
+        COUNT(DISTINCT CASE WHEN step_name = 'PURCHASE' THEN user_id END) * 100.0 / 
+        NULLIF(COUNT(DISTINCT user_id), 0), 2
+    ) AS overall_conversion_pct
+FROM funnel_logs;
+```
+
+- `DATE_TRUNC('month', signup_date)`: Converts a date to the beginning of its month. Example: `'2025-01-15'` → `2025-01-01 00:00:00`.
+
+- `EXTRACT(YEAR FROM event_date)`: Extracts the year from a date. Example: `'2025-03-10'` → `2025`.
+
+- `UserCohorts` assigns each user a cohort based on their signup month using `DATE_TRUNC()`.
+
+- `ActivityPeriods` joins users with their events and calculates the month offset using `EXTRACT()`.
+
+- `COUNT(DISTINCT user_id)` counts unique active users in each cohort and period.
+
+- `GROUP BY` and `ORDER BY` organize the results by cohort month and period number.
+
+**INTERVIEW QUESTION**
+
+- **Q1: What is the difference between Period 0 and Period 1 in a retention matrix?**
+    - _Answer:_ **Period 0** represents the initial baseline period when the user signed up or made their first purchase (typically yielding 100% retention). **Period 1** represents the very first subsequent cycle (such as month 1 or week 1) where returning activity is measured.
+
+- **Q2: How do we calculate drop-off conversion rates across multi-step funnels in SQL?**
+    - _Answer:_ We use conditional aggregation (`COUNT(DISTINCT CASE WHEN step = 'X' THEN user_id END)`) across sequential funnel stages, allowing us to evaluate all step counts in a single pass and compute percentage conversions relative to prior steps.
+
+---
