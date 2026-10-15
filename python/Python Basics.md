@@ -65,13 +65,14 @@ Why does `0.1 + 0.2 == 0.3` return `False`? What would you use for money?
 - **Methods**: built-in tools like `.strip()`, `.split()`, `.lower()`, `.replace()`.
 
 **Industrial use:** raw data is messy text: emails with stray spaces, IDs with prefixes, CSV lines, log entries. About 60% of real data cleaning is string handling.
+
 `"tx_102, user_b,45.30"` has a space after the comma, so after splitting, the user is `" user_b"`, which won’t match `"user_b"` in a join. That’s a real bug source.
 
 
 ```python
 line = "  tx_102, user_b ,45.30\n"
 
-print(repr(line.strip()))     # 'tx_102, user_b ,45.30'  (edges cleaned, \n gone)
+print(repr(line.strip()))     # 'tx_102, user_b ,45.30'  (edges cleaned, \n gone). repr Shows the string in a form that makes special characters visible.
 
 parts = line.strip().split(",")
 print(parts)                  # ['tx_102', ' user_b ', '45.30']
