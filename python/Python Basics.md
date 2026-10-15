@@ -252,3 +252,69 @@ for order_id, amount in orders:        # unpack each tuple right in the loop
 # o3 -> 300.00
 ```
 
+**TASK** - transactions = [
+    ("tx_1", "user_a", 150.0),
+    ("tx_2", "user_b", 45.3),
+    ("tx_3", "user_a", 300.0),
+    ("tx_4", "user_c", 80.0),
+    ("tx_5", "user_b", 220.0),
+]
+ 1. create an empty list called high_value
+ 2. loop over transactions, unpacking each into tx_id, user, amount
+ 3. if amount > 100, append just the tuple (tx_id, amount) to high_value
+ 4. sort high_value by amount, highest first
+ 5. print only the top 2 using a slice
+
+```python
+high_value = []
+for tx_id, user, amount in transactions:
+    if amount > 100:
+        high_value.append((tx_id, amount))
+
+order = sorted(high_value, key=lambda t: t[1], reverse=True)
+print(order[:2])    # [('tx_3', 300.0), ('tx_5', 220.0)]
+```
+
+## Interview questions
+
+**Q1. Besides mutability, why might you choose a tuple over a list?**  
+Tuples are hashable (if their contents are), so they can be dict keys or set members, which lists can’t. They also signal “fixed record” to anyone reading the code, and they’re slightly smaller and faster to create.
+
+**Q2. What does this print, and why?**
+
+```python
+def add_item(item, bucket=[]):
+    bucket.append(item)
+    return bucket
+
+print(add_item(1))
+print(add_item(2))
+```
+
+It prints `[1]` and then `[1, 2]`. The default `[]` is created **once**, when the function is defined, and every call shares it. Fix it with `bucket=None`, then `if bucket is None: bucket = []` inside.
+
+**Q3. What are `b` and `c`, and what happens with nested lists?**
+
+```python
+a = [1, 2, 3]
+b = a
+c = a[:]
+a.append(4)
+
+m = [[1, 2], [3, 4]]
+n = m.copy()
+n[0].append(9)
+```
+
+`b` is `[1, 2, 3, 4]` (same object) and `c` is `[1, 2, 3]` (a copy). But `m` becomes `[[1, 2, 9], [3, 4]]`, because `.copy()` is **shallow**: the inner lists are still shared. Use `copy.deepcopy(m)` for a full independent copy.
+
+**Q4. Scenario: you must check 1 million incoming IDs against 1 million allowed IDs stored in a list. It’s extremely slow. Why, and what do you change?**  - 
+`x in some_list` scans the list, which is O(n), so 1M checks × 1M items is about 10¹² operations. Convert the allowed IDs to a set once: `allowed = set(allowed_list)`. Membership checks become O(1) on average, so the whole job drops to roughly 2 million operations. Choosing the right structure is often the entire optimisation.
+
+**Q5. Scenario: you have 5 million IDs in a list and must process them in batches of 10,000. How, and what’s a memory concern?**  - 
+`for i in range(0, len(ids), 10_000): batch = ids[i:i + 10_000]`. The concern is that the 5M-item list is already fully in RAM, and each slice makes a copy. For truly huge data, stream from the file with a generator instead (your notes already cover this), or use `itertools.islice`. 
+
+**Q6. What is `rest` after `first, *rest = (1, 2, 3, 4)`?**  
+`[2, 3, 4]`, always a **list**, even when unpacking a tuple.
+
+---
