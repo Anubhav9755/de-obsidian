@@ -4683,3 +4683,8 @@ FROM funnel_logs;
     - _Answer:_ We use conditional aggregation (`COUNT(DISTINCT CASE WHEN step = 'X' THEN user_id END)`) across sequential funnel stages, allowing us to evaluate all step counts in a single pass and compute percentage conversions relative to prior steps.
 
 ---
+
+## Time-Series Patterns (`DATE_TRUNC`, `generate_series`, and Period-over-Period Growth)
+
+Time-series patterns involve manipulating temporal data to align events into consistent chronological intervals, fill missing calendar gaps, compute running totals, and calculate growth velocities across comparative periods:
+
