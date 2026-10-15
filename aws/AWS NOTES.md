@@ -2760,3 +2760,11 @@ This produces the same **VGW + customer gateway + routing** concepts that Direct
 - The project must **start next week**, but a Direct Connect link normally takes 4 to 6 weeks to provision.
 
 Design the connectivity. For each point, name the AWS features and explain your reasoning:
+
+1. How do you get started next week, before Direct Connect is ready?
+2. What is the target connectivity design (connection type, locations, interfaces) and why?
+3. How do you satisfy both **“no public internet”** and **“encrypted in transit”**?
+4. How do you make it resilient to a single failure, including a full location outage?
+5. How do you connect the extra VPCs in Mumbai and Hyderabad without building many separate links?
+6. What checks would you do if the link is up but the servers can’t reach Pune?
+
