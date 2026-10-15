@@ -449,15 +449,45 @@ stock.pop("banana")                 # or del stock["banana"]
 print(stock)  
 ```
 
+**TASK** - transactions = [
+    ("tx_1", "user_a", 150.0),
+    ("tx_2", "user_b", 45.3),
+    ("tx_3", "user_a", 300.0),
+    ("tx_4", "user_c", 80.0),
+    ("tx_5", "user_b", 220.0),
+]
+1. create an empty dict called totals
+2. loop over transactions, unpacking each into tx_id, user, amount
+3. add the amount to that user's running total
+		(use the counting pattern: totals.get(user, 0) + amount)
+4. print each user and total with 2 decimals, e.g. "user_a: 450.00"
+5. print the user with the highest total
+	  (copy this pattern: max(totals, key=totals.get))
+
+# expected:
+# user_a: 450.00
+# user_b: 265.30
+# user_c: 80.00
+# top user: user_a
+
+
+```python
 totals = {}
 for tx_id, user, amount in transactions:
-	totals.get(user,0)+ amount
-for users in transations:
-	print(f"{user}:{amount:.2f})
+    totals[user] = totals.get(user, 0) + amount
 
-for 
-max(totals, key=totals.get)
+for user, total in totals.items():
+    print(f"{user}: {total:.2f}")
 
+top_user = max(totals, key=totals.get)
+print(f"top user: {top_user}")
+# user_a: 450.00
+# user_b: 265.30
+# user_c: 80.00
+# top user: user_a
+```
+
+`max(totals, key=totals.get)`: looping over a dict gives its **keys**, and `key=totals.get` tells `max` to compare them by their **values**. So it returns the user with the highest total.
 
 ### Find the bug
 
@@ -470,8 +500,6 @@ for item in inventory:
 
 **Answer:** it raises `RuntimeError: dictionary changed size during iteration`. You can’t add or delete keys from a dict while looping over it. Fix it by looping over a **copy** of the keys, or by building a new dict:
 
-python
-
 ```python
 for item in list(inventory):                        # list() makes a snapshot of the keys
     if inventory[item] == 0:
@@ -480,3 +508,44 @@ for item in list(inventory):                        # list() makes a snapshot of
 # or build a new dict instead of mutating:
 inventory = {k: v for k, v in inventory.items() if v != 0}   # (comprehension, comin
 ```
+
+### Interview questions 
+
+**Q1. Why must dict keys be hashable? What can’t be a key?**  
+A dict computes `hash(key)` to decide where to store and find the value. If a key could change, its hash would change and the value would be lost. So lists, dicts, and sets are rejected (`TypeError: unhashable type: 'list'`). Strings, numbers, and tuples work, and a tuple works only if everything inside it is hashable too. For example, `{(12.9, 77.5): "Bangalore"}` is fine.
+
+**Q2. What does this print? When should you use `d[key]` versus `d.get(key)`?**
+
+```python
+d = {"a": 1}
+x = d.get("b")
+y = d.get("b", 0) + 1
+print(x, y)
+```
+
+It prints `None 1`. Use `d[key]` when the key **must** exist and its absence is a bug, so you want a loud `KeyError` (fail loud). Use `.get()` when absence is normal and you have a sensible default (fail soft). Data pipelines use both, deliberately.
+
+**Q3. How do you remove duplicates from a list while keeping the original order?**  
+`list(dict.fromkeys(items))`. A dict keeps unique keys in insertion order. `list(set(items))` also de-duplicates, but it **loses the order**.
+
+**Q4. What’s the time complexity of `key in dict`, `dict[key]`, and `x in list`?**  
+`key in dict` and `dict[key]` are O(1) on average. `x in list` is O(n). The dict’s worst case is O(n) when many keys collide, but that’s rare in practice.
+
+**Q5. Scenario: two files list user IDs, 2 million per day. Find the new users, the users who left, and the returning users.**  
+Convert both to sets, then `today - yesterday`, `yesterday - today`, and `today & yesterday`. Each is roughly O(n). Nested loops would be O(n²), about 4 trillion comparisons, so the set approach is what makes the job feasible at all.
+
+**Q6. Classic placement question: find the first non-repeating character in a string. For `"swiss"` the answer is `"w"`.**
+
+```python
+def first_unique(s):
+    counts = {}
+    for ch in s:                       # pass 1: count everything
+        counts[ch] = counts.get(ch, 0) + 1
+    for ch in s:                       # pass 2: first one with count 1, in original order
+        if counts[ch] == 1:
+            return ch
+    return None
+```
+
+It’s O(n) time and O(k) space, where k is the number of distinct characters. The key insight: count first, then scan in the original order.
+
