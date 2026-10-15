@@ -205,7 +205,7 @@ names = ["a", "b", "c"]
 amounts = [10, 20, 30]
 
 for name, amt in zip(names, [10,20,30]):  # walk two lists in parallel
-    print(name, amt)                        # a10 b20 c30
+    print(name, amt)                        # a 10 b 20 c 30
 ```
 
 ## Python looping functions 
