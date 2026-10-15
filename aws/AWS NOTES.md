@@ -2881,6 +2881,38 @@ Step 5 is the key idea. It gives SQS **at-least-once** behavior: nothing is lost
 
 - **Batching**: send or receive up to 10 messages per call, to cut cost and improve throughput.
 
+#### Two queue types
 
+![[Pasted image 20261015102829.png]]
 
+FIFO uses **message group IDs**: ordering is guaranteed **within a group**, while different groups can be processed in parallel.
+
+#### Security and other features
+
+- **Encryption**: server-side encryption is on by default (SQS-managed keys), with the option of KMS keys. TLS in transit.
+- **Access control**: IAM policies and **queue policies** (resource policies, for cross-account or cross-service access).
+- **Pricing**: pay per request (and payload size in 64 KiB chunks), with a free tier. There’s no cost for an empty, unused queue beyond requests.
+
+#### What SQS is NOT
+
+- It’s **not pub/sub**. In a queue, each message is processed by **one** consumer (competing consumers). If you need one event delivered to **many** subscribers, that’s **SNS**, and the two are often combined.
+- It’s **not a database or a long-term log**. Messages are temporary (14 days at most) and are deleted once processed.
+- It doesn’t **push** messages. Consumers pull (although Lambda’s integration polls for you).
+
+### The industry problem it solves
+
+**Example: an online store during a flash sale.**
+
+The checkout flow does a lot after a customer clicks “Pay”: charge the card, update inventory, send a confirmation email, generate an invoice PDF, notify the warehouse. If checkout does all of this **synchronously**:
+
+1. The customer waits many seconds for the page to respond.
+2. During a spike, the email service or the invoice generator slows down, and **checkout itself slows or fails**, even though the payment succeeded.
+3. If the invoice service crashes mid-task, the order data for that step is **lost**.
+4. To survive the peak, the whole system must be scaled for the worst case.
+
+With SQS, the checkout service does the **essential** work (take the payment, save the order), puts a message on a queue (“order 8841 needs invoice and email”), and responds to the customer immediately. A fleet of workers (Lambda or EC2) drains the queue at its own pace. If the spike is 10x bigger than workers can handle, the **queue grows** instead of the system failing. Auto Scaling can add workers based on the **queue depth** (the number of waiting messages). Failed messages go to a **DLQ** for investigation.
+
+**Where it is a poor fit:** when the caller needs the answer immediately (a synchronous request/response, like “is this password correct?”), when you need real-time fan-out to many receivers (use SNS), or when you need to replay a long history of events (use a streaming service like Kinesis).
+
+## CODE 
 
