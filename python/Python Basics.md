@@ -402,3 +402,49 @@ print(total_qty)
 
 `order["items"][0]["sku"]` left to right: dict → list → first item → dict → key.
 
+**Sets:**
+
+```python
+yesterday = {"u1", "u2", "u3"}
+today = {"u2", "u3", "u4"}
+
+print(today - yesterday)    # {'u4'}              new users
+print(yesterday - today)    # {'u1'}              users who left
+print(today & yesterday)    # {'u2', 'u3'}        returning users
+print(today | yesterday)    # {'u1','u2','u3','u4'}   everyone
+
+print(set([1, 2, 2, 3, 3]))    # {1, 2, 3}   instant de-duplication
+empty_set = set()              # NOT {} (that's an empty dict)
+```
+
+Set printing order can vary, because sets have no order.
+
+**Level 1:
+
+```python
+product = {"sku": "A1", "price": 250}
+product["stock"] = 40
+price = product.____("price")              # safe read
+discount = product.get("discount", ____)   # default of 0 if missing
+for key, value in product.____():          # loop key + value
+    print(key, value)
+```
+
+**Answer:** `get`, `0`, `items`. It prints `sku A1`, `price 250`, `stock 40`. `discount` ends up `0` because the key doesn’t exist and `get` returns your default instead of crashing.
+
+**Level 2: modify.** With the dict below, print each **in-stock** item as `apple: 10`. Then add `"mango": 7` and remove `"banana"`.
+
+```python
+stock = {"apple": 10, "banana": 0, "cherry": 5}
+```
+
+**Answer:**
+```python
+for item, qty in stock.items():
+    if qty > 0:
+        print(f"{item}: {qty}")      # apple: 10 / cherry: 5
+
+stock["mango"] = 7
+stock.pop("banana")                 # or del stock["banana"]
+print(stock)  
+```
