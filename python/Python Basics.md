@@ -581,3 +581,47 @@ def first_unique(s):
 
 It’s O(n) time and O(k) space, where k is the number of distinct characters. The key insight: count first, then scan in the original order.
 
+---
+## Lesson 5: Loops, Conditions & Comprehensions
+
+- **Conditions** (`if / elif / else`): run code only when something is true.
+- **Loops**: `for` repeats over a collection, `while` repeats until a condition fails. `break` exits a loop and `continue` skips to the next item.
+- **Comprehension**: builds a new list, dict, or set from a loop and an optional filter, in one line.
+
+**Conditions:**
+
+```python
+amount = 150
+if amount > 500:
+    tier = "high"
+elif amount > 100:
+    tier = "medium"
+else:
+    tier = "low"
+print(tier)                                   # medium
+
+tier = "high" if amount > 500 else "low"      # one-line version (ternary)
+
+rows = []
+if not rows:                  # empty list, "", 0, None are all "falsy"
+    print("no data")
+```
+
+
+**Loops:**
+
+```python
+for i in range(3):            # 0, 1, 2   (range(start, stop, step), stop excluded)
+    print(i)
+
+for amount in [150, -20, 300, 0]:
+    if amount <= 0:
+        continue              # skip bad rows, go to the next one
+    print("processing", amount)    # 150, then 300
+
+attempts = 0
+while attempts < 3:           # retry pattern
+    attempts += 1
+    print("attempt", attempts)
+```
+
