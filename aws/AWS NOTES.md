@@ -3032,3 +3032,16 @@ SQS stores messages **redundantly across multiple AZs**, so once the message is 
 
 One honest caveat: “save the order to the database” and “send the message to the queue” are two separate operations, and one could succeed while the other fails. A common safeguard is the **transactional outbox pattern** (write the message into the database in the same transaction, then a small process publishes it to the queue), or at minimum a reconciliation job that finds orders stuck in `RECEIVED` with no processing started.
 
+#### 2. What goes into a queue, and what does not
+
+**Not queued:** the **card charge**. The customer needs to know immediately whether payment succeeded, and this step needs a direct answer (synchronous request and response). Queueing it would also make “exactly once” harder.
+
+**Queued:**
+
+- Photo processing (the heavy 1 to 3 minute job).
+- Proof PDF generation.
+- Confirmation email.
+- Sending the job to the print shop.
+- Order status updates.
+
+
