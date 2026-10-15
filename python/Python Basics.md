@@ -327,3 +327,78 @@ n[0].append(9)
 `[2, 3, 4]`, always a **list**, even when unpacking a tuple.
 
 ---
+## Lesson 4: Dictionaries & Sets
+
+- **Dictionary (`dict`)**: a collection of **key → value** pairs. You look things up by key, not by position: `user["name"]`. Keys must be unique and **hashable** (str, int, tuple), and values can be anything. Since Python 3.7, dicts remember insertion order.
+- **Set**: an unordered collection of **unique** items: `{1, 2, 3}`.
+
+**Industrial use:**
+
+- Every JSON response from an API becomes a dict (or a list of dicts).
+- `csv.DictReader` gives you each CSV row as a dict, as in your own notes.
+- Config files, lookup tables (“country code → country name”), and counters are all dicts.
+- Sets handle de-duplication (“unique customers today”) and comparing datasets (“who’s new since yesterday?”).
+
+**Problem it solves:** finding a record in a list means scanning it item by item. A dict jumps straight to the item through hashing, which is O(1) on average. With 5 million records, that’s the difference between instant and minutes.
+
+### Code:
+
+```python
+user = {"id": 101, "name": "Rahul", "city": "Kanpur"}
+
+print(user["name"])                 # Rahul
+print(user.get("email"))            # None   (no crash)
+print(user.get("email", "n/a"))     # n/a    (custom default)
+# print(user["email"])              # KeyError: 'email'
+
+user["email"] = "r@x.com"           # add a new key
+user["city"] = "Lucknow"            # update an existing key
+user.pop("id")                      # remove a key (and return its value)
+print("name" in user)               # True: `in` checks KEYS
+
+for key, value in user.items():     # loop over key + value together
+    print(key, value)
+```
+
+**The counting pattern :**
+
+```python
+words = ["apple", "banana", "apple", "cherry", "apple"]
+counts = {}
+for w in words:
+    counts[w] = counts.get(w, 0) + 1     # "current count, or 0 if new, plus 1"
+print(counts)    # {'apple': 3, 'banana': 1, 'cherry': 1}
+```
+
+**The grouping pattern** :
+
+```python
+transactions = [("tx_1", "user_a", 150.0), ("tx_2", "user_b", 45.3), ("tx_3", "user_a", 300.0)]
+
+by_user = {}
+for tx_id, user, amount in transactions:
+    if user not in by_user:
+        by_user[user] = []           # first time we see this user: make a list
+    by_user[user].append(amount)
+print(by_user)   # {'user_a': [150.0, 300.0], 'user_b': [45.3]}
+```
+
+**Nested dicts: 
+
+```python
+order = {
+    "order_id": "o1",
+    "customer": {"name": "Rahul", "city": "Kanpur"},
+    "items": [{"sku": "A1", "qty": 2}, {"sku": "B2", "qty": 1}],
+}
+print(order["customer"]["name"])      # Rahul
+print(order["items"][0]["sku"])       # A1
+
+total_qty = 0
+for item in order["items"]:
+    total_qty += item["qty"]
+print(total_qty)    
+```
+
+`order["items"][0]["sku"]` left to right: dict → list → first item → dict → key.
+
