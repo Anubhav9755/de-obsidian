@@ -226,6 +226,14 @@ for name, amt in zip(names, [10,20,30]):  # walk two lists in parallel
 | `all()`            | `True` if every item is truthy        | `all([True, True])`                 |
 | `iter()`           | Gets an iterator from an iterable     | `iter(names)`                       |
 | `next()`           | Gets the next item from an iterator   | `next(iter(names))`                 |
+
+
+```python
+amounts = [5, 15, 8, 20, 12]
+print(list(map(str, amounts)))
+print(list(filter(lambda x: x > 10, amounts)))
+```
+
 **Two traps:**
 
 ```python
