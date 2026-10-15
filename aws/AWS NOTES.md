@@ -3094,14 +3094,56 @@ An optional improvement is to **fan out one message per photo** (or per batch of
 
 #### One queue or several?
 
-|Queue|Type|Why separate|
-|---|---|---|
-|Photo processing|Standard + DLQ|Heavy, scalable, poison-message risk|
-|Email|Standard (+ DLQ)|Cheap and light, shouldn’t wait behind photo jobs|
-|Print shop|Standard (+ DLQ), limited consumers|Concurrency capped at the print shop’s limit|
-|Order status updates|**FIFO**|Ordering per customer|
+| Queue                | Type                                | Why separate                                      |
+| -------------------- | ----------------------------------- | ------------------------------------------------- |
+| Photo processing     | Standard + DLQ                      | Heavy, scalable, poison-message risk              |
+| Email                | Standard (+ DLQ)                    | Cheap and light, shouldn’t wait behind photo jobs |
+| Print shop           | Standard (+ DLQ), limited consumers | Concurrency capped at the print shop’s limit      |
+| Order status updates | **FIFO**                            | Ordering per customer                             |
 
 Separate queues give each step its **own scaling, visibility timeout, retry and DLQ settings**, and one slow or failing step can’t block the others. A related improvement, which SNS makes possible in our next lesson, is **publishing one “order placed” event that fans out to all these queues**, instead of the web app sending several separate messages.
 
 ---
+
+## Amazon SNS (Simple Notification Service)
+
+- **SQS** is a queue: a producer puts a message in, and **one** consumer pulls it out and processes it. Consumers **pull**.
+- **Lambda** runs your code in response to events.
+- **Producer / consumer**: the side that creates a message, and the side that handles it.
+- **Loose coupling**: components communicate through something in between, so each can fail or scale independently.
+- **IAM policies**: JSON rules that decide who can do what. **Resource policies** are attached to the resource itself (like a queue or topic).
+
+SQS was the **order rail** in a kitchen, where each ticket is taken by one chef.
+
+SNS is a **school’s public-address announcement system** combined with a **notice-board subscription list**. When the principal makes **one announcement** (“School closes early today”), the system delivers it to **everyone who subscribed**: every classroom speaker, the staff WhatsApp group, the parents’ SMS list and the bus company’s email. The principal doesn’t call each person. They speak once, and the system fans it out.
+The principal (publisher) doesn’t know or care who is listening. New listeners can subscribe later without the principal changing anything.
+
+### Definition
+
+**Amazon SNS** is a fully managed **publish/subscribe (pub/sub)** messaging service. A **publisher** sends a message to a **topic**, and SNS **pushes a copy of that message to every subscriber** of that topic.
+
+It handles two kinds of use:
+
+- **Application-to-application (A2A)**: delivering events to SQS queues, Lambda functions, HTTP/S endpoints, Kinesis Data Firehose and more.
+- **Application-to-person (A2P)**: delivering notifications to people through **SMS, email and mobile push** notifications.
+
+#### Core concepts
+
+- **Topic**: a named channel that messages are published to (for example `order-placed`). It’s the central object.
+
+- **Publisher**: anything that sends a message to the topic (your app, an AWS service, a CloudWatch alarm).
+
+-**Subscription**: a connection between a topic and an **endpoint**. Each subscription has a **protocol**:
+    - **SQS** (queue), **Lambda** (function), **HTTP/HTTPS** (a webhook), **Email / Email-JSON**, **SMS**, **mobile push** (platform applications), **Kinesis Data Firehose**.
+
+- **Message**: up to **256 KiB** (check the current limit, as SQS’s limit was recently raised and SNS’s may follow). For large payloads, store the data in S3 and send a pointer.
+
+- **Message attributes**: key-value metadata attached to a message, used for filtering.
+
+- **Subscription filter policy**: a JSON rule on a subscription saying “only deliver me messages where `eventType` is `order_placed`” or “where `amount` is greater than 1000”. This lets one topic serve many different subscribers without each one receiving everything.
+
+- **Delivery retries**: SNS retries failed deliveries according to a delivery policy (the retry behavior depends on the endpoint type). For SQS and Lambda endpoints, retries are persistent, and for HTTP endpoints they follow a configurable policy.
+
+- **Dead-letter queue for subscriptions**: an SQS queue attached to a **subscription** (not the topic) that captures messages SNS couldn’t deliver to that endpoint.
+
 
