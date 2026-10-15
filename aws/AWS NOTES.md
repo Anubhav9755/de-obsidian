@@ -3059,3 +3059,14 @@ Two different problems:
 - **Order status updates: FIFO queue**, with the **customer ID (or order ID) as the message group ID**. This guarantees “processing” is applied before “shipped” **for the same customer**, while different customers’ updates are still processed in parallel. Use a **deduplication ID** (for example order ID plus status) so repeated sends are dropped within the 5-minute window.
 - The **email** and **print shop** messages can be Standard queues too, since order doesn’t matter there, although the email should be idempotent so customers don’t get duplicates.
 
+An alternative for statuses is to put a version number on each update and let the consumer ignore stale ones, which allows Standard queues everywhere. The FIFO approach is simpler to reason about for this requirement, and the throughput limit of FIFO isn’t a concern at status-update volumes per customer.
+
+#### 5. Handling the corrupted photo files
+
+Use a **dead-letter queue** on the photo-processing queue with a **redrive policy** (for example `maxReceiveCount` of 3). A corrupted order would otherwise crash a worker, reappear, crash another, and loop forever, wasting capacity. After 3 failed attempts, it goes to the **DLQ**. Then:
+
+- Set a **CloudWatch alarm** on the DLQ depth (covered in a later lesson), so someone is alerted.
+- Update the order status to something like `NEEDS_ATTENTION` and notify the customer to re-upload the broken photo (a worker can do this when it detects a failure, or a DLQ consumer can).
+- Set the DLQ’s **retention period longer** than the source queue’s, so messages don’t expire before anyone examines them.
+- Better still, **catch exceptions in the worker and validate files early** (for example, check each image before heavy processing), so the common failure produces a clean “bad photo” result immediately instead of a crash. The DLQ remains the safety net for unexpected failures.
+
