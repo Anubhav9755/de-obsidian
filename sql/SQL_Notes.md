@@ -4918,8 +4918,6 @@ Output 4:
 | ------------- | ----- |
 | Smart Watch   | 429   |
 | Running Shoes | 120   |
-Output 5:
-
 
 #### Code Breakdown:
 
@@ -4931,4 +4929,18 @@ Output 5:
 
 - **`USING GIN (specs)`:** Builds a Generalized Inverted Index over all keys and values in the JSONB column, transforming document lookups from full table scans into lightning-fast index searches.
 
+### Interview Corner:
+
+- **Q1: What is the key performance difference between `JSON` and `JSONB` storage types?**
+    - _Answer:_ `JSON` stores data as an exact textual copy of the input string, requiring text re-parsing on every read query. `JSONB` parses data into a decomposed binary format upon insertion, eliminating parsing overhead during queries and enabling indexing via GIN.
+
+- **Q2: How does the containment operator (`@>`) differ from the text extraction operator (`->>`) when filtering rows?**
+    - _Answer:_ The extraction operator (`->>`) pulls out a scalar value which often requires explicit type casting and prevents efficient index usage unless functional indexes are built. The containment operator (`@>`) evaluates structural inclusion across the entire JSONB document and is fully optimized to leverage GIN indexes.
+
+- **Q3: Explain how a GIN index processes a JSONB containment query (`@>`), and describe the primary write-performance trade-off associated with maintaining JSONB GIN indexes.**
+    - _Answer:_ A GIN (Generalized Inverted Index) breaks down a JSONB document into individual key-value element pairs (e.g., path, key, and value entries) and stores them in an index lookup structure pointing to the matching row IDs. When a containment query (`@>`) runs, the engine looks up the target elements directly in the GIN index. **The trade-off:** Because a single JSONB document can contain dozens of keys and values, updating or inserting a row forces the database to write multiple index entries for every single key/value pair, causing significantly heavier write amplification and slower `INSERT`/`UPDATE` performance compared to standard B-Tree indexes.
+
+---
+
+## Semi-structured & Modern Data — Arrays & Structs
 
