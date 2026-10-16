@@ -4857,7 +4857,7 @@ WHERE (metadata ->> 'age')::INT > 30;
 
 - **`jsonb_set`:** A built-in function used to insert, update, or delete nested values within a JSONB document dynamically.
 
-- **GIN Index:** A Generalized Inverted Index designed specifically to index keys and values inside JSONB documents for rapid lookups.
+- **GIN Index:** A Generalized Inverted Index designed specifically to index keys and values inside JSONB documents for rapid lookups. The GIN index helps PostgreSQL locate rows whose JSONB data contains the specified brand. You get the same results with or without the index; the index is intended to improve search performance.
 
 ### Application
 
@@ -4872,3 +4872,63 @@ WHERE (metadata ->> 'age')::INT > 30;
 - **Problem:** An e-commerce platform stores dynamic product specifications in a standard `JSON` text column. When users filter products by nested criteria (e.g., `specs ->> 'waterproof' = 'true'`), the database must re-parse the raw string text of every single row sequentially, resulting in severe CPU bottlenecks and slow query speeds at scale.
 
 - **Solution:** Migrating the column to `JSONB` parses the document into binary format upfront. Combined with a **GIN index**, the database can locate matching documents instantly via index pointer lookups instead of scanning and parsing text strings row-by-row.
+
+### Industrial Example
+
+A multi-tenant SaaS application stores organization-specific UI layout preferences and feature toggles in a `JSONB` column. The application relies on containment operators (`@>`) and GIN indexes to quickly filter organizations that have specific feature flags enabled, executing complex preference checks in milliseconds.
+
+### Code and Explanation
+
+```sql
+-- 1. Target Table Setup with JSONB
+CREATE TABLE catalog_items (
+    item_id INT PRIMARY KEY,
+    item_name VARCHAR(100),
+    specs JSONB
+);
+
+INSERT INTO catalog_items VALUES 
+(1, 'Smart Watch', '{"brand": "Apple", "price": 399, "tags": ["electronics", "wearable"], "connectivity": {"bluetooth": true, "wifi": true}}'),
+(2, 'Running Shoes', '{"brand": "Nike", "price": 120, "tags": ["sports", "footwear"], "connectivity": {"bluetooth": false, "wifi": false}}');
+
+-- 2. Containment Operator (@>) Lookup
+-- Finds items that contain the specified key-value pair structure
+SELECT item_name 
+FROM catalog_items 
+WHERE specs @> '{"brand": "Apple"}';     -- item_name |Smart Watch|
+
+-- 3. Key Existence Operator (?) Lookup
+-- Checks if the top-level document contains a specific key name
+SELECT item_name 
+FROM catalog_items 
+WHERE specs ? 'tags';      -- item_name |Smart Watch||Running Shoes|
+
+-- 4. Modifying Nested Data using jsonb_set
+UPDATE catalog_items
+SET specs = jsonb_set(specs, '{price}', '429')
+WHERE item_id = 1;   
+
+-- 5. Creating a GIN Index for High-Performance JSONB Querying
+CREATE INDEX idx_catalog_specs_gin ON catalog_items USING GIN (specs);     -- CREATE INDEX
+```
+
+Output 4:
+
+| item_name     | price |
+| ------------- | ----- |
+| Smart Watch   | 429   |
+| Running Shoes | 120   |
+Output 5:
+
+
+#### Code Breakdown:
+
+- **`specs @> '{"brand": "Apple"}'`:** Uses the containment operator to check if the JSONB document contains the sub-document `{"brand": "Apple"}`. This query can leverage a GIN index.
+
+- **`specs ? 'tags'`:** Tests whether the string `'tags'` exists as a top-level key.
+
+- **`jsonb_set(specs, '{price}', '429')`:** Navigates to the `{price}` path within the binary JSONB structure and updates its value to `429`.
+
+- **`USING GIN (specs)`:** Builds a Generalized Inverted Index over all keys and values in the JSONB column, transforming document lookups from full table scans into lightning-fast index searches.
+
+
