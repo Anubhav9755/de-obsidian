@@ -4846,3 +4846,8 @@ WHERE (metadata ->> 'age')::INT > 30;
 - _Answer:_ If a requested JSON key does not exist, extraction operators return `NULL` rather than throwing a syntax error. We can use `COALESCE` or standard `IS NULL` checks to handle missing document attributes safely.
 
 ---
+
+## Semi-structured & Modern Data — JSONB
+
+**JSONB** (Binary JSON) is an advanced semi-structured data storage format. Unlike standard `JSON` text types (which store raw character strings complete with original whitespace and duplicate keys), `JSONB` parses the document on input and decomposes it into a binary representation.
+
