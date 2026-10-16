@@ -5091,7 +5091,25 @@ LEFT JOIN LATERAL jsonb_array_elements(o.order_data->'items') AS item ON TRUE;
 
 ### Interview Questions
 
-#### Question 1: You are flattening a table of user profiles containing a nested array of addresses using an inner join with `jsonb_array_elements`. You notice that users who haven't added an address completely disappear from your final output report.
-_Ans._
+#### Question 1:  You are flattening a table of user profiles containing a nested array of addresses using an inner join with `jsonb_array_elements`. You notice that users who haven't added an address completely disappear from your final output report.
+
+- **The Task:** Explain why this happens and how to modify your query to keep those users visible.
+- **Solution Approach:**
     - _Why it happens:_ A standard inner `LATERAL` join drops parent rows if the evaluated array is empty or `NULL`, because the function returns zero rows to join against.
-	- _Solution:_ Replace the inner `LATERAL` join with a `LEFT JOIN LATERAL` so that parent entities with empty or missing collections are preserved with `NULL` values.
+    - _The Fix:_ Replace the inner `LATERAL` join with a `LEFT JOIN LATERAL` so that parent entities with empty or missing collections are preserved with `NULL` values.
+
+#### Question 2: Your data pipeline flattens a table containing 1 million customer records, where each customer record contains an average of 10 nested transaction logs.
+    
+- **The Task:** What structural performance issue occurs when you unnest these arrays, and how can you safeguard your downstream queries against it?
+- **Solution Approach:**
+    - _The Issue:_ Unnesting causes **row explosion** (multiplication of rows). 1 million rows multiplied by 10 elements explodes the dataset into 10 million rows, increasing memory pressure, temporary disk space usage, and join costs.
+    - _Safeguard:_ Filter or aggregate the nested data _before_ or _during_ the unnest operation (e.g., filtering out irrelevant history or performing conditional checks) rather than unnesting the entire raw history blindly across wide table joins.
+
+#### Question 3: After flattening a nested JSON log table to perform specific calculations on individual elements, you need to aggregate the processed rows back into a single structured JSON object per user session.
+    
+- **The Task:** Which aggregation function would you use to pack flat rows back into a JSON/JSONB array?
+- **Solution Approach:**
+    - Use **`jsonb_agg()`** (or `json_agg()`). This aggregate function collects individual rows or scalar values back into a single JSONB array format. Combined with `jsonb_build_object()`, it allows you to reconstruct customized hierarchical structures from flattened tables.
+
+---
+
