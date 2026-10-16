@@ -4779,9 +4779,9 @@ FROM MonthlyRevenue;
 
 JSON (JavaScript Object Notation) data types allow relational databases to store unstructured or semi-structured key-value document payloads natively inside standard table columns. Specialized operators are used to traverse, extract, and cast nested data directly within SQL statements:
 
-- **`->` (Arrow Operator):** Extracts a JSON object or field, retaining its JSON data type (returns JSON/JSONB).
+- **`->` (Arrow Operator):** returns the extracted value as a JSON/JSONB data type (preserving structural quotes or formatting)
 
-- **`->>` (Double Arrow Operator):** Extracts a JSON field and casts it directly into text (or scalar value).
+- **`->>` (Double Arrow Operator):** extracts and coerces the value into a standard SQL scalar string text type.
 
 - **`#>` and `#>>`:** Extracts nested JSON objects or text fields using a path array (e.g., `{address, city}`).
 
@@ -4803,3 +4803,46 @@ An enterprise telemetry system ingests user app logs containing nested device in
 
 ## QUERY
 
+```sql
+-- Target Table Setup
+CREATE TABLE user_profiles (
+    user_id INT PRIMARY KEY,
+    username VARCHAR(50),
+    metadata JSONB -- Stores semi-structured profile data
+);
+
+INSERT INTO user_profiles VALUES 
+(1, 'alice', '{"age": 28, "city": "New York", "preferences": {"theme": "dark", "notifications": true}}'),
+(2, 'bob', '{"age": 34, "city": "London", "preferences": {"theme": "light", "notifications": false}}');
+
+-- 1. Extracting JSON Fields using -> (JSON) and ->> (Text)
+SELECT 
+    username,
+    metadata -> 'city' AS city_json_type,       -- Returns JSON format ("New York")
+    metadata ->> 'city' AS city_text_type,     -- Returns raw text (New York)
+    -- Casting extracted JSON text to an integer
+    (metadata ->> 'age')::INT AS user_age
+FROM user_profiles;
+
+-- 2. Extracting Nested Keys using Path Operators (#> and #>>)
+SELECT 
+    username,
+    metadata #> '{preferences, theme}' AS theme_json,
+    metadata #>> '{preferences, theme}' AS theme_text
+FROM user_profiles
+WHERE (metadata ->> 'age')::INT > 30;
+```
+
+- **`metadata -> 'city'`:** Extracts the `city` field while preserving its JSON string formatting (including quotes).
+
+- **`metadata ->> 'city'`:** Extracts the `city` value and unquotes it into a clean SQL `TEXT` string.
+
+- **`(metadata ->> 'age')::INT`:** Casts the extracted text value explicitly into an integer type so it can be used safely in mathematical comparisons or `WHERE` clauses.
+
+- **`#>> '{preferences, theme}'`:** Traverses nested JSON document branches using a path array to pull deep sub-keys directly.
+
+**Q1: How do we handle missing keys or null values when querying JSON columns?**
+
+- _Answer:_ If a requested JSON key does not exist, extraction operators return `NULL` rather than throwing a syntax error. We can use `COALESCE` or standard `IS NULL` checks to handle missing document attributes safely.
+
+---
