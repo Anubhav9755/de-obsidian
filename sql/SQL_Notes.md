@@ -4851,3 +4851,24 @@ WHERE (metadata ->> 'age')::INT > 30;
 
 **JSONB** (Binary JSON) is an advanced semi-structured data storage format. Unlike standard `JSON` text types (which store raw character strings complete with original whitespace and duplicate keys), `JSONB` parses the document on input and decomposes it into a binary representation.
 
+- **Containment (`@>`):** Checks if the left JSONB document contains all key-value pairs or elements of the right JSONB document.
+
+- **Key Existence (`?`):** Checks if a specific string key exists as a top-level field in the JSONB document.
+
+- **`jsonb_set`:** A built-in function used to insert, update, or delete nested values within a JSONB document dynamically.
+
+- **GIN Index:** A Generalized Inverted Index designed specifically to index keys and values inside JSONB documents for rapid lookups.
+
+### Application
+
+- **High-Performance Document Filtering:** Querying and filtering large tables based on nested semi-structured attributes without incurring text-parsing overhead.
+
+- **Flexible E-commerce Catalogs:** Managing product attribute variations where different items share few common columns.
+
+- **Indexing Semi-structured Data:** Accelerating complex key-value searches using GIN indexes.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** An e-commerce platform stores dynamic product specifications in a standard `JSON` text column. When users filter products by nested criteria (e.g., `specs ->> 'waterproof' = 'true'`), the database must re-parse the raw string text of every single row sequentially, resulting in severe CPU bottlenecks and slow query speeds at scale.
+
+- **Solution:** Migrating the column to `JSONB` parses the document into binary format upfront. Combined with a **GIN index**, the database can locate matching documents instantly via index pointer lookups instead of scanning and parsing text strings row-by-row.
