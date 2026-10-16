@@ -4944,3 +4944,95 @@ Output 4:
 
 ## Semi-structured & Modern Data — Arrays & Structs
 
+Relational databases support native **Array** and **Struct (Composite/Row)** data types to handle multi-valued attributes and nested compound objects directly within columns:
+
+- **Array Columns:** Ordered lists of homogeneous elements (e.g., `INT[]`, `VARCHAR[]`) stored in a single cell.
+
+- **1-Based Indexing:** SQL array indexing starts at `1` (unlike Python or C++, which start at `0`).
+
+- **`unnest()`:** A set-returning function that expands an array column into a separate row for each element.
+
+- **`array_agg()`:** An aggregate function that collapses rows back into a single array.
+
+- **`ANY` / `ALL` with Arrays:** Operators used to evaluate scalar values against array elements.
+
+### Application
+
+- **Multi-Valued Attributes:** Storing lists of tags, phone numbers, permission roles, or category IDs inside a single table row without requiring a separate mapping table.
+
+- **Flattening & Re-aggregating:** Transforming vertical lists into horizontal arrays for reporting or matrix operations.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** An e-commerce system tracks category tags for products. If a product belongs to multiple categories, a fully normalized relational design requires creating a separate junction table (`product_tags`) and executing frequent `JOIN` operations just to filter products matching a list of tags.
+
+- **Solution:** Storing tags in a native array column (`VARCHAR[]`) allows the system to store multi-valued data directly within the product row and query it efficiently using array operators, eliminating unnecessary join overhead.
+
+### 4. Industrial Example
+
+A content management platform stores user permission roles as a native array (`roles VARCHAR[]`) inside a `users` table. Authorization checks use the `ANY` operator to verify user permissions instantly during API request validation.
+
+### CODE
+
+
+```sql
+-- Target Table Setup with Array Columns
+CREATE TABLE articles (
+    article_id INT PRIMARY KEY,
+    title VARCHAR(100),
+    tags VARCHAR(50)[] -- Native array column
+);
+
+INSERT INTO articles VALUES 
+(1, 'Introduction to SQL', ARRAY['database', 'sql', 'backend']),
+(2, 'Advanced Python Decorators', ARRAY['python', 'programming', 'backend']);
+
+-- 1. Querying Arrays using 1-Based Indexing and ANY
+-- Fetch articles where 'sql' is present anywhere in the tags array
+SELECT title 
+FROM articles 
+WHERE 'sql' = ANY(tags);
+
+-- Accessing a specific array element (1-based indexing: gets the first element)
+SELECT title, tags[1] AS primary_tag
+FROM articles;
+
+-- 2. Array Modification Functions (array_append, array_length)
+UPDATE articles
+SET tags = array_append(tags, 'tutorial')
+WHERE article_id = 1;
+
+-- 3. Unnesting Arrays (Turning array elements into individual rows)
+SELECT 
+    article_id,
+    title,
+    unnest(tags) AS individual_tag     -- Expands the array elements vertically, turning a single row with an array of 3 tags into 3 individual rows.
+FROM articles;
+```
+
+### Interview Corner: 
+
+- **Q1: What is the starting index of an array in standard SQL?**
+    - _Answer:_ SQL arrays use **1-based indexing** (the first element is accessed via `arr[1]`), unlike languages like Python or C++ which use 0-based indexing.
+
+- **Q2: What happens to a query's row count when you use the `unnest()` function in the `SELECT` clause?**
+    - _Answer:_ `unnest()` is a set-returning function that triggers **row explosion**. If a row contains an array of 5 elements, `unnest()` expands that single row into 5 separate output rows, multiplying the row count for that record.
+
+
+- **Q3: When should you choose a native SQL array column over a traditional normalized child table with a foreign key?**
+    - _Answer:_
+        - Choose **Native Arrays** when dealing with small, fixed-shape, homogeneous multi-value attributes (like tags or email lists) where child items do not require independent metadata, complex foreign key constraints, or individual updates.
+            
+        - Choose a **Normalized Child Table** when child elements represent independent entities that need rigorous referential integrity, unique constraints, independent timestamps, frequent updates, or multi-column indexing.
+
+---
+## Semi-structured & Modern Data — Flattening Nested Data
+
+Flattening nested data is the process of converting hierarchical, multi-valued arrays or nested JSON collections into flat, tabular row formats. This is typically achieved using set-returning functions (like `jsonb_array_elements` or `unnest`) combined with a `LATERAL` join to unpack elements while retaining relational context.
+
+### Application
+
+- **ETL and Data Pipelines:** Transforming nested JSON API responses into flat staging tables for data warehouse loading.
+
+- **Analytical Reporting:** Enabling standard group-by and aggregate operations on data elements that were previously locked inside nested arrays or documents.
+
