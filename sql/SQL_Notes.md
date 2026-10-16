@@ -5114,5 +5114,21 @@ LEFT JOIN LATERAL jsonb_array_elements(o.order_data->'items') AS item ON TRUE;
 ---
 ## Programmability — Stored Procedures
 
+A **stored procedure** is a precompiled collection of one or more SQL statements and procedural logic (such as variables, conditional branches, loops, and exception handling) stored directly inside the database catalog. It is executed on the database server via an explicit invocation command (e.g., `CALL` or `EXEC`).
 
+- **Parameters (`IN`, `OUT`, `INOUT`):** Input parameters pass data into the procedure, output parameters return computed results back to the caller, and inout parameters handle both.
+
+- **Procedural Block:** Extends declarative SQL with programmatic control flows like `IF/ELSE` statements and loops.
+
+### Application
+
+- **Encapsulating Complex Workflows:** Grouping multi-step business transactions, data transformations, and validation rules into a single server-side script.
+
+- **Network Round-Trip Reduction:** Executing heavy multi-statement logic on the database server with a single network call rather than sending dozens of individual queries back and forth from the application layer.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** An application performs a complex monthly payroll calculation requiring sequential inserts, updates, and validations across five different tables. Executing these steps individually from the application tier creates heavy network latency and risks leaving data in a half-updated state if a network timeout occurs midway.
+
+- **Solution:** Encapsulating the entire payroll workflow inside a single database stored procedure ensures that all procedural logic and transactional states execute securely on the database engine side in a single network round-trip.
 
