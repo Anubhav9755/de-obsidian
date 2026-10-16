@@ -4972,7 +4972,7 @@ Relational databases support native **Array** and **Struct (Composite/Row)** dat
 
 A content management platform stores user permission roles as a native array (`roles VARCHAR[]`) inside a `users` table. Authorization checks use the `ANY` operator to verify user permissions instantly during API request validation.
 
-### CODE
+### QUERY
 
 
 ```sql
@@ -5036,3 +5036,62 @@ Flattening nested data is the process of converting hierarchical, multi-valued a
 
 - **Analytical Reporting:** Enabling standard group-by and aggregate operations on data elements that were previously locked inside nested arrays or documents.
 
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** An order management database stores customer orders where each order contains a nested JSON array of purchased line items (`items: [{item_id, qty, price}, ...]`). Management wants to calculate total revenue per product across all orders. Running standard aggregations fails because the items are locked inside a nested array blob.
+
+- **Solution:** Using a `LATERAL` join with `jsonb_array_elements` unpacks each nested item into its own discrete row while keeping the parent `order_id` attached, allowing standard relational aggregations to run smoothly.
+
+### Industrial Example
+
+A food delivery application ingests multi-vendor order payloads from external partners. The data engineering pipeline uses flattening functions to explode nested delivery milestone logs into flat rows, tracking precise step-by-step driver timing metrics in the data warehouse.
+
+## QUERY 
+
+```sql
+-- Target Table Setup with Nested JSONB Data
+CREATE TABLE customer_orders (
+    order_id INT PRIMARY KEY,
+    customer_id INT,
+    order_data JSONB
+);
+
+INSERT INTO customer_orders VALUES 
+(101, 501, '{"order_date": "2026-06-01", "items": [{"product": "Laptop", "qty": 1, "price": 1200}, {"product": "Mouse", "qty": 2, "price": 25}]}'),
+(102, 502, '{"order_date": "2026-06-02", "items": [{"product": "Keyboard", "qty": 1, "price": 80}]}'),
+(103, 503, '{"order_date": "2026-06-03", "items": []}'); -- Order with zero items
+
+-- 1. Flattening Nested JSON Arrays using LEFT JOIN LATERAL
+SELECT 
+    o.order_id,
+    o.customer_id,
+    item->>'product' AS product_name,
+    (item->>'qty')::INT AS quantity, -- extract values from JSON and convert them into numeric data types.
+    (item->>'price')::DECIMAL AS unit_price  -- extract values from JSON and convert them into numeric data types.
+FROM customer_orders o
+-- LEFT JOIN LATERAL ensures orders with empty items arrays are still preserved
+LEFT JOIN LATERAL jsonb_array_elements(o.order_data->'items') AS item ON TRUE;
+```
+## Expected output
+
+|order_id|customer_id|product_name|quantity|unit_price|
+|---|---|---|---|---|
+|101|501|Laptop|1|1200|
+|101|501|Mouse|2|25|
+|102|502|Keyboard|1|80|
+|103|503|`NULL`|`NULL`|`NULL`|
+
+- `o.order_data->'items'` extracts the JSON array containing the order's products.
+
+- `jsonb_array_elements()` expands that array into one row per product.
+
+- `LEFT JOIN LATERAL ... ON TRUE` evaluates the array for each order and preserves the order even when its array has no elements.
+
+- `item->>'product'` extracts the product name as text, while `::INT` and `::DECIMAL` convert quantity and price into numeric types.
+
+### Interview Questions
+
+#### Question 1: You are flattening a table of user profiles containing a nested array of addresses using an inner join with `jsonb_array_elements`. You notice that users who haven't added an address completely disappear from your final output report.
+_Ans._
+    - _Why it happens:_ A standard inner `LATERAL` join drops parent rows if the evaluated array is empty or `NULL`, because the function returns zero rows to join against.
+	- _Solution:_ Replace the inner `LATERAL` join with a `LEFT JOIN LATERAL` so that parent entities with empty or missing collections are preserved with `NULL` values.
