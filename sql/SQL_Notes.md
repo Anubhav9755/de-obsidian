@@ -5112,4 +5112,7 @@ LEFT JOIN LATERAL jsonb_array_elements(o.order_data->'items') AS item ON TRUE;
     - Use **`jsonb_agg()`** (or `json_agg()`). This aggregate function collects individual rows or scalar values back into a single JSONB array format. Combined with `jsonb_build_object()`, it allows you to reconstruct customized hierarchical structures from flattened tables.
 
 ---
+## Programmability — Stored Procedures
+
+
 
