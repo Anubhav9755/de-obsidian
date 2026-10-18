@@ -5132,3 +5132,63 @@ A **stored procedure** is a precompiled collection of one or more SQL statements
 
 - **Solution:** Encapsulating the entire payroll workflow inside a single database stored procedure ensures that all procedural logic and transactional states execute securely on the database engine side in a single network round-trip.
 
+### Industrial Example
+
+An enterprise healthcare system executes daily patient insurance claims processing via database stored procedures. The procedure loops through pending claims, validates billing codes against reference tables, updates ledger statuses, and handles transaction commits or rollbacks autonomously.
+
+### QUERY
+
+```sql
+-- Target Table Setup
+CREATE TABLE accounts (
+    account_id INT PRIMARY KEY,
+    balance DECIMAL(10, 2)
+);
+
+INSERT INTO accounts VALUES (1, 1000.00), (2, 500.00);
+
+-- 1. Creating a Stored Procedure with Transaction Control (PostgreSQL PL/pgSQL style)
+CREATE OR REPLACE PROCEDURE transfer_funds(
+    IN source_acc INT,
+    IN target_acc INT,
+    IN transfer_amount DECIMAL(10, 2)
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    current_balance DECIMAL(10, 2);
+BEGIN
+    -- Check source account balance
+    SELECT balance INTO current_balance 
+    FROM accounts 
+    WHERE account_id = source_acc;
+
+    IF current_balance < transfer_amount THEN
+        RAISE EXCEPTION 'Insufficient funds in source account: %', source_acc;
+    END IF;
+
+    -- Deduct from source
+    UPDATE accounts 
+    SET balance = balance - transfer_amount 
+    WHERE account_id = source_acc;
+
+    -- Add to target
+    UPDATE accounts 
+    SET balance = balance + transfer_amount 
+    WHERE account_id = target_acc;
+
+    -- Explicit commit of the transfer transaction
+    COMMIT;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Rollback changes if any error occurs
+        ROLLBACK;
+        RAISE;
+END;
+$$;
+
+-- 2. Calling the Stored Procedure
+CALL transfer_funds(1, 2, 250.00);
+```
+
