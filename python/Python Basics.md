@@ -936,3 +936,55 @@ print(parse_amount("N/A"))        # None
 print(parse_amount(""))           # None
 ```
 
+`square(4)` **calls** the function and gives a result. `square` without parentheses is the function itself. (The technical name for this ability is “functions are first-class objects.”)
+
+**some functions ask you for a function.** For example, `sorted()` can sort a list, but how should it compare items? You tell it by giving it a small function: “for each item, use _this_ as the value to compare.” That small helper function is passed through a parameter named `key`.
+
+```python
+def get_amount(t):
+    return t[1]
+
+orders = [("o1", 120.0), ("o2", 45.5), ("o3", 300.0)]
+print(sorted(orders, key=get_amount))
+# [('o2', 45.5), ('o1', 120.0), ('o3', 300.0)]
+```
+
+`sorted` calls `get_amount` on each tuple, gets 120.0, 45.5, 300.0, and orders the tuples by those numbers.
+
+## LAMBDA
+
+A **lambda** is a small function written in a single line, with **no name**. Syntax:
+
+```
+lambda parameters: expression
+```
+
+- `lambda` is the keyword that starts it.
+- Before the `:` are the parameters, like in `def`.
+- After the `:` is **one expression**, and its value is automatically returned. You don’t write `return`.
+
+These two are identical:
+
+```python
+def square(x):
+    return x * x
+
+square = lambda x: x * x      # same thing
+
+print(square(5))              # 25
+```
+
+More shapes:
+
+```python
+add = lambda a, b: a + b                    # two parameters
+print(add(2, 3))                            # 5
+
+label = lambda n: "big" if n > 100 else "small"     # a condition inside is fine
+print(label(150))                           # big
+
+print((lambda x: x + 1)(10))                # 11  (created and called immediately, rarely useful)
+```
+
+**An expression** is anything that produces a value: `x * 2`, `t[1]`, `a if b else c`, `len(s)`. **A statement** is an instruction that doesn’t produce a value: `y = 5`, `return`, `for`, `if` as a block. A lambda can only contain an expression, so `lambda x: y = x` is a `SyntaxError`.
+
