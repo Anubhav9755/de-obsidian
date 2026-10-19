@@ -5387,10 +5387,15 @@ INSERT INTO employee_records VALUES (1, 'Alice', 75000.00, NULL);
 UPDATE employee_records SET salary = 80000.00 WHERE emp_id = 1;
 ```
 
-- **`RETURNS TRIGGER`:** Declares that the function is built specifically to operate as a trigger callback.
-- **`NEW.updated_at := CURRENT_TIMESTAMP`:** Mutates the incoming record's column value dynamically before the actual write hits the disk.
-- **`BEFORE UPDATE ... FOR EACH ROW`:** Instructs the database engine to execute the function for every single individual row right before the update operation is finalized.
-
+- `CREATE OR REPLACE FUNCTION`: Creates the function or replaces its existing definition.
+- `RETURNS TRIGGER`: Indicates that this function is designed to be called by a trigger.
+- `NEW`: Represents the new version of the row being updated.
+- `NEW.updated_at := CURRENT_TIMESTAMP`: Sets the timestamp to the current transaction's time.
+- `RETURN NEW`: Sends the modified row back so PostgreSQL can save it.
+- `BEFORE UPDATE`: Runs the trigger before an update is saved.
+- `ON employee_records`: Applies it to this table.
+- `FOR EACH ROW`: Runs the function separately for every row being updated.
+- `EXECUTE FUNCTION`: Calls the trigger function.
 ### 6. Interview Questions
 
 #### Question 1: What is the operational difference between a row-level trigger (`FOR EACH ROW`) and a statement-level trigger (`FOR EACH STATEMENT`)?
