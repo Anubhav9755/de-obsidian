@@ -1583,3 +1583,70 @@ JSON is a text format used to store structured data. It supports objects, arrays
 **JSON Operations:**
 
 ![[Pasted image 20261020000242.png]]
+
+- `dump` / `load` → file operations.
+- `dumps` / `loads` → string operations. The extra `s` stands for string.
+
+**JSON — Writing and reading files**
+
+```python
+# Import Python's built-in json module.
+import json
+
+# Create a Python dictionary containing different data types.
+data = {
+    "id": 1,                   # Integer
+    "tags": ["a", "b"],        # List
+    "ok": True                 # Boolean
+}
+
+# Open out.json in write mode.
+# Create the file if missing, or overwrite it if it exists.
+with open("out.json", "w", encoding="utf-8") as f:
+
+    # Convert the Python dictionary to JSON and write it to the file.
+    # indent=2 formats the JSON with indentation for readability.
+    json.dump(data, f, indent=2)
+
+# Open the JSON file in read mode.
+with open("out.json", "r", encoding="utf-8") as f:
+
+    # Read JSON from the file and convert it back to Python objects.
+    # Here, the result is a Python dictionary.
+    loaded = json.load(f)
+
+# Convert the Python dictionary into a JSON string.
+# dumps() returns a string instead of writing to a file.
+text = json.dumps(data)
+
+# Parse the JSON string and convert it back to Python objects.
+# loads() reads from a string.
+back = json.loads(text)
+```
+
+**output** - 
+```json
+{
+  "id": 1,
+  "tags": [
+    "a",
+    "b"
+  ],
+  "ok": true
+}
+```
+
+## CSV vs JSON
+
+|Feature|CSV|JSON|
+|---|---|---|
+|Structure|Rows and columns|Objects, lists, nested data|
+|Python module|`csv`|`json`|
+|Common data type|Table-like data|Structured data|
+|Read|`csv.reader()` / `csv.DictReader()`|`json.load()`|
+|Write|`csv.writer()` / `csv.DictWriter()`|`json.dump()`|
+|Best for|Excel-like datasets|APIs, configurations, nested records|
+|Supports nested data naturally|No|Yes|
+
+---
+
