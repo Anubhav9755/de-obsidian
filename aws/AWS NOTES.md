@@ -3809,5 +3809,37 @@ The key shift is from **“do these steps”** (imperative) to **“this is what
 
 - **Pseudo parameters**: values AWS fills in automatically, such as `AWS::Region`, `AWS::AccountId` and `AWS::StackName`.
 
+#### The template sections
 
+```yaml
+AWSTemplateFormatVersion: "2010-09-09"
+Description: What this template builds
+Parameters:      # inputs
+Mappings:        # lookup tables
+Conditions:      # optional logic
+Resources:       # the only REQUIRED section: what to build
+Outputs:         # values to show or export
+```
+
+Only **Resources** is mandatory.
+
+#### How it works
+
+1. You write the template.
+2. You create a stack from it (Console, CLI or API). The template is uploaded (templates above a size limit must come from S3).
+3. CloudFormation **builds a dependency graph** (it knows the queue must exist before the Lambda trigger that references it, because of `!Ref`) and creates resources **in parallel where possible and in order where required**.
+4. If **any resource fails** to create, CloudFormation **rolls back** by default: it deletes what it had created so far, leaving no half-built mess. (You can disable rollback for debugging.)
+5. The stack ends in a status such as `CREATE_COMPLETE`, or `ROLLBACK_COMPLETE` if it failed.
+
+#### Updating safely: change sets
+
+When you modify the template and update the stack, CloudFormation compares the new template with the current state. A **change set** is a **preview** of what would happen: which resources would be added, modified or **replaced** (deleted and recreated). You review it, then execute it. Some property changes **update in place**, some cause **“some interruption”**, and some require **replacement**, which can mean downtime or **data loss** for things like databases. Reading the change set before executing is a key safety habit.
+
+#### Protecting your resources
+
+- **DeletionPolicy**: a per-resource setting that controls what happens to the resource when the stack is deleted (or the resource is removed from the template). Values are `Delete` (default for most), `Retain` (keep the resource), and `Snapshot` (take a snapshot first, for supported resources such as RDS and EBS volumes). Use `Retain` or `Snapshot` for databases and other stateful data.
+- **UpdateReplacePolicy**: the same idea for resources that are replaced during updates.
+- **Stack policy**: a JSON document that blocks updates to specific resources (for example, “no one may update the production database through this stack”).
+- **Termination protection**: prevents the whole stack from being deleted by accident.
+- **IAM service role**: lets CloudFormation use its own permissions to create resources, so the person running it needs fewer permissions.
 
