@@ -1360,3 +1360,33 @@ Common exceptions:
 
 **Catching several kinds at once**, using a tuple: `except (ValueError, TypeError):`.
 
+**The full form: `else` and `finally`:**
+
+```python
+def read_number(text):
+    try:
+        n = int(text)
+    except ValueError:
+        print("not a number")
+        return None
+    else:                         # runs ONLY if the try block had no error
+        print("converted fine")
+        return n
+    finally:                      # ALWAYS runs: error or not, even with a return
+        print("done")
+
+read_number("5")    # converted fine / done   → returns 5
+read_number("x")    # not a number / done     → returns None
+```
+
+`finally` is for clean-up that must always happen (closing a connection, releasing a lock).
+
+**Raising your own exception** when your code detects a problem:
+
+```python
+def withdraw(balance, amount):
+    if amount > balance:
+        raise ValueError("insufficient balance")
+    return balance - amount
+```
+
