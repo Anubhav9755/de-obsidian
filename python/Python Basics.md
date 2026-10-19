@@ -920,6 +920,82 @@ The `*` and `**` symbols do **two opposite jobs**, depending on where you write 
 | --------------------- | ----------------------------------------------- | ------------------ |
 | In the **`def` line** | **Packs** extra values into a tuple/dict        | `def total(*nums)` |
 | In the **call**       | **Unpacks** a list/dict into separate arguments | `total(*nums)`     |
+### Where they’re used in the real world
+
+1. **Decorators and wrappers.** A decorator doesn’t know which function it will wrap, so it forwards whatever it receives. You’ve seen this in your notes:
+
+```python
+   def log_calls(func):
+       def wrapper(*args, **kwargs):
+           print("calling", func.__name__)
+           return func(*args, **kwargs)      # forward everything unchanged
+       return wrapper
+```
+
+2. **Passing options through.** You write one function and let the caller control the underlying library: `pd.read_csv(path, **options)`, where `options = {"sep": ";", "encoding": "utf-8"}`.
+3. **Flexible APIs.** `print("a", "b", "c", sep="-")` accepts any number of values plus keyword options. That’s `*args` and `**kwargs` underneath.
+4. **Config-driven code.** Settings loaded from YAML or JSON arrive as a dict, and `connect(**db_config)` unpacks them straight into a function.
+
+### The order rule
+
+When you use several kinds of parameters together, the order must be:
+
+```python
+def f(a, b=2, *args, c, **kwargs):
+    ...
+#   1   2     3      4   5
+# 1. normal  2. defaults  3. *args  4. keyword-only  5. **kwargs
+```
+
+You’ll mostly use the simple forms, `f(*args, **kwargs)` or `f(name, **extra)`. Just know the order exists.
+
+### Common mistakes
+
+```python
+# 1. Forgetting the * when passing a list
+total([1, 2, 3])      # TypeError: nums = ([1, 2, 3],); sum tries 0 + [1, 2, 3]
+
+# 2. Giving a value twice
+build_user("Asha", name="Meera")
+# TypeError: got multiple values for argument 'name'
+
+# 3. Positional after keyword
+build_user(city="Pune", "Asha")      # SyntaxError
+```
+
+**Task**
+
+```
+# Write a function  average(*nums)  that:
+# 1. returns None if no numbers were given   (hint: `if not nums`)
+# 2. otherwise returns sum(nums) / len(nums)
+
+# Then write  make_row(tx_id, **fields)  that returns a dict
+# like {"tx_id": "tx_1", "user": "user_a", "amount": 150.5}
+# when called as make_row("tx_1", user="user_a", amount=150.5)
+
+# Tests:
+# print(average(10, 20, 30))      # 20.0
+# print(average())                # None
+# print(make_row("tx_1", user="user_a", amount=150.5))
+```
+
+```PYTHON
+def average(*nums):
+    if not nums:                       # nums is an empty tuple → falsy
+        return None
+    return sum(nums) / len(nums)
+
+
+def make_row(tx_id, **fields):
+    return {"tx_id": tx_id, **fields}
+
+
+print(average(10, 20, 30))                              # 20.0
+print(average())                                        # None
+print(make_row("tx_1", user="user_a", amount=150.5))
+# {'tx_id': 'tx_1', 'user': 'user_a', 'amount': 150.5}
+```
 
 **A real function:**
 
@@ -988,3 +1064,94 @@ print((lambda x: x + 1)(10))                # 11  (created and called immediatel
 
 **An expression** is anything that produces a value: `x * 2`, `t[1]`, `a if b else c`, `len(s)`. **A statement** is an instruction that doesn’t produce a value: `y = 5`, `return`, `for`, `if` as a block. A lambda can only contain an expression, so `lambda x: y = x` is a `SyntaxError`.
 
+**Industrial use:** sorting records by a field, finding the max or min record, custom grouping rules, and (later, in pandas) applying a quick rule to a column, like `df["price"].apply(lambda p: p * 1.18)`.
+
+### Where you’ll actually use it
+
+**1. Sorting by a field.** Here `t` is just the parameter name, and Python passes each item of the list into it.
+
+```python
+orders = [("o1", 120.0), ("o2", 45.5), ("o3", 300.0)]
+
+print(sorted(orders, key=lambda t: t[1]))                  # lowest amount first
+print(sorted(orders, key=lambda t: t[1], reverse=True))    # highest first
+# [('o3', 300.0), ('o1', 120.0), ('o2', 45.5)]
+```
+
+**2. Sorting a list of dicts** (what API data looks like):
+
+```python
+users = [{"name": "Asha", "age": 25}, {"name": "Ravi", "age": 19}]
+print(sorted(users, key=lambda u: u["age"]))     # Ravi (19) first
+```
+
+**3. `max` and `min` with `key`**: “give me the item that has the biggest value of this thing”:
+
+```python
+print(max(orders, key=lambda t: t[1]))     # ('o3', 300.0)
+print(min(orders, key=lambda t: t[1]))     # ('o2', 45.5)
+```
+
+**4. Sorting by two things.** Return a **tuple** from the lambda. Python compares tuples left to right: the first element, and only on a tie the second.
+
+```python
+words = ["pear", "fig", "apple", "kiwi"]
+print(sorted(words, key=lambda w: (len(w), w)))
+# ['fig', 'kiwi', 'pear', 'apple']   shortest first; ties (kiwi/pear) alphabetical
+```
+
+To get “this field descending, that field ascending” with numbers, put a minus sign on the descending number: `key=lambda t: (t["user"], -t["amount"])`.
+
+**5. `map` and `filter`.** These are two built-in functions that take a function and a list:
+
+- `map(f, items)` applies `f` to every item.
+- `filter(f, items)` keeps only the items where `f` returns True.
+
+```python
+nums = [1, 2, 3, 4]
+print(list(map(lambda x: x * 2, nums)))        # [2, 4, 6, 8]
+print(list(filter(lambda x: x > 2, nums)))     # [3, 4]
+```
+
+They need `list(...)` around them, because in Python 3 they return a lazy iterator (something that produces items one at a time, not a ready-made list). In practice, **comprehensions are preferred** (`[x * 2 for x in nums]`) because they’re easier to read. `map` and `filter` still appear in older code and in interviews, so you must recognise them.
+
+### 5. When NOT to use lambda
+
+- **If it needs more than one expression, write a `def`.** Lambdas can’t hold multiple lines or statements.
+- **Don’t store a lambda in a name** (`square = lambda x: x * x`) in real code. Python’s style guide (PEP 8) says to use `def` instead, because a `def` shows its real name in error messages, and a lambda just shows `<lambda>`. I used it above only to show the equivalence.
+- **If the function already exists, pass it directly.** `sorted(words, key=len)` works because `len` is already a function. `key=lambda w: len(w)` is redundant.
+
+## TASK - 
+
+```
+txns = [
+    {"id": "tx_1", "user": "user_b", "amount": 150.0},
+    {"id": "tx_2", "user": "user_a", "amount": 45.3},
+    {"id": "tx_3", "user": "user_a", "amount": 300.0},
+    {"id": "tx_4", "user": "user_c", "amount": 80.0},
+]
+
+# 1. sort txns by amount, highest first, and print just the ids
+#    (hint: build the ids with a list comprehension: [t["id"] for t in ...])
+# 2. sort by user (A to Z), and within the same user by amount highest first; print the ids
+#    (hint: key=lambda t: (t["user"], -t["amount"]))
+# 3. use max with a lambda to find the smallest-amount... careful: which function gives the smallest?
+#    print its id
+# 4. use filter + lambda to keep only amount > 100, then print the ids
+#    then rewrite the same thing as a list comprehension
+
+# expected:
+# ['tx_3', 'tx_1', 'tx_4', 'tx_2']
+# ['tx_3', 'tx_2', 'tx_1', 'tx_4']
+# tx_2
+# ['tx_1', 'tx_3']
+```
+
+```python
+txns = [ {"id": "tx_1", "user": "user_b", "amount": 150.0}, {"id": "tx_2", "user": "user_a", "amount": 45.3}, {"id": "tx_3", "user": "user_a", "amount": 300.0}, {"id": "tx_4", "user": "user_c", "amount": 80.0}, ]
+
+by_amount = sorted(txns,key = lamba t: t["amount], reverse = True)
+print([t["id"] for t in by_amount])
+
+
+```
