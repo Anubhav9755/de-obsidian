@@ -1202,6 +1202,7 @@ def parse_row(line):
 		excpect TypeError:
 			return none
     # 2. parts = [p.strip() for p in line.split(",")]
+    same thing just replace ans line with part
     # 3. if len(parts) != 3, return None
     # 4. unpack parts into tx_id, user, amount_raw
     # 5. try float(amount_raw); on ValueError, return None
@@ -1226,3 +1227,90 @@ for t in tests:
 # None
 # None
 ```
+
+### Find the bug
+
+**Bug A:**
+
+```python
+def add_tax(amount):
+    total = amount * 1.18
+
+print(add_tax(100) + 10)
+```
+
+**Answer:** it raises `TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'`. There’s no `return`, so `add_tax(100)` is `None`. Fix: `return amount * 1.18`.
+
+**Bug B:**
+
+```python
+def add_user(name, users=[]):
+    users.append(name)
+    return users
+
+print(add_user("a"))
+print(add_user("b"))     # expected ['b']
+```
+
+**Answer:** it prints `['a']` and then `['a', 'b']`, the mutable-default trap. Fix: `users=None`, then `if users is None: users = []`.
+
+### Interview questions
+
+**Q1. What are `*args` and `**kwargs`, really? What types are they inside the function?**  
+`args` is a **tuple** of extra positional arguments, and `kwargs` is a **dict** of extra keyword arguments. The names are just convention, and the `*` and `**` are what matter. They’re used for wrappers and decorators that must forward arguments they don’t know in advance. You already have decorators in your notes, and `wrapper(*args, **kwargs)` is exactly this.
+
+**Q2. Is Python pass-by-value or pass-by-reference? What does this print?**
+
+```python
+def f(lst):
+    lst.append(1)
+    lst = [99]
+
+a = []
+f(a)
+print(a)
+```
+
+It prints `[1]`. Python is **pass-by-object-reference** (also called pass-by-assignment). The function receives a reference to the same list, so `append` mutates the caller’s list. But `lst = [99]` rebinds the local name to a new list, which doesn’t affect `a`. Mutating changes the shared object, and reassigning only changes the local name.
+
+**Q3. What is LEGB? What does this do?**
+
+```python
+x = "global"
+def f():
+    print(x)
+    x = "local"
+f()
+```
+
+LEGB is the lookup order: **L**ocal, **E**nclosing, **G**lobal, **B**uilt-in. This raises `UnboundLocalError`. Because `x` is assigned somewhere in `f`, Python treats it as local for the _entire_ function, so the earlier `print(x)` reads a local that doesn’t exist yet. The fix is a different name, or pass it in as a parameter.
+
+**Q4. What does this print?**
+
+```python
+funcs = [lambda: i for i in range(3)]
+print([f() for f in funcs])
+```
+
+It prints `[2, 2, 2]`. Closures capture the **variable** `i`, not its value at that moment, so by the time you call them, `i` is 2 (late binding). Fix with a default argument that freezes the value: `lambda i=i: i`. This is the same closure mechanism in your notes.
+
+**Q5. Scenario: you inherit a 300-line script that reads a file, cleans it, calculates metrics, and writes output, all at the top level. How do you refactor it?**  
+Split it into small single-purpose functions: `read_rows()`, `parse_row()`, `validate()`, `compute_metrics()`, `write_output()`. Make them **pure** where possible (same input gives same output, no globals, no hidden side effects), so each can be tested with a few asserts or `pytest`. Wire them together in a `main()` function, and call it under:
+
+```python
+if __name__ == "__main__":
+    main()
+```
+
+That guard means the code runs when you execute the file directly, but not when another file imports it, which makes your functions reusable and testable.
+
+**Q6. Placement classic: write `is_palindrome(s)` that ignores case, spaces, and punctuation. `"A man, a plan, a canal: Panama"` should return `True`.**
+
+```python
+def is_palindrome(s):
+    cleaned = [c.lower() for c in s if c.isalnum()]
+    return cleaned == cleaned[::-1]
+```
+
+The comprehension keeps only letters and digits and lowercases them, and `[::-1]` reverses the list. It’s O(n) time.
+
