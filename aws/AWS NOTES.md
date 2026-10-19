@@ -3785,7 +3785,7 @@ Clicking in the Console is like **giving verbal instructions to a builder, brick
 
 The key shift is from **“do these steps”** (imperative) to **“this is what I want to exist”** (declarative). CloudFormation works out how to get there.
 
-#### Core concepts
+## Core concepts
 
 - **Template**: the YAML or JSON file describing resources. It’s just text, so it can be stored in Git, reviewed, versioned and reused.
 
@@ -3809,7 +3809,9 @@ The key shift is from **“do these steps”** (imperative) to **“this is what
 
 - **Pseudo parameters**: values AWS fills in automatically, such as `AWS::Region`, `AWS::AccountId` and `AWS::StackName`.
 
-#### The template sections
+**CloudFormation itself is free** for AWS resource types. You pay only for the resources it creates (and for certain third-party or custom resource operations).
+
+## The template sections
 
 ```yaml
 AWSTemplateFormatVersion: "2010-09-09"
@@ -3831,11 +3833,11 @@ Only **Resources** is mandatory.
 4. If **any resource fails** to create, CloudFormation **rolls back** by default: it deletes what it had created so far, leaving no half-built mess. (You can disable rollback for debugging.)
 5. The stack ends in a status such as `CREATE_COMPLETE`, or `ROLLBACK_COMPLETE` if it failed.
 
-#### Updating safely: change sets
+## Updating safely: change sets
 
 When you modify the template and update the stack, CloudFormation compares the new template with the current state. A **change set** is a **preview** of what would happen: which resources would be added, modified or **replaced** (deleted and recreated). You review it, then execute it. Some property changes **update in place**, some cause **“some interruption”**, and some require **replacement**, which can mean downtime or **data loss** for things like databases. Reading the change set before executing is a key safety habit.
 
-#### Protecting your resources
+## Protecting your resources
 
 - **DeletionPolicy**: a per-resource setting that controls what happens to the resource when the stack is deleted (or the resource is removed from the template). Values are `Delete` (default for most), `Retain` (keep the resource), and `Snapshot` (take a snapshot first, for supported resources such as RDS and EBS volumes). Use `Retain` or `Snapshot` for databases and other stateful data.
 - **UpdateReplacePolicy**: the same idea for resources that are replaced during updates.
@@ -3843,3 +3845,145 @@ When you modify the template and update the stack, CloudFormation compares the n
 - **Termination protection**: prevents the whole stack from being deleted by accident.
 - **IAM service role**: lets CloudFormation use its own permissions to create resources, so the person running it needs fewer permissions.
 
+## Bigger designs
+
+- **Nested stacks**: a template that includes other templates as reusable pieces (like a standard VPC module).
+- **Cross-stack references**: one stack **exports** an output (for example the VPC ID), and another **imports** it (`!ImportValue`), so network, database and application layers can live in separate stacks. An export can’t be removed or changed while another stack imports it.
+- **StackSets**: deploy the same stack to **multiple accounts and Regions** at once (common in large organizations).
+- **Custom resources**: let a Lambda function run custom logic during stack create, update or delete, for things CloudFormation doesn’t support natively.
+- **Helper scripts and `cfn-init`** for configuring EC2 instances, and **wait conditions or creation policies** so CloudFormation waits for an instance to actually finish setting up.
+- **CloudFormation Registry** for third-party resource types, and **AWS CDK** (below).
+
+## Where CDK and others fit
+
+**AWS CDK (Cloud Development Kit)** lets you define infrastructure in a real programming language (Python, TypeScript, Java and others) and **generates CloudFormation templates** from it. CDK doesn’t replace CloudFormation, it **builds on it**, and the deployment still happens through CloudFormation stacks. **AWS SAM** is a simplified extension for serverless applications (Lambda, API Gateway, DynamoDB) that also compiles down to CloudFormation. **Terraform** is a popular third-party IaC tool that does a similar job across clouds. For the AWS exam, know that CloudFormation is AWS’s native IaC service, and that CDK uses it underneath.
+
+### The industry problem it solves
+
+**Example: a startup that has grown.** The team built its production environment by clicking in the Console over two years. Now:
+
+1. **Nobody remembers exactly what’s there.** A new engineer can’t tell which security group rules were added by hand, or why.
+2. **Setting up a staging environment** that matches production takes weeks of clicking, and it still differs in small, bug-causing ways.
+3. **Disaster recovery**: if the Region fails or someone deletes something, rebuilding from memory is slow and error-prone.
+4. **Changes are risky and unreviewed**: someone edits a firewall rule at midnight and breaks things, with no record of who changed what or how to undo it.
+5. **Cleaning up** an experiment means hunting for every resource that belongs to it. Forgotten resources keep costing money.
+
+With CloudFormation, the infrastructure is **code in Git**:
+
+- **Repeatable**: the same template builds dev, staging and production, differing only by parameters.
+- **Reviewable**: infrastructure changes go through pull requests and change sets, with a history of who changed what.
+- **Recoverable**: rebuild an entire environment (or a whole new Region) in minutes by creating the stack again.
+- **Clean teardown**: delete the stack and everything it created goes away, so experiments don’t leave bills behind.
+- **Documentation by definition**: the template **is** the accurate description of what exists.
+
+**Where it is a poor fit:** one-off experiments where clicking is faster, resources created and changed **outside** the template (leading to drift), data-heavy contents that don’t belong in a template (the template defines the database, but doesn’t hold its data), and teams that strongly prefer a general-purpose language (CDK) or multi-cloud tooling (Terraform).
+
+## CODE
+A small template: an SQS queue with a dead-letter queue, an SNS topic, and a subscription (YAML)
+
+```yaml
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Order events - SNS topic fanning out to an SQS queue with a DLQ
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+  MaxReceives:
+    Type: Number
+    Default: 3
+
+Conditions:
+  IsProd: !Equals [!Ref Environment, prod]
+
+Resources:
+  OrdersDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "orders-dlq-${Environment}"
+      MessageRetentionPeriod: 1209600          # 14 days
+
+  OrdersQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "orders-queue-${Environment}"
+      VisibilityTimeout: !If [IsProd, 300, 60]
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt OrdersDLQ.Arn
+        maxReceiveCount: !Ref MaxReceives
+
+  OrderTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "order-placed-${Environment}"
+
+  QueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref OrdersQueue]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: sns.amazonaws.com }
+            Action: sqs:SendMessage
+            Resource: !GetAtt OrdersQueue.Arn
+            Condition:
+              ArnEquals: { "aws:SourceArn": !Ref OrderTopic }
+
+  Subscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref OrderTopic
+      Protocol: sqs
+      Endpoint: !GetAtt OrdersQueue.Arn
+      RawMessageDelivery: true
+
+Outputs:
+  TopicArn:
+    Value: !Ref OrderTopic
+    Export:
+      Name: !Sub "${AWS::StackName}-TopicArn"
+  QueueUrl:
+    Value: !Ref OrdersQueue
+
+```
+
+## Deploying and managing it(CLI):
+
+```bash
+# Create the stack
+aws cloudformation create-stack \
+  --stack-name orders-dev \
+  --template-body file://orders.yaml \
+  --parameters ParameterKey=Environment,ParameterValue=dev
+
+# Watch progress
+aws cloudformation describe-stack-events --stack-name orders-dev
+
+# Preview an update safely with a change set
+aws cloudformation create-change-set \
+  --stack-name orders-dev --change-set-name add-retries \
+  --template-body file://orders.yaml \
+  --parameters ParameterKey=MaxReceives,ParameterValue=5
+aws cloudformation describe-change-set \
+  --stack-name orders-dev --change-set-name add-retries
+aws cloudformation execute-change-set \
+  --stack-name orders-dev --change-set-name add-retries
+
+# Detect manual changes
+aws cloudformation detect-stack-drift --stack-name orders-dev
+
+# Delete everything the stack created
+aws cloudformation delete-stack --stack-name orders-dev
+```
+
+- `Parameters` and `Conditions` let one template build `dev`, `staging` and `prod` versions (a longer visibility timeout in production).
+
+- `!GetAtt OrdersDLQ.Arn` uses the DLQ’s **ARN**, and this reference tells CloudFormation to **create the DLQ before the main queue**. You never write the order yourself, because CloudFormation reads the dependencies from the references. (When there is no reference but order still matters, you add a `DependsOn`.)
+- `!Sub "orders-queue-${Environment}"` builds names that differ per environment, so two stacks don’t collide. Hard-coding a queue name would make a **second stack fail**, because names must be unique.
+- The **queue policy** and subscription from the SNS lesson are now code, so the “forgot the policy, messages silently don’t arrive” mistake can’t happen in a new environment.
+- `Outputs` with `Export` make the topic ARN available to other stacks through `!ImportValue`.
+- The **change set** shows exactly what an update would change before anything happens. Here, changing `MaxReceives` modifies the queue’s redrive policy in place, whereas changing certain properties (like a queue’s `FifoQueue` setting or, for some resources, the explicit name) would **replace** it.
+- `delete-stack` removes everything cleanly, and this is why CloudFormation is such a good way to avoid forgotten, billing resources.
