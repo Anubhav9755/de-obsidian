@@ -1148,10 +1148,28 @@ txns = [
 ```
 
 ```python
-txns = [ {"id": "tx_1", "user": "user_b", "amount": 150.0}, {"id": "tx_2", "user": "user_a", "amount": 45.3}, {"id": "tx_3", "user": "user_a", "amount": 300.0}, {"id": "tx_4", "user": "user_c", "amount": 80.0}, ]
+txns = [
+    {"id": "tx_1", "user": "user_b", "amount": 150.0},
+    {"id": "tx_2", "user": "user_a", "amount": 45.3},
+    {"id": "tx_3", "user": "user_a", "amount": 300.0},
+    {"id": "tx_4", "user": "user_c", "amount": 80.0},
+]
 
-by_amount = sorted(txns,key = lamba t: t["amount], reverse = True)
-print([t["id"] for t in by_amount])
+# 1. sort by amount, highest first
+by_amount = sorted(txns, key=lambda t: t["amount"], reverse=True)
+print([t["id"] for t in by_amount])        # ['tx_3', 'tx_1', 'tx_4', 'tx_2']
 
+# 2. user A to Z, then amount highest first within a user
+by_user = sorted(txns, key=lambda t: (t["user"], -t["amount"]))
+print([t["id"] for t in by_user])          # ['tx_3', 'tx_2', 'tx_1', 'tx_4']
 
+# 3. smallest amount → min (not max)
+smallest = min(txns, key=lambda t: t["amount"])
+print(smallest["id"])                      # tx_2
+
+# 4. keep amount > 100: filter + lambda, then the comprehension version
+high = list(filter(lambda t: t["amount"] > 100, txns))
+print([t["id"] for t in high])             # ['tx_1', 'tx_3']
+
+high2 = [t for t in txns if t["amount"] > 100]     # same result, easier to read
 ```
