@@ -3377,3 +3377,199 @@ Design the solution with SNS (and whatever else we’ve covered). For each point
 7. What do you do about deliveries that fail repeatedly for one subscriber?
 
  **what would you need to change to add the loyalty service later, and why is that better than before?**
+#### 1. Restructuring the flow so checkout doesn’t depend on downstream systems
+
+Use **SNS fan-out**. Checkout does its essential work (take payment, save the order) and publishes **one `OrderPlaced` event** to an SNS topic. It knows nothing about who is listening.
+
+Each downstream system subscribes **independently**, normally through **its own SQS queue** (SNS + SQS fan-out):
+
+- Warehouse queue, invoice queue, notification queue, analytics queue, fraud queue.
+- Each team’s workers pull from their own queue at their own pace.
+
+This fixes the “invoice service down means checkout fails” problem. If invoice is down, its queue simply accumulates messages (retained up to 14 days), and checkout never notices. A slow or failing consumer can’t hurt the others.
+
+Some subscribers can attach differently where it makes sense. For example, analytics might use **Kinesis Data Firehose**, and a light task might use a **Lambda** subscription directly. But SQS is the safe default whenever a consumer needs durability or controls its own speed.
+
+#### 2. Giving fraud and loyalty only the orders they need
+
+Use **subscription filter policies**.
+
+- Checkout publishes with **message attributes**, such as `amount` (Number) and `memberStatus` (String, for example `registered` or `guest`).
+- **Fraud queue subscription** filter: `{"amount": [{"numeric": [">", 50000]}]}`.
+- **Loyalty queue subscription** filter: `{"memberStatus": ["registered"]}`.
+- Warehouse, invoice, notifications and analytics have **no filter**, so they get everything.
+
+Filtering happens inside SNS, so unwanted messages never reach those queues and cost nothing to process. If you’d prefer filtering on fields inside the JSON body instead of attributes, SNS supports a `MessageBody` filter scope, but attributes are the simpler default.
+
+#### 3. Protecting the slow warehouse system from the 200-per-second peak
+
+This is **SQS’s job** (Lesson 31), not SNS’s. SNS pushes messages immediately and **doesn’t buffer for slow consumers**, so a slow warehouse can’t be subscribed directly. Put the **warehouse’s SQS queue** between SNS and the workers:
+
+- SNS delivers to the queue at up to 200 per second, which SQS handles easily.
+- The warehouse workers pull at **5 per second**, and the queue grows during the peak and drains afterward. Backlog is fine, because messages are stored durably across AZs for up to 14 days.
+- Add a **dead-letter queue** to the warehouse queue (with `maxReceiveCount`) so a broken order doesn’t block everything, plus a CloudWatch alarm on queue age and depth.
+- Set the **visibility timeout** longer than the warehouse’s processing time.
+- If the backlog is unacceptable for business reasons (for example, orders waiting hours), the real fix is more warehouse capacity, since a queue only smooths the load, it doesn’t create processing speed.
+
+“Never lose an order” is met by SQS’s durability **plus** a delivery failure net on the SNS side (see point 7).
+
+#### 4. The wrapped message the warehouse team sees
+
+SNS wraps the payload in an **envelope**: a JSON object with fields like `Type`, `MessageId`, `TopicArn`, `Timestamp`, and a `Message` field that holds **your original JSON as a string**. Nothing went wrong, that’s the default behavior.
+
+Two options:
+
+- **Enable raw message delivery** on the warehouse queue’s subscription (`RawMessageDelivery: true`). The queue then receives exactly the JSON that checkout published. This is the best fix, and it needs no code change on the warehouse side. (Message attributes then arrive as SQS message attributes.)
+- Or change the warehouse code to parse the outer envelope and then parse the inner `Message` string.
+
+Tell them to make this change **per subscription**, since other subscribers might already depend on the envelope.
+
+#### 5. Operations alerting with email, SMS and automatic remediation
+
+- Create a CloudWatch **alarm** on the error-rate metric (above 5%, evaluated over a sensible period) with an **SNS topic `ops-alerts`** as its alarm action. (CloudWatch is next lesson.)
+- Subscribe to that topic:
+    - **Email** for the on-call team (each recipient must confirm).
+    - **SMS** for the manager or on-call phone numbers, keeping in mind that SMS has cost, country regulations, and sandbox restrictions on new accounts.
+    - A **Lambda function** that runs the automated remediation (for example restarting a service, scaling out workers, or clearing a stuck process).
+- All three fire from **one alarm**. Use a **separate topic from `OrderPlaced`**, so operational alerts and business events aren’t mixed, and so access control can differ.
+- Make the Lambda function **idempotent and safe**, since alarms can trigger repeatedly. A Lambda that fixes things automatically should have limits (for example, don’t restart more than N times per hour), or you risk a loop that makes the incident worse.
+
+#### 6. Ordered refund events
+
+Use an **SNS FIFO topic** (`refund-events.fifo`) with **FIFO SQS queues** as subscribers:
+
+- Set the **message group ID to the order ID**, so for each order, “requested → approved → paid” is delivered in order, while different orders are processed in parallel.
+- Use a **deduplication ID** (or content-based deduplication), so a retried publish within the 5-minute window isn’t delivered twice.
+- Trade-offs to state: FIFO topics have **lower throughput than standard topics**, only support **SQS and Lambda** style subscribers (no email or SMS), and a failing message **blocks the rest of its group** until it’s handled or moved to a DLQ.
+
+As a defense in depth, put a **sequence number or status version** on each event, so consumers can detect and ignore stale or out-of-order updates.
+
+#### 7. Deliveries that fail repeatedly for one subscriber
+
+- Attach a **subscription-level dead-letter queue** (an SQS queue) to that subscription, so messages SNS **can’t deliver** are captured instead of being dropped after retries are exhausted. This helps meet “never lose an order”.
+- Set a sensible **delivery retry policy** (most relevant for HTTP/S endpoints).
+- Monitor with CloudWatch metrics such as `NumberOfNotificationsFailed`, and alarm on the DLQ depth.
+- Common root causes to check: a missing **queue policy** allowing the topic to send, a **KMS key policy** blocking SNS, a subscriber Lambda that’s throttled or erroring, or an endpoint that’s down.
+- Once fixed, replay the DLQ messages to the subscriber.
+
+#### Adding the loyalty service later
+
+Only **add a new SQS queue and subscribe it to the existing topic** (with the `registered` filter and the queue policy). **Checkout is not changed or redeployed**, and nothing else is touched. Before, a new consumer meant modifying and redeploying the core checkout code, with its risk and its coupling. Now the publisher doesn’t know who listens, which is the whole point of pub/sub. The same applies to removing a service: delete its subscription.
+
+---
+## Amazon CloudWatch
+
+A hospital’s **patient monitoring room**.
+
+- The **vital-signs machines** (heart rate, oxygen, blood pressure) are **metrics**: numbers recorded every few seconds.
+- The **doctors’ written notes** are **logs**: detailed records of what happened.
+- The **dashboard on the wall** shows all patients’ vitals at a glance (**dashboards**).
+- The **alarm that beeps and pages the doctor** when the heart rate drops too low is a **CloudWatch alarm**.
+- The nurse who says “if the oxygen level drops, automatically start oxygen” is an **alarm action** (such as Auto Scaling).
+Without monitoring, you’d find out a patient was in trouble only when they collapsed.
+
+### Definition
+
+**Amazon CloudWatch** is AWS’s **monitoring and observability service**. It collects **metrics, logs and events** from your AWS resources and applications, lets you **visualize** them, **alarm** on them, and **react** automatically.
+
+#### Metrics
+
+- A **metric** is a time-ordered set of data points, like `CPUUtilization` for an EC2 instance.
+- Organized by **namespace** (like `AWS/EC2`, `AWS/SQS`), **metric name**, and **dimensions** (identifiers such as `InstanceId` that slice the metric).
+- **Most AWS services publish metrics automatically.** For EC2, the default is **basic monitoring at 5-minute intervals**, and **detailed monitoring** (extra cost) gives **1-minute** data.
+- **Important gap:** EC2’s default metrics cover **CPU, network and disk I/O (at the hypervisor level) and status checks**, but **not memory usage or disk space used**. To get those, install the **CloudWatch agent** on the instance.
+- **Custom metrics**: your application can publish its own (for example, “orders processed per minute”), using the API (`PutMetricData`) or the agent. High-resolution custom metrics can go down to 1-second granularity.
+- Metrics are retained for up to **15 months** (with the resolution reduced over time: 1-minute data is kept for 15 days, 5-minute data for 63 days, and 1-hour data for 15 months).
+
+#### Alarms
+
+An **alarm** watches **one metric** (or a math expression) and changes **state** based on a threshold:
+- **OK**: within the threshold.
+- **ALARM**: threshold breached.
+- **INSUFFICIENT_DATA**: not enough data yet (or data isn’t arriving).
+
+When it changes state, an alarm can trigger **actions**: send an **SNS notification**, run an **Auto Scaling** policy, perform an **EC2 action** (stop, terminate, reboot, recover an instance), or create a Systems Manager OpsItem/incident.
+
+Key settings: **period** (length of each evaluation window), **evaluation periods** and **datapoints to alarm** (for example, “3 out of 5 periods” to avoid alerting on one blip), and **treat missing data** (how to handle gaps). **Composite alarms** combine several alarms with AND/OR logic to reduce noise. **Anomaly detection** alarms use a learned band of expected values instead of a fixed number.
+
+#### Logs
+
+- **CloudWatch Logs** collects and stores log data from applications, servers and AWS services (Lambda, API Gateway, VPC Flow Logs, CloudTrail and more).
+- Structure: **log group** (a collection, usually one per application or service) → **log stream** (a sequence from a single source, like one instance or one Lambda container) → **log events** (individual entries).
+- **Retention** is set per log group. The **default is “never expire”**, which keeps costing money until you change it, so setting retention is a standard good practice.
+- **Metric filters** turn log patterns into metrics (for example, count the lines containing “ERROR”, then alarm on that count).
+- **Logs Insights** is a query language for searching and analyzing logs interactively.
+- **Subscription filters** stream logs in near real time to other destinations (Lambda, Kinesis, OpenSearch, S3 via Firehose).
+- **Export to S3** for cheap long-term storage.
+- **Lambda** automatically writes its output to CloudWatch Logs (when its execution role allows it), so `print()` statements in a function show up there.
+
+#### Dashboards
+
+Customizable pages of **graphs and numbers** across metrics, logs and alarms, and across Regions and accounts. Useful for a “single glass” view of a service’s health.
+
+#### Events and EventBridge
+
+**CloudWatch Events** evolved into **Amazon EventBridge**, which reacts to **events** (“an EC2 instance changed state”, “a file was uploaded”, “it’s 2 AM every day”) and routes them to targets like Lambda, SNS or SQS, including **scheduled** (cron) rules. You’ll see both names, and EventBridge is the current service.
+
+#### Other capabilities worth knowing
+
+- **Container Insights, Lambda Insights, Application Insights**: curated monitoring for containers, functions and applications.
+- **CloudWatch Synthetics (canaries)**: scripts that act like a user and test your site or API from outside every few minutes.
+- **Contributor Insights**: shows top contributors (for example, which IPs send the most requests).
+- **Cross-account and cross-Region observability** features for large organizations.
+
+## CloudWatch vs CloudTrail
+
+![[Pasted image 20261019190329.png]]
+
+(CloudTrail belongs to the security and governance part of the course, but know the difference now. They work well together.)
+
+### The industry problem it solves
+
+**Example: a ticket-booking website.**
+
+Without monitoring:
+
+1. The site gets slow on Friday night. Nobody knows until customers tweet about it.
+2. A bug starts throwing errors in one service, but the errors are buried in log files on 20 different servers, so engineers have to log in to each one.
+3. Servers run out of memory and crash, and no one noticed memory climbing for days.
+4. The team can’t tell whether last week’s release made things better or worse.
+5. Auto Scaling doesn’t know when to add servers.
+
+With CloudWatch:
+
+- **Metrics and dashboards** show request rate, latency and error rate in one place.
+- **Alarms** page the on-call engineer (through SNS) within minutes when latency or error rate crosses a threshold, and trigger Auto Scaling automatically on CPU or queue depth.
+- **Centralized logs** from all servers and Lambdas are searchable in one place with Logs Insights (“show all errors from the booking service in the last hour”).
+- **Custom metrics** like “failed payments per minute” make business problems as visible as technical ones.
+- **Synthetics canaries** detect a broken checkout page even when the servers look healthy.
+
+**Where it is a poor fit:** deep application tracing across microservices is the job of **AWS X-Ray** or similar tools, audit of API activity is **CloudTrail**, and extremely high-volume log analytics can get expensive in CloudWatch compared with other pipelines.
+
+## CODE
+
+Create an alarm that notifies an SNS topic (CLI):
+
+``` BASH
+# 1. An SNS topic for alerts (Lesson 32)
+aws sns create-topic --name ops-alerts
+aws sns subscribe \
+  --topic-arn arn:aws:sns:ap-south-1:123456789012:ops-alerts \
+  --protocol email --notification-endpoint you@example.com
+
+# 2. An alarm: average CPU above 80% for 3 of the last 5 minutes
+aws cloudwatch put-metric-alarm \
+  --alarm-name web-high-cpu \
+  --namespace AWS/EC2 \
+  --metric-name CPUUtilization \
+  --dimensions Name=InstanceId,Value=i-0abc123def4567890 \
+  --statistic Average \
+  --period 60 \
+  --evaluation-periods 5 \
+  --datapoints-to-alarm 3 \
+  --threshold 80 \
+  --comparison-operator GreaterThanThreshold \
+  --treat-missing-data notBreaching \
+  --alarm-actions arn:aws:sns:ap-south-1:123456789012:ops-alerts
+```
+
