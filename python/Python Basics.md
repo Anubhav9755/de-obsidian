@@ -1494,25 +1494,92 @@ path1 = Path("C:/new/table.csv")
 path2 = Path(r"C:\new\table.csv")
 ```
 
-### CSV and JSON
+### CSV - COMMA SEPERATED VALUES
 
 **CSV** (comma-separated values) is plain text where each line is a row and commas separate the columns. The `csv` module handles the tricky parts, like commas inside quoted text.
 
 **CSV operations:**
 
-| Operation                 | Python code                          |
-| ------------------------- | ------------------------------------ |
-| Import module             | `import csv`                         |
-| Open for reading          | `open("data.csv", "r")`              |
-| Read rows as lists        | `csv.reader(f)`                      |
-| Read rows as dictionaries | `csv.DictReader(f)`                  |
-| Open for writing          | `open("data.csv", "w")`              |
-| Append data               | `open("data.csv", "a")`              |
-| Create writer             | `csv.writer(f)`                      |
-| Create dictionary writer  | `csv.DictWriter(f, fieldnames=cols)` |
-| Write header              | `writer.writeheader()`               |
-| Write one row             | `writer.writerow(row)`               |
-| Write multiple rows       | `writer.writerows(rows)`             |
+| Operation                 | Python code                          | Meaning                               |
+| ------------------------- | ------------------------------------ | ------------------------------------- |
+| Import module             | `import csv`                         | Load CSV tools                        |
+| Open for reading          | `open("data.csv", "r")`              | Read an existing file                 |
+| Read rows as lists        | `csv.reader(f)`                      | Each row is a list                    |
+| Read rows as dictionaries | `csv.DictReader(f)`                  | Column headers become dictionary keys |
+| Open for writing          | `open("data.csv", "w")`              | Create or overwrite a file            |
+| Append data               | `open("data.csv", "a")`              | Add data at the end                   |
+| Create writer             | `csv.writer(f)`                      | Write list-based rows                 |
+| Create dictionary writer  | `csv.DictWriter(f, fieldnames=cols)` | Write dictionary-based rows           |
+| Write header              | `writer.writeheader()`               | Write column names                    |
+| Write one row             | `writer.writerow(row)`               | Write a single row                    |
+| Write multiple rows       | `writer.writerows(rows)`             | Write multiple rows                   |
 
 **CSV — Reading a file**: 
 
+```
+sale.csv
+tx_id,user,amount
+tx_1,user_a,150.5
+tx_2,user_b,200
+```
+
+```python
+import csv
+
+with open("sales.csv", "r", newline="", encoding="utf-8") as f:
+
+    # DictReader reads the first row as column names.
+    # Each following row becomes a dictionary using those names.
+    reader = csv.DictReader(f)
+
+    # Loop through the CSV rows one by one.
+    for row in reader:
+        # Print each row as a dictionary.
+        # Values read from a CSV are strings by default.
+        print(row)
+```
+
+```
+output:
+{'tx_id': 'tx_1', 'user': 'user_a', 'amount': '150.5'}
+{'tx_id': 'tx_2', 'user': 'user_b', 'amount': '200'}
+```
+
+**CSV — Writing a file**
+
+```python
+import csv
+
+rows = [
+    {"tx_id": "tx_1", "user": "user_a", "amount": 150.5}
+]
+
+# Open out.csv in write mode.
+# "w" creates the file or overwrites it if it already exists.
+# newline="" avoids unwanted blank lines on Windows.
+with open("out.csv", "w", newline="", encoding="utf-8") as f:
+
+    # Specify the column names and their order.
+    writer = csv.DictWriter(f,fieldnames=["tx_id", "user", "amount"])
+
+    # Write the column names as the first row.
+    writer.writeheader()
+
+    # Write all dictionaries as CSV rows.
+    writer.writerows(rows)
+```
+
+```
+The resulting `out.csv`:
+tx_id,user,amount
+tx_1,user_a,150.5
+```
+
+
+**JSON - JAVASCRIPT OBJECT NOTATION.**
+
+JSON is a text format used to store structured data. It supports objects, arrays, strings, numbers, booleans, and `null`.
+
+**JSON Operations:**
+
+![[Pasted image 20261020000242.png]]
