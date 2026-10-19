@@ -732,8 +732,32 @@ raw_rows = [
 **CODE-**
 
 ```python
+raw_rows = [ "tx_1, user_a, 150.50", "tx_2, user_b, abc", "tx_3, user_a, 300", "", "tx_4, user_c, -20", "tx_5, user_b, 220.25", ]
 
+clean = []
 
+for line in raw_rows:
+	line  = line.strip()
+	if not line:
+		continue
+	
+	parts = [p.strip() for p in line.split(",")]
+	tx_id, user, amount_raw = parts
+	
+	
+	try:
+		amount  = float(amount_raw)
+	except ValueError:
+		continue
+		
+	if amount<=0:
+		continue
+		
+	clean.append((tx_id, user, amount_raw))
+	
+print(clean)	
+
+# [('tx_1', 'user_a', 150.5), ('tx_3', 'user_a', 300.0), ('tx_5', 'user_b', 220.25)]
 ```
 
 ### Find the bug
