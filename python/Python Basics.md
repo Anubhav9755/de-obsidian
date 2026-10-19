@@ -828,11 +828,12 @@ Input: `nums = [2, 7, 11, 15]`, `target = 9`
 |1|7|2|Yes!|Returns `(0, 1)`|
 
 ---
-## Functions
+## Lesson 6: Functions
 
 - **Function**: a named, reusable block of code. It takes **parameters** (inputs) and gives back a result with `return`.
 - **Parameters** are the names in the `def` line. **Arguments** are the actual values you pass when calling it.
 - **Scope**: where a variable is visible. Variables created inside a function exist only inside it.
+The function **never crashes**, it returns `None` for bad input, and the caller decides what to do.
 
 **Industrial use:** a real pipeline is a chain of small functions: `read_file → parse_row → validate → transform → write`. Each does one job, and each can be tested alone.
 
@@ -878,3 +879,60 @@ lo, hi = min_max([3, 1, 9])     # lo=1, hi=9
 if you don’t know in advance how many values will come in.
 
 `*args` collects all extra **positional** arguments (values passed without a name) into a **tuple**.
+
+```python
+def total(*nums):
+    print(nums)          # see what we actually receive
+    return sum(nums)
+
+total(1, 2, 3)           # prints (1, 2, 3)  → returns 6
+total(10, 20)            # prints (10, 20)   → returns 30
+total()                  # prints ()         → returns 0
+```
+
+Inside the function, `nums` is an ordinary tuple, so you can loop over it, index it, or pass it to `sum()`.
+
+`**kwargs` (keyword arguments) collects all extra arguments passed as `name=value` into a **dict**.
+
+```python
+def build_user(name, **extra):
+    print(extra)
+    return {"name": name, **extra}
+
+build_user("Rahul", city="Kanpur", age=21)
+```
+
+"Rahul" matched the first parameter, so name ="Rahul". 
+city = "Kanpur" -  no parameter called city, so it goes into extra.
+age=21 - same, so it goes into extra.
+
+So `extra` becomes `{"city": "Kanpur", "age": 21}`. The line `{"name": name, **extra}` builds a new dict with `name` first, then merges everything from `extra` in. Result:
+
+```python
+{'name': 'Rahul', 'city': 'Kanpur', 'age': 21}
+```
+
+### The one idea to remember: packing vs unpacking
+
+The `*` and `**` symbols do **two opposite jobs**, depending on where you write them.
+
+| Where                 | What it does                                    | Example            |
+| --------------------- | ----------------------------------------------- | ------------------ |
+| In the **`def` line** | **Packs** extra values into a tuple/dict        | `def total(*nums)` |
+| In the **call**       | **Unpacks** a list/dict into separate arguments | `total(*nums)`     |
+
+**A real function:**
+
+```python
+def parse_amount(raw):
+    """Convert text like '1,200.50' to a float. Return None if invalid."""
+    try:
+        return float(raw.replace(",", ""))
+    except ValueError:
+        return None
+
+print(parse_amount("1,200.50"))   # 1200.5
+print(parse_amount("N/A"))        # None
+print(parse_amount(""))           # None
+```
+
