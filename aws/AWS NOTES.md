@@ -3676,3 +3676,138 @@ Design the monitoring setup. For each point, name the CloudWatch features and ex
 
 Also : **which alarms would page a human at 3 AM, and which would not, and why**
 
+#### 1. Memory visibility and other server data
+
+Install the **CloudWatch agent** on every instance. Bake it into the **AMI or launch template** (or install it via Systems Manager), so every instance the Auto Scaling group launches reports automatically. The instance’s **IAM role** needs the `CloudWatchAgentServerPolicy` managed policy.
+
+The agent publishes **memory used percent, disk space used, swap** and other OS-level metrics under the `CWAgent` namespace. These are the metrics that EC2’s default hypervisor-level metrics can’t see, which is why no graph showed the memory problem.
+
+It can also ship **application and system log files** to CloudWatch Logs, which covers point 4. Also turn on **detailed monitoring (1-minute metrics)** for the instances if the faster resolution is worth the cost.
+
+For the **ALB**, the built-in metrics worth watching are `TargetResponseTime`, `HTTPCode_Target_5XX_Count`, `HTTPCode_ELB_5XX_Count` and `UnHealthyHostCount`. For **Aurora**, watch `CPUUtilization`, `DatabaseConnections` and `FreeableMemory`. These all arrive automatically.
+
+#### 2. Alerts that catch real problems without false alarms
+
+- Alarm on **customer-facing symptoms** first: ALB **latency** (for example p95 or p99 `TargetResponseTime`, not just the average) and **5XX error rate**. These would have caught the Friday slowdown within minutes.
+- Use **“M out of N datapoints”** (for example, 4 of 5 one-minute periods) so a short CPU spike doesn’t fire.
+- Use **memory and disk alarms** from the agent metrics as **early warnings** (for example, memory above 85% for 10 minutes).
+- Use **composite alarms** (high CPU **and** high latency) so a harmless CPU spike with healthy latency doesn’t alert.
+- Consider **anomaly detection** for metrics with daily patterns (the lunch and dinner peaks in a food app).
+- Send alarm actions to an **SNS topic** (Lesson 32), with separate topics for urgent (pager, SMS) and non-urgent (email, ticket) notifications.
+
+CPU on its own is a weak alarm for a service that scales out automatically. If Auto Scaling handles CPU, a human doesn’t need to hear about it.
+
+#### 3. “Orders per minute” and the sudden-drop alert
+
+- Have the application publish a **custom metric** (`OrdersPlaced`, namespace `FoodRush`, value 1 per order, or aggregated counts) with `PutMetricData`. Alternatively, derive it from logs with a **metric filter** (for example, count log lines containing “ORDER_PLACED”). Use the **Sum statistic over 1-minute periods**. Keep dimensions low-cardinality (for example, environment), not per-user or per-order.
+- **Dashboard:** put it on a CloudWatch dashboard as a line graph.
+- **Sudden-drop alert**: a fixed threshold is poor, because normal volume changes between 3 AM and 8 PM. Use an **anomaly detection alarm**, which learns the expected daily and weekly band and alarms when the metric falls **below** the lower band. A good alternative is a **metric math** alarm comparing current volume with the same time last week.
+- Configure **`treat-missing-data` as `breaching`** for this alarm. If checkout is so broken that no orders (and therefore no metric data points) arrive at all, silence should alarm, not be ignored. Alternatively publish an explicit zero every minute so there are always data points.
+
+This alarm is valuable because it catches a business failure even when every server looks healthy.
+
+#### 4. Centralizing and searching logs, and turning errors into a graph and alert
+
+- The **agent** ships server logs, and **Lambda** automatically writes to its own log group (the execution role needs permission to write logs). Use clear **log group names** per service (for example `/foodrush/api` and `/aws/lambda/notify-restaurant`).
+- Write logs as **structured JSON** (with fields like `level`, `orderId`, `service`). This makes Logs Insights queries much more powerful.
+- **Search:** use **Logs Insights**, which can query **multiple log groups at once**, for example: filter `level = "ERROR"`, stats count by `bin(1m)`.
+- **Errors per minute graph and alert:** create a **metric filter** on the error pattern (for example, `ERROR` or `{ $.level = "ERROR" }` for JSON), publishing a `ErrorCount` metric. Graph it on the dashboard, then create an **alarm** on it (for example, more than 20 errors per minute for 3 of 5 minutes).
+- The engineers no longer need to SSH into 15 servers, and they can also trace one `orderId` across all of them.
+
+#### 5. Controlling log costs
+
+- **Set retention on every log group** (for example, 30 days for application logs and 7 days for debug-level logs), as the default is “never expire”.
+- Use the **Infrequent Access log class** for logs that are stored but rarely queried.
+- **Reduce volume at the source**: lower the log level in production (INFO or WARN, not DEBUG), avoid logging large payloads, and sample noisy logs.
+- **Export or stream older logs to S3** (cheap storage, with lifecycle policies to colder classes) if they must be kept for compliance, longer than CloudWatch is economical.
+- Watch for **high-cardinality metric dimensions**, which create many billable metrics.
+- Use the **billing breakdown** to identify the most expensive log groups. We’ll cover cost tools in Domain 4.
+
+#### 6. Security alerts, and the underlying data source
+
+The data comes from **AWS CloudTrail**, which records API calls, not from CloudWatch itself. The setup:
+
+- Make sure a **CloudTrail trail** exists (covering all Regions) and is **delivered to CloudWatch Logs**.
+- Create **metric filters** on that log group:
+    - Security group deletion: a filter on event name `DeleteSecurityGroup`.
+    - Root login: a filter on `userIdentity.type = "Root"` and event name `ConsoleLogin`.
+- Create an **alarm on each metric (count of 1 or more)** that notifies a **security SNS topic**.
+- An **EventBridge rule** matching the same CloudTrail events is a common alternative that reacts to events directly, and it can also trigger automated responses (for example, a Lambda that re-creates a deleted rule or revokes a session).
+- Root usage should alert **immediately and to a human**, since the root user should almost never be used.
+
+#### 7. Scaling on the queue backlog instead of CPU
+
+Use **Auto Scaling with target tracking** on a **backlog-per-instance** metric, which is the AWS-recommended approach:
+
+- The raw `ApproximateNumberOfMessagesVisible` doesn’t account for how many workers exist or how fast each processes.
+- Publish a custom metric: **queue depth ÷ number of running instances** (computed with metric math or a small scheduled job), and set the **target value** to the backlog each instance can clear within your acceptable delay (derived from processing time per message and the delay you can tolerate).
+- Auto Scaling then adds instances when the backlog per instance rises, and removes them when it falls.
+
+One caution: in this architecture the notification tasks are consumed by **Lambda**, which already scales with the queue automatically. Instance scaling on queue depth applies only if the queue consumers run on EC2. If the EC2 group is the web tier, scale it on **ALB request count per target** or latency-related metrics instead. Also set **maximum capacity** to protect Aurora from too many connections.
+
+#### 8. Noticing problems that servers can’t report
+
+Use **CloudWatch Synthetics (canaries)**: scheduled scripts that behave like a user and test **from outside** (for example, every minute: load the home page, log in, add an item to the cart, reach checkout) and alarm when the script fails or is slow. This catches problems such as a broken checkout page, an expired TLS certificate, a DNS mistake or a CDN problem, when the servers look healthy and report nothing wrong. It pairs well with the orders-per-minute anomaly alarm, because one checks technical availability and the other checks business results.
+
+#### Which alarms page a human at 3 AM, and which do not
+
+**Page a human (customer impact or security, and needs a person):**
+
+- ALB 5XX error rate or latency above the agreed level for several minutes.
+- Orders-per-minute anomaly (a sudden drop).
+- Synthetics canary failing (checkout broken).
+- Root login, or critical security changes such as deleting a security group in production.
+- The DLQ receiving messages (orders or notifications are failing) if those are business-critical.
+- Aurora failure or running out of connections or storage.
+
+**Don’t page (send to email, chat or a ticket for business hours):**
+
+- A brief CPU spike (and CPU in general when Auto Scaling handles it).
+- Memory or disk **warnings** at moderate levels (early warnings), unless they’re about to cause an outage.
+- Queue backlog growth that Auto Scaling or Lambda is already handling.
+- Cost anomalies and log volume increases.
+
+The principle: **page only for what is actionable now and affects customers or security**, and let automation handle what automation can. Everything else should be visible but not wake someone up.
+
+---
+
+## AWS CloudFormation
+
+Building a house.
+
+Clicking in the Console is like **giving verbal instructions to a builder, brick by brick**: “put a wall here, now a window there.” If you want an identical second house, you must remember and repeat every instruction, and you’ll probably forget something.
+
+**CloudFormation is the architect’s blueprint.** You write down the **complete design** once: the walls, windows, plumbing and wiring, and how they connect. You hand the blueprint to a construction crew (CloudFormation), and it builds everything in the right order. Want a second identical house? Hand over the same blueprint. Want to add a room? Edit the blueprint and the crew works out what changes are needed. Want to demolish the house? The crew removes everything it built, cleanly.
+
+### Definition
+
+**AWS CloudFormation** is AWS’s **Infrastructure as Code (IaC)** service. You describe the AWS resources you want in a **template** (a text file in JSON or YAML), and CloudFormation **creates, updates and deletes** them for you, in the right order, as a single unit called a **stack**.
+
+The key shift is from **“do these steps”** (imperative) to **“this is what I want to exist”** (declarative). CloudFormation works out how to get there.
+
+#### Core concepts
+
+- **Template**: the YAML or JSON file describing resources. It’s just text, so it can be stored in Git, reviewed, versioned and reused.
+
+- **Stack**: the **running instance of a template**: the actual set of resources CloudFormation created and manages together. Create the stack, update it, delete it, and everything goes together.
+
+- **Resource**: one thing in the template (an S3 bucket, an EC2 instance, an SQS queue), identified by a **logical ID** you choose, and a **type** such as `AWS::S3::Bucket`. The real thing it creates has a **physical ID** (the actual bucket name or instance ID).
+
+- **Parameters**: inputs supplied when you create the stack, so one template can build different variations (for example instance size or environment name).
+
+- **Mappings**: fixed lookup tables inside the template (for example, AMI IDs per Region).
+
+- **Conditions**: make parts of the template optional (for example, create a bigger database only in production).
+
+- **Outputs**: values the stack exposes after creation (a bucket name, a URL), which can be **exported** and used by other stacks.
+
+- **Intrinsic functions**: built-in helpers for referencing and composing values:
+    - `!Ref` returns a resource’s ID (or a parameter’s value).
+    - `!GetAtt` returns an attribute of a resource (such as the ARN).
+    - `!Sub` substitutes variables into a string.
+    - `!Join`, `!If`, `!FindInMap`, `!ImportValue` and others.
+
+- **Pseudo parameters**: values AWS fills in automatically, such as `AWS::Region`, `AWS::AccountId` and `AWS::StackName`.
+
+
+
