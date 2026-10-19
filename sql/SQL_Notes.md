@@ -5295,3 +5295,33 @@ $$;
 SELECT * FROM get_items_by_price_threshold(200.00);
 ```
 
+- **`RETURNS DECIMAL(10, 2)`:** Declares that the scalar function outputs a single numeric value.
+
+- **`DETERMINISTIC`:** Tells the query optimizer that this function produces identical outputs for identical inputs, enabling execution plan optimizations.
+
+- **`RETURNS TABLE (...) AS $$ RETURN QUERY ... $$`:** Defines a set-returning function that executes an internal query and returns tabular results.
+
+### Interview Questions
+
+#### Question 1: What are the fundamental differences between a Stored Procedure and a User-Defined Function (UDF) in SQL?
+
+- **Solution Approach:**
+    - _Execution Context:_ Functions can be called inline directly inside `SELECT`, `WHERE`, or `JOIN` clauses as part of a query execution tree. Procedures cannot be called inline; they must be invoked explicitly using a standalone execution command (`CALL` or `EXEC`).
+    - _Transaction Control:_ Procedures can contain transaction control statements (`BEGIN`, `COMMIT`, `ROLLBACK`). Standard SQL functions generally cannot execute explicit transaction control commands.
+    - _Side Effects:_ Functions are typically expected to be side-effect-free (read-only data access), whereas procedures frequently perform data modifications, mutations, and administrative tasks.
+
+#### Question 2: What is the performance pitfall of using scalar UDFs in large-scale relational queries, and how do database engines handle them?
+
+- **Solution Approach:**
+    - _The Pitfall:_ Row-by-row execution. If a scalar UDF is called inside the `SELECT` clause of a query scanning 1 million rows, the database engine may execute the function code 1 million times sequentially. This triggers context switches between the SQL execution engine and the procedural language runtime, bypassing vectorization and causing severe CPU bottlenecks.
+    - _Mitigation:_ Modern engines support inlineable functions or recommend rewriting scalar UDF logic into native SQL expressions, joins, or window functions so the optimizer can vectorize execution.
+
+#### Question 3: Why does the query optimizer care whether a user-defined function is declared as `DETERMINISTIC` (or `IMMUTABLE`) versus `NON-DETERMINISTIC` (or `VOLATILE`)?
+
+- **Solution Approach:**
+    
+    - If a function is marked **Deterministic / Immutable**, the optimizer knows its output depends solely on its input parameters. This allows the optimizer to cache or pre-compute function results, evaluate expressions once per query instead of once per row, or apply index-based optimizations.
+    - If a function is marked **Non-Deterministic / Volatile** (e.g., calling `NOW()` or `RANDOM()`), the optimizer must re-evaluate the function expression for every single row processed, preventing aggressive caching and restricting specific execution plan optimizations.
+
+---
+
