@@ -1432,21 +1432,22 @@ except FileNotFoundError:
 
 **Pathlib:** 
 
-Python tool that helps you create folders, locate files, read files, and write files without manually handling complicated file paths.
+Python tool that helps you create folders, locate files, read files, and write files without manually handling complicated file paths. `pathlib` is a built-in module (a ready-made toolbox you load with `import`) that represents a path as an object.
 
-|Code|Meaning|
-|---|---|
-|`Path("data")`|Represent a folder path|
-|`base.mkdir()`|Create a folder|
-|`base / "sales.csv"`|Join path components|
-|`file.exists()`|Check whether a path exists|
-|`file.name`|Get the final name|
-|`file.suffix`|Get the last extension|
-|`file.parent`|Get the containing folder|
-|`file.write_text()`|Write text; overwrite existing content|
-|`file.read_text()`|Read the entire file as text|
-|`base.glob("*.csv")`|Find matching entries in the folder|
-|`base.rglob("*.csv")`|Find matching entries recursively|
+| Code                  | Meaning                                |
+| --------------------- | -------------------------------------- |
+| `Path("data")`        | Represent a folder path                |
+| `base.mkdir()`        | Create a folder                        |
+| `base / "sales.csv"`  | Join path components                   |
+| `file.exists()`       | Check whether a path exists            |
+| `file.name`           | Get the final name                     |
+| `file.suffix`         | Get the last extension                 |
+| `file.parent`         | Get the containing folder              |
+| `file.write_text()`   | Write text; overwrite existing content |
+| `file.read_text()`    | Read the entire file as text           |
+| `base.glob("*.csv")`  | Find matching entries in the folder    |
+| `base.rglob("*.csv")` | Find matching entries recursively      |
+
 ```python 
 
 from pathlib import Path
@@ -1461,15 +1462,12 @@ base = Path("data")
 base.mkdir(parents=True, exist_ok=True)
 
 # Join the folder path with the file name using /.
-file = base / "sales.csv"      # Result: data/sales.csv
+file = base / "sales.csv"  # Result: data/sales.csv
 
-print(file.exists())     # Prints False if the file hasn't been created yet.
+print(file.exists()) # Prints False if the file hasn't been created yet.
 print(file.name)     ## Output: sales.csv
-print(file.suffix)      # Output: .csv
-
-# Get and print the folder containing the file.
-# Output: data
-print(file.parent)
+print(file.suffix)   # Output: .csv
+print(file.parent)   # Output: data
 
 # Write the text "hello" into sales.csv.
 # If the file doesn't exist, it will be created.
@@ -1478,15 +1476,43 @@ print(file.parent)
 file.write_text("hello", encoding="utf-8")
 
 # Read the entire file contents as a string and print them.
-# Output: hello
-print(file.read_text(encoding="utf-8"))
+print(file.read_text(encoding="utf-8"))  # Output: hello
 
 # Find entries in the "data" folder whose names end in .csv.
 # The * wildcard matches any sequence of characters.
 # This searches the immediate folder, not nested subfolders.
 for p in base.glob("*.csv"):
-
-    # Print the path of each matching entry.
-    # Output includes data/sales.csv.
-    print(p)
+    print(p)  # Output includes data/sales.csv.
 ```
+
+**Windows warning:** in a normal string, backslash starts an escape code, so `"C:\new\table.csv"` contains a newline (`\n`) and a tab (`\t`). Avoid it by using `Path("C:/new/table.csv")` (forward slashes work on Windows too) or a raw string `r"C:\new\table.csv"`. `Path` joins with `/` and works on both Windows and Linux.
+
+```python
+from pathlib import Path
+
+path1 = Path("C:/new/table.csv")
+path2 = Path(r"C:\new\table.csv")
+```
+
+### CSV and JSON
+
+**CSV** (comma-separated values) is plain text where each line is a row and commas separate the columns. The `csv` module handles the tricky parts, like commas inside quoted text.
+
+**CSV operations:**
+
+| Operation                 | Python code                          |
+| ------------------------- | ------------------------------------ |
+| Import module             | `import csv`                         |
+| Open for reading          | `open("data.csv", "r")`              |
+| Read rows as lists        | `csv.reader(f)`                      |
+| Read rows as dictionaries | `csv.DictReader(f)`                  |
+| Open for writing          | `open("data.csv", "w")`              |
+| Append data               | `open("data.csv", "a")`              |
+| Create writer             | `csv.writer(f)`                      |
+| Create dictionary writer  | `csv.DictWriter(f, fieldnames=cols)` |
+| Write header              | `writer.writeheader()`               |
+| Write one row             | `writer.writerow(row)`               |
+| Write multiple rows       | `writer.writerows(rows)`             |
+
+**CSV — Reading a file**: 
+
