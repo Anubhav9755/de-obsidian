@@ -1324,3 +1324,39 @@ The comprehension keeps only letters and digits and lowercases them, and `[::-1]
 
 ---
 
+**Lesson 7: Exceptions & File Handling**
+
+**Exception:** an error that happens while the program is running. If nothing handles it, the program stops and Python prints a report called a **traceback**. You’ve already met some: `ValueError` (right type, bad value, like `int("abc")`), `TypeError` (wrong type), `KeyError` (missing dict key).
+
+**Handling** an exception means telling Python “if this specific thing goes wrong, do this instead of crashing”. That’s `try/except`.
+
+**File handling** means reading data from files and writing results to files. In data work, almost all data starts as a file (CSV, JSON, log, text) and ends as one.
+
+**Industrial use:** a nightly job reads thousands of files. Some are missing, some are corrupt, some have a bad row on line 40,000. A pipeline that crashes on the first problem is useless, and one that silently ignores problems is dangerous. The professional approach is to **handle expected failures, record them, and keep going.**
+
+**Problem it solves:** without exception handling, one bad row kills the whole run. Without the `with` statement (explained below), files stay open after errors, which on Windows can leave a file locked so you can’t delete or rename it.
+
+### 3. Exceptions in code
+
+```python
+try:
+    n = int("abc")              # risky line
+except ValueError as e:         # catch ONLY this kind of error; `as e` keeps the error object
+    print("bad input:", e)      # bad input: invalid literal for int() with base 10: 'abc'
+    n = 0
+```
+
+Common exceptions:
+
+| Exception           | Typical cause                     |
+| ------------------- | --------------------------------- |
+| `ValueError`        | `int("abc")`, `float("N/A")`      |
+| `TypeError`         | `"5" + 5`, `float(None)`          |
+| `KeyError`          | `d["missing"]`                    |
+| `IndexError`        | `lst[10]` on a 3-item list        |
+| `FileNotFoundError` | opening a file that doesn’t exist |
+| `ZeroDivisionError` | `10 / 0`                          |
+| `AttributeError`    | `None.strip()`                    |
+
+**Catching several kinds at once**, using a tuple: `except (ValueError, TypeError):`.
+
