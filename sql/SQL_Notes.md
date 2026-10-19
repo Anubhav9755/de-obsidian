@@ -5193,14 +5193,105 @@ CALL transfer_funds(1, 2, 250.00);
 ```
 
 - `CREATE OR REPLACE PROCEDURE`: Creates the procedure, or replaces it if it already exists.
-- `transfer_funds`: The procedure's name.
 - `IN source_acc INT`: Input parameter containing the sender's account ID.
 - `IN target_acc INT`: Input parameter containing the receiver's account ID.
 - `IN transfer_amount DECIMAL(10, 2)`: Input amount, with up to 10 total digits and 2 decimal places.
 - `LANGUAGE plpgsql`: Says the procedure is written in PostgreSQL's procedural SQL language.
 - `AS $$ ... $$`: Delimits the procedure's body.
 - `DECLARE`: Defines variables used inside the procedure.
-- `current_balance`: Stores the sender's current balance.
-- `BEGIN`: Starts the executable statements
 - `RAISE EXCEPTION`: Stops execution and reports an error if the condition is true.
 - `%`: Placeholder replaced with the source account ID.
+- `COMMIT`: Saves the transaction's changes permanently.
+- `EXCEPTION`: Starts the error-handling section.
+- `WHEN OTHERS`: Catches most runtime errors.
+- `ROLLBACK`: Attempts to undo the transaction.
+- `RAISE`: Rethrows the error so the caller knows the operation failed.
+
+### Interview Questions
+
+Question 1: You are designing an order fulfillment workflow that updates inventory levels, logs audit events, and charges a payment gateway. The team is debating whether to implement this logic inside an application-layer service or a database stored procedure.
+
+- The Task: Compare the trade-offs between stored procedures and application-layer code regarding performance, maintenance, and debugging.
+- Solution Approach: Stored procedures run close to the storage engine, reducing network overhead for multi-statement batch jobs and centralizing database logic. However, they are harder to version-control, scale horizontally across application servers, debug with standard application tracing tools, and tie business logic tightly to a specific database vendor dialect.
+
+Question 2: A junior developer writes a stored procedure that performs 50 individual row updates inside a loop, executing a separate database transaction commit after every single iteration.
+
+- The Task: Identify the performance and data integrity risks associated with this pattern, and propose an optimized approach.
+- Solution Approach: The Issue: Committing inside a loop creates severe overhead due to constant transaction log flushing (frequent disk I/O). Furthermore, it violates atomicity; if the script fails on iteration 45, the first 44 iterations remain permanently committed, corrupting data consistency. The Fix: Wrap the entire loop execution block inside a single atomic transaction transaction block (`BEGIN` ... `COMMIT` at the procedure level) so that changes commit together or roll back entirely on failure.
+
+---
+## User-Defined Functions (UDFs)
+
+A **User-Defined Function (UDF)** is a database routine that accepts parameters, performs calculations or data manipulations, and returns a value or a set of rows. Unlike stored procedures, functions are designed to be evaluated inline within SQL statements (`SELECT`, `WHERE`, `JOIN`).
+
+- **Scalar Functions:** Return a single atomic value (e.g., an integer, string, or boolean) per invocation.
+
+- **Table-Valued / Set-Returning Functions:** Return a table or a set of rows that can be queried like a physical table.
+
+- **Deterministic vs. Non-Deterministic:**
+
+    - _Deterministic:_ Always returns the exact same output given the same input parameters (e.g., mathematical operations, string manipulation).
+    - _Non-Deterministic:_ Can return different outputs on separate calls even with identical inputs (e.g., `NOW()`, `RANDOM()`).
+
+### Application
+
+- **Reusable Computations:** Encapsulating complex mathematical formulas, string formatting, or currency conversions into reusable modules that can be called across multiple queries.
+
+- **Inline Filtering:** Passing parameters into table-valued functions inside `FROM` or `JOIN` clauses to generate dynamic result sets on the fly.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** An analytics team repeatedly writes identical complex tax-calculation formulas across twenty different financial reports. If tax laws change, developers must manually update the formula in all twenty SQL scripts, leading to maintenance errors and inconsistent reporting.
+
+- **Solution:** Encapsulating the formula inside a scalar UDF (`calculate_tax()`) allows all reports to reference the single function definition, ensuring that updating the function logic automatically updates every dependent report instantly.
+
+### Industrial Example
+
+An e-commerce pricing engine uses a deterministic scalar UDF to compute discounted unit prices based on customer tier and seasonal promotion codes, embedding the function directly into core inventory and checkout query pipelines.
+
+## CODE
+
+```sql
+-- 1. Creating a Scalar UDF (PostgreSQL style)
+CREATE OR REPLACE FUNCTION calculate_final_price(
+    base_price DECIMAL(10, 2), 
+    discount_pct DECIMAL(5, 2)
+)
+RETURNS DECIMAL(10, 2)
+LANGUAGE plpgsql
+DETERMINISTIC
+AS $$
+BEGIN
+    RETURN base_price * (1.0 - (discount_pct / 100.0));
+END;
+$$;
+
+-- Using the Scalar Function inside a standard SELECT query
+SELECT 
+    item_name,
+    base_price,
+    calculate_final_price(base_price, 15.00) AS discounted_price
+FROM catalog_items;
+
+
+-- 2. Creating a Table-Valued / Set-Returning Function
+CREATE OR REPLACE FUNCTION get_items_by_price_threshold(max_price DECIMAL(10, 2))
+RETURNS TABLE (
+    item_id INT,
+    item_name VARCHAR,
+    price DECIMAL
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT c.item_id, c.item_name, (c.specs->>'price')::DECIMAL AS price
+    FROM catalog_items c
+    WHERE (c.specs->>'price')::DECIMAL <= max_price;
+END;
+$$;
+
+-- Querying the Table-Valued Function like a table
+SELECT * FROM get_items_by_price_threshold(200.00);
+```
+
