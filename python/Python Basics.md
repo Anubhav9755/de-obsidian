@@ -717,7 +717,6 @@ raw_rows = [
 # 2. loop over raw_rows
 # 3. strip the line; if it's empty, continue
 # 4. split on "," and strip each part, unpacking into tx_id, user, amount_raw
-#    (hint: parts = [p.strip() for p in line.split(",")])
 # 5. convert amount_raw to float; if that fails, skip the row. Pattern:
 #       try:
 #           amount = float(amount_raw)
