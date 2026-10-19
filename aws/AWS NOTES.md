@@ -3549,7 +3549,6 @@ With CloudWatch:
 ## CODE
 
 Create an alarm that notifies an SNS topic (CLI):
-
 ``` BASH
 # 1. An SNS topic for alerts (Lesson 32)
 aws sns create-topic --name ops-alerts
@@ -3572,4 +3571,108 @@ aws cloudwatch put-metric-alarm \
   --treat-missing-data notBreaching \
   --alarm-actions arn:aws:sns:ap-south-1:123456789012:ops-alerts
 ```
+
+Publish a custom metric and write logs from Python (boto3, introduced last lesson):
+
+```python
+import boto3, time
+
+cw = boto3.client("cloudwatch", region_name="ap-south-1")
+
+# Custom business metric
+cw.put_metric_data(
+    Namespace="TicketApp",
+    MetricData=[{
+        "MetricName": "FailedPayments",
+        "Value": 3,
+        "Unit": "Count",
+        "Dimensions": [{"Name": "Environment", "Value": "prod"}],
+    }],
+)
+
+logs = boto3.client("logs", region_name="ap-south-1")
+# (the log group and stream must exist first, via create_log_group / create_log_stream)
+logs.put_log_events(
+    logGroupName="/ticketapp/booking",
+    logStreamName="server-1",
+    logEvents=[{
+        "timestamp": int(time.time() * 1000),   # milliseconds
+        "message": "ERROR payment gateway timeout order=8841",
+    }],
+)
+```
+
+Turn log lines into a metric, and query logs:
+
+```bash
+# Metric filter: count log lines containing ERROR
+aws logs put-metric-filter \
+  --log-group-name /ticketapp/booking \
+  --filter-name error-count \
+  --filter-pattern "ERROR" \
+  --metric-transformations \
+    metricName=BookingErrors,metricNamespace=TicketApp,metricValue=1
+
+# Set retention so logs don't pile up (and cost) forever
+aws logs put-retention-policy \
+  --log-group-name /ticketapp/booking --retention-in-days 30
+```
+
+- The alarm watches CPU every **60 seconds** and goes to `ALARM` only if **3 of the last 5** data points exceed 80%, which avoids alerting on a single spike. `treat-missing-data notBreaching` means gaps in data don’t trigger a false alarm.
+
+- The **alarm action** is the SNS topic’s ARN (ARNs, as we just covered), so an email goes out. The same topic could also fan out to SMS and Lambda.
+
+- `put_metric_data` publishes your own business number. After that, it can be graphed and alarmed like any built-in metric.
+
+- The **metric filter** converts text logs into a numeric metric (`BookingErrors`), which can then drive an alarm. That is how “too many errors in the logs” becomes an alert.
+
+- The **retention policy** stops logs from being kept forever.
+
+### Interview questions with answers
+
+**Q1. Your EC2 application is crashing because it runs out of memory, but the CloudWatch CPU, network and disk graphs all look normal, and there is no memory graph at all. Why, and what do you do?**
+
+**Answer:** EC2’s default metrics come from the **hypervisor**, which can see CPU, network and disk I/O, but **can’t see inside the operating system**, so **memory usage and disk space used are not published by default**. The fix is to install and configure the **CloudWatch agent** on the instance (or via Systems Manager across many instances), which publishes memory, disk space, swap and other OS-level metrics as **custom metrics** (under the `CWAgent` namespace by default), and also ships log files to CloudWatch Logs. Then create alarms on memory. The instance’s IAM role needs permission to write to CloudWatch (the managed `CloudWatchAgentServerPolicy`).
+
+**Q2. An alarm shows `INSUFFICIENT_DATA` instead of `OK` or `ALARM`. What does it mean and how do you investigate?**
+
+**Answer:** It means CloudWatch **doesn’t have enough data points to evaluate the alarm**. Common causes: the alarm was just created and hasn’t collected data yet; the **metric isn’t being published** (the instance is stopped, the agent crashed, the application stopped sending its custom metric, or the dimensions in the alarm don’t match the dimensions of the actual metric, which is a very common mistake); or the metric is naturally sparse (for example, an error count that’s only published when errors happen). To investigate: check in the Metrics console that **data for exactly that namespace, name and dimensions exists**, check the **period** is not shorter than the metric’s publishing interval, and decide on the right **`treat-missing-data` setting** (`notBreaching`, `breaching`, `ignore` or `missing`). For sparse metrics, `notBreaching` is typical, whereas for a heartbeat metric (where silence is a problem), `breaching` is the right choice because silence should alert.
+
+**Q3. You get paged at 3 AM several times a week by a CPU alarm that goes to ALARM for a minute and then recovers by itself. The team is suffering from alert fatigue. How do you improve it?**
+
+**Answer:** The alarm is too sensitive. First, use **multiple evaluation periods with “M out of N datapoints”** (for example, 4 out of 5 one-minute periods) so brief spikes don’t alert. Second, check the **threshold and statistic**: average over a longer period, or use a percentile as appropriate. Third, consider **anomaly detection** alarms for metrics with daily patterns, or **composite alarms** that only fire when several conditions are true together (for example, high CPU **and** high latency, because high CPU alone with healthy latency may not need a human). Fourth, ask whether it should page a person at all: send **non-urgent alarms to email or a ticket queue** and route only **customer-impacting** alarms to the pager, and prefer **automated remediation** (Auto Scaling) for load-driven CPU. Alerts should be **actionable**, and an alarm nobody acts on should be changed or deleted.
+
+**Q4. Your monthly CloudWatch bill jumped sharply. A review shows Logs ingestion and storage are the largest costs. What are the likely causes and the remedies?**
+
+**Answer:** Likely causes: **log groups with “never expire” retention** accumulating years of data; **verbose DEBUG logging** left on in production; a bug that **logs in a loop** or logs huge payloads; **VPC Flow Logs or other high-volume logs** sent to CloudWatch Logs; and many custom metrics with high-cardinality dimensions (for example, a user ID as a dimension creates a separate billable metric per user). Remedies: **set retention policies** on every log group; **lower the log level** and sample noisy logs; **filter before sending**; use the **Infrequent Access log class** for logs that are rarely queried; **export old logs to S3** (cheaper long-term storage) or send high-volume logs straight to S3 or a cheaper analytics store; avoid high-cardinality dimensions; and use **Cost Explorer or the billing breakdown by usage type** (to be covered in Domain 4) to find which log groups and metrics cost the most.
+
+**Q5. A security engineer asks: “Who deleted that security group yesterday at 2 PM?” A colleague suggests checking CloudWatch metrics. Is that the right tool?**
+
+**Answer:** No. **CloudWatch tells you about performance and health** (metrics, application logs), while **CloudTrail records AWS API activity**: who made which API call, when, from which IP, with which identity. The right place is **CloudTrail event history** (searchable for recent management events, typically the last 90 days) or a **CloudTrail trail** delivering to S3 and optionally to CloudWatch Logs for longer retention and querying. A good setup uses both: CloudTrail logs delivered into CloudWatch Logs with a **metric filter and alarm** for risky actions (like deleting a security group or root account usage), which gives you alerting on audit events.
+
+### Scenario question
+
+**Scenario:** You are the cloud engineer at **FoodRush**, a food-delivery startup.
+
+- The app runs on **EC2 instances in an Auto Scaling group** behind an ALB, writes orders to an **Aurora** database and sends tasks through an **SQS** queue to **Lambda** functions that notify restaurants.
+- Last Friday at 8 PM the app became slow for 40 minutes. Nobody noticed until customers complained. Engineers then had to **SSH into 15 servers** to read log files, and found that the servers were running **out of memory**, which no graph had shown.
+- The CEO wants to **know about problems before customers do**. The on-call engineer is tired of **false alarms** from short CPU spikes.
+- The business team wants a graph of **“orders placed per minute”** and an alert if it **suddenly drops** (which usually means checkout is broken, even if servers look healthy).
+- Developers want to **search all application errors** from all servers and Lambdas in one place, and see **how many errors per minute** there are.
+- The finance team complains that **logs cost too much** because the logs have been kept forever.
+- Separately, the security team wants to be alerted when **someone deletes a security group** or **logs in as the root user**.
+- The Auto Scaling group should add instances automatically when the **notification queue backs up**, rather than waiting for CPU to rise.
+
+Design the monitoring setup. For each point, name the CloudWatch features and explain your reasoning:
+
+1. How do you get memory visibility, and what else do you collect from the servers?
+2. How do you build alerts that catch real problems without false alarms?
+3. How do you create and alarm on “orders per minute”, including the sudden-drop case?
+4. How do you centralize and search logs, and turn errors into a graph and alert?
+5. How do you control the log costs?
+6. How do you set up the security alerts, and which service provides the underlying data?
+7. How do you scale on the queue backlog instead of CPU?
+8. How do you notice a problem that servers can’t report, such as the checkout page being broken?
+
+Also : **which alarms would page a human at 3 AM, and which would not, and why**
 
