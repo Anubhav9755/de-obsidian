@@ -1202,9 +1202,11 @@ def parse_row(line):
 		excpect TypeError:
 			return none
     # 2. parts = [p.strip() for p in line.split(",")]
-    same thing just replace ans line with part
+    same thing just replace ans line with parts = [p.strip() for p in linel.split(",")]
     # 3. if len(parts) != 3, return None
+    same thing
     # 4. unpack parts into tx_id, user, amount_raw
+    during function call
     # 5. try float(amount_raw); on ValueError, return None
     # 6. if amount <= 0, return None
     # 7. return the tuple (tx_id, user, amount)
