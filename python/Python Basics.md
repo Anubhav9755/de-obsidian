@@ -874,7 +874,7 @@ def min_max(values):
 lo, hi = min_max([3, 1, 9])     # lo=1, hi=9
 ```
 
-## `*args` and `**kwargs`
+## inside concept 1: `*args` and `**kwargs`
 
 if you don’t know in advance how many values will come in.
 
@@ -1027,7 +1027,7 @@ print(sorted(orders, key=get_amount))
 
 `sorted` calls `get_amount` on each tuple, gets 120.0, 45.5, 300.0, and orders the tuples by those numbers.
 
-## LAMBDA
+## inside concept 2: LAMBDA
 
 A **lambda** is a small function written in a single line, with **no name**. Syntax:
 
@@ -1172,4 +1172,57 @@ high = list(filter(lambda t: t["amount"] > 100, txns))
 print([t["id"] for t in high])             # ['tx_1', 'tx_3']
 
 high2 = [t for t in txns if t["amount"] > 100]     # same result, easier to read
+```
+
+continuation function - 
+
+**Task 1**- Change `parse_amount` so that it (a) also trims spaces, (b) returns `None` for negative or zero values, and (c) doesn’t crash if the input is `None`.
+
+```python
+def parse_amount(raw):
+    try:
+        value = float(raw.strip().replace(",", ""))
+    except (ValueError, AttributeError):    # AttributeError: None has no .strip()
+        return None
+    return value if value > 0 else None
+
+print(parse_amount(" 1,200.50 "))   # 1200.5
+print(parse_amount("-5"))           # None
+print(parse_amount(None))           # None
+```
+
+**Task. Write the function yourself, one line under each comment:**
+
+```python
+def parse_row(line):
+    # 1. strip the line; if it's empty, return None
+    def stripper(line):
+	    try:
+		   ans = [line.strip() for l in line]
+		excpect TypeError:
+			return none
+    # 2. parts = [p.strip() for p in line.split(",")]
+    # 3. if len(parts) != 3, return None
+    # 4. unpack parts into tx_id, user, amount_raw
+    # 5. try float(amount_raw); on ValueError, return None
+    # 6. if amount <= 0, return None
+    # 7. return the tuple (tx_id, user, amount)
+    ...
+
+tests = [
+    "tx_1, user_a, 150.50",
+    "tx_2, user_b, abc",
+    "",
+    "tx_4, user_c, -20",
+    "tx_5, user_b",
+]
+for t in tests:
+    print(parse_row(t))
+
+# expected:
+# ('tx_1', 'user_a', 150.5)
+# None
+# None
+# None
+# None
 ```
