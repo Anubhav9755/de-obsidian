@@ -1390,3 +1390,103 @@ def withdraw(balance, amount):
     return balance - amount
 ```
 
+**Two rules professionals follow:**
+
+1. **Catch specific exceptions.** A bare `except:` catches everything, including your own typos and the Ctrl+C that stops a program, and hides real bugs.
+2. **Put only the risky lines inside `try`.** The smaller the block, the clearer what you’re protecting.
+
+### Files in code
+
+```python
+with open("notes.txt", "w", encoding="utf-8") as f:
+    f.write("tx_1,user_a,150.5\n")
+    f.write("tx_2,user_b,abc\n")
+```
+
+- `open(path, mode)` opens a file. **Modes:** `"r"` read (the default), `"w"` write (**erases existing content!**), `"a"` append (adds to the end).
+- `encoding="utf-8"` says how to turn text into bytes. Always write it. Without it, Windows may use a different default, and text such as Hindi or Telugu comes out garbled.
+- **`with`** is a **context manager**: a block that sets something up when it starts and cleans up when it ends, even if an error occurs inside. Here it closes the file for you automatically. Always open files with `with`.
+- `\n` is the newline character. `write` doesn’t add one for you.
+
+**Reading:**
+
+```python
+with open("notes.txt", encoding="utf-8") as f:
+    for line in f:                  # one line at a time: memory-safe, even for huge files
+        print(line.strip())
+
+with open("notes.txt", encoding="utf-8") as f:
+    text = f.read()                 # whole file as one string (fine for small files)
+    # f.readlines() would give a list of lines (also loads everything)
+```
+
+**Missing file:**
+
+```python
+try:
+    with open("missing.txt", encoding="utf-8") as f:
+        data = f.read()
+except FileNotFoundError:
+    data = ""
+```
+
+**Pathlib:** 
+
+Python tool that helps you create folders, locate files, read files, and write files without manually handling complicated file paths.
+
+|Code|Meaning|
+|---|---|
+|`Path("data")`|Represent a folder path|
+|`base.mkdir()`|Create a folder|
+|`base / "sales.csv"`|Join path components|
+|`file.exists()`|Check whether a path exists|
+|`file.name`|Get the final name|
+|`file.suffix`|Get the last extension|
+|`file.parent`|Get the containing folder|
+|`file.write_text()`|Write text; overwrite existing content|
+|`file.read_text()`|Read the entire file as text|
+|`base.glob("*.csv")`|Find matching entries in the folder|
+|`base.rglob("*.csv")`|Find matching entries recursively|
+```python 
+
+from pathlib import Path
+
+# Create a Path object representing the "data" folder.
+# This does NOT create the folder yet; it only represents its path.
+base = Path("data")
+
+# Create the "data" folder.
+# parents=True  -> create missing parent folders if needed.
+# exist_ok=True -> don't raise an error if the folder already exists.
+base.mkdir(parents=True, exist_ok=True)
+
+# Join the folder path with the file name using /.
+file = base / "sales.csv"      # Result: data/sales.csv
+
+print(file.exists())     # Prints False if the file hasn't been created yet.
+print(file.name)     ## Output: sales.csv
+print(file.suffix)      # Output: .csv
+
+# Get and print the folder containing the file.
+# Output: data
+print(file.parent)
+
+# Write the text "hello" into sales.csv.
+# If the file doesn't exist, it will be created.
+# If it already exists, its previous contents will be overwritten.
+# encoding="utf-8" specifies how text is encoded.
+file.write_text("hello", encoding="utf-8")
+
+# Read the entire file contents as a string and print them.
+# Output: hello
+print(file.read_text(encoding="utf-8"))
+
+# Find entries in the "data" folder whose names end in .csv.
+# The * wildcard matches any sequence of characters.
+# This searches the immediate folder, not nested subfolders.
+for p in base.glob("*.csv"):
+
+    # Print the path of each matching entry.
+    # Output includes data/sales.csv.
+    print(p)
+```
