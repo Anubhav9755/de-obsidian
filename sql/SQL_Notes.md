@@ -5192,3 +5192,15 @@ $$;
 CALL transfer_funds(1, 2, 250.00);
 ```
 
+- `CREATE OR REPLACE PROCEDURE`: Creates the procedure, or replaces it if it already exists.
+- `transfer_funds`: The procedure's name.
+- `IN source_acc INT`: Input parameter containing the sender's account ID.
+- `IN target_acc INT`: Input parameter containing the receiver's account ID.
+- `IN transfer_amount DECIMAL(10, 2)`: Input amount, with up to 10 total digits and 2 decimal places.
+- `LANGUAGE plpgsql`: Says the procedure is written in PostgreSQL's procedural SQL language.
+- `AS $$ ... $$`: Delimits the procedure's body.
+- `DECLARE`: Defines variables used inside the procedure.
+- `current_balance`: Stores the sender's current balance.
+- `BEGIN`: Starts the executable statements
+- `RAISE EXCEPTION`: Stops execution and reports an error if the condition is true.
+- `%`: Placeholder replaced with the source account ID.
