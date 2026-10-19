@@ -1196,21 +1196,33 @@ print(parse_amount(None))           # None
 ```python
 def parse_row(line):
     # 1. strip the line; if it's empty, return None
-    def stripper(line):
-	    try:
-		   ans = [line.strip() for l in line]
-		excpect TypeError:
-			return none
-    # 2. parts = [p.strip() for p in line.split(",")]
-    same thing just replace ans line with parts = [p.strip() for p in linel.split(",")]
-    # 3. if len(parts) != 3, return None
-    same thing
-    # 4. unpack parts into tx_id, user, amount_raw
-    during function call
-    # 5. try float(amount_raw); on ValueError, return None
-    # 6. if amount <= 0, return None
-    # 7. return the tuple (tx_id, user, amount)
-    ...
+    line = line.strip()
+    if not line:                      # empty string is falsy
+        return None
+
+    # 2. split on "," and strip each piece
+    parts = [p.strip() for p in line.split(",")]
+
+    # 3. wrong number of pieces → None
+    if len(parts) != 3:
+        return None
+
+    # 4. unpack
+    tx_id, user, amount_raw = parts
+
+    # 5. convert to float; on failure → None
+    try:
+        amount = float(amount_raw)
+    except ValueError:
+        return None
+
+    # 6. zero or negative → None
+    if amount <= 0:
+        return None
+
+    # 7. everything passed
+    return (tx_id, user, amount)
+
 
 tests = [
     "tx_1, user_a, 150.50",
@@ -1221,13 +1233,6 @@ tests = [
 ]
 for t in tests:
     print(parse_row(t))
-
-# expected:
-# ('tx_1', 'user_a', 150.5)
-# None
-# None
-# None
-# None
 ```
 
 ### Find the bug
@@ -1315,4 +1320,7 @@ def is_palindrome(s):
 ```
 
 The comprehension keeps only letters and digits and lowercases them, and `[::-1]` reverses the list. It’s O(n) time.
+
+
+---
 
