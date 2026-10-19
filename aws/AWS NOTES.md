@@ -4260,8 +4260,6 @@ aws secretsmanager delete-secret --secret-id prod/orders/db --recovery-window-in
 
 **Reading the secret in Python (boto3) inside a Lambda function:**
 
-python
-
 ```python
 import boto3, json
 
@@ -4282,8 +4280,6 @@ def handler(event, context):
 
 **Defining a secret in CloudFormation, with a generated password (Lesson 34):**
 
-yaml
-
 ```yaml
 Resources:
   DbSecret:
@@ -4296,3 +4292,74 @@ Resources:
         PasswordLength: 24
         ExcludeCharacters: '"@/\'
 ```
+
+A resource that needs the value can read it with a dynamic reference: `{{resolve:secretsmanager:prod/orders/db:SecretString:password}}`. Note that the value is resolved at deploy time, so use it carefully (for databases, prefer letting the service **manage the master password**, or attach the secret with `AWS::SecretsManager::SecretTargetAttachment`).
+
+- The secret is **JSON**, so one secret holds username, password, host and so on.
+
+- **`get-secret-value`** returns the `AWSCURRENT` version by default (you can request `AWSPREVIOUS` with a version stage).
+
+- The IAM policy allows **one action on one secret**. The `-*` at the end handles the **random ARN suffix**. Granting `secretsmanager:*` on `*` is a common mistake that defeats the purpose.
+
+- The Python code reads the secret at runtime, so **no password appears in the code or environment variables**, and it **caches** the value to avoid calling the API on every invocation. (For long-lived containers, a cache with a **time limit or a refresh on authentication failure** is needed once rotation is on, see Q2.)
+
+- `GenerateSecretString` lets AWS create the initial password, so **no human ever knows it**.
+
+- **`--recovery-window-in-days`** keeps a deleted secret restorable.
+
+- The Lambda’s role needs permission to call Secrets Manager. If the secret uses a **customer managed KMS key**, the role also needs **`kms:Decrypt`** on that key, and the key policy must allow it. If the Lambda runs **inside a VPC without internet access**, it needs a **VPC endpoint for Secrets Manager** (or a NAT gateway), otherwise the call times out.
+
+### Interview questions 
+
+**Q1. Security discovers a production database password committed to a GitHub repository six months ago. A developer says: “I deleted the file and pushed again, so it’s fine.” Is it? What do you do?**
+
+**Answer:** No. The password still exists in the **Git history**, in any **clones and forks**, and possibly in CI logs and caches, so it must be treated as **compromised**. Steps: **rotate the credential immediately** (change the database password, and ideally move to a Secrets Manager secret with automatic rotation so this is easy next time); check **database logs and CloudTrail** for unauthorized use during the exposure window; remove the secret from history only as a secondary cleanup (history rewriting doesn’t un-leak it); add **secret scanning and pre-commit hooks** (for example GitHub secret scanning) to prevent a repeat; and replace the hard-coded value in the code with a **secret name**, with the app’s **IAM role** granted access.
+
+**Q2. You enabled 30-day rotation on the database secret. The day after the first rotation, the application starts failing with authentication errors, although the rotation Lambda reported success. What probably happened, and how do you fix it?**
+
+**Answer:** The application most likely **read the password once at startup and cached it forever**, so after the rotation its credentials are stale and **new connections fail** with the old password (existing connections may keep working for a while, which makes the failure intermittent and confusing). Fixes: make the app **fetch the secret when creating connections**, with a **cache that has a short lifetime**, and add **retry logic that refreshes the secret on an authentication failure**. Also consider the **alternating-users rotation strategy**, where two database users take turns, so the previous credentials are still valid while apps pick up the new ones, which avoids a failure window. Test rotation in a non-production environment before enabling it in production, and use alarms on rotation failures (a failed rotation can leave the secret and the database out of sync).
+
+**Q3. A Lambda function’s role has an IAM policy allowing `secretsmanager:GetSecretValue`, but the call fails (either with AccessDenied or by timing out). List what you’d check.**
+
+**Answer:** For **AccessDenied**: (1) the **resource ARN in the policy** doesn’t match the secret’s ARN, often because the **random 6-character suffix** isn’t covered by a wildcard; (2) the secret uses a **customer managed KMS key** and the role lacks **`kms:Decrypt`**, or the **key policy** doesn’t allow the role; (3) an explicit **deny** from a resource policy, a **permissions boundary** or an **SCP** (Organizations); (4) the wrong **Region or account**, so the secret name resolves to nothing. For a **timeout**: the Lambda runs **inside a VPC** with **no route to the Secrets Manager endpoint**, so it needs a **VPC interface endpoint** for Secrets Manager (or a NAT gateway), plus security group rules allowing HTTPS to it. Use the exact error text and **CloudTrail** to tell which cause it is, because AccessDenied events are logged.
+
+**Q4. A team stores 800 configuration values (feature flags, endpoints, timeouts) in Secrets Manager “to be secure”, and the bill surprises them. What do you recommend?**
+
+**Answer:** Secrets Manager charges **per secret per month**, so 800 secrets cost roughly $320 per month before API calls, for values that don’t need rotation. Move the **non-sensitive configuration** to **SSM Parameter Store** (standard parameters are free, and `SecureString` handles the few that need encryption). Keep Secrets Manager for what it’s best at: **database credentials, API keys and tokens that need rotation, replication or audit-grade lifecycle handling**. Also **consolidate related values into one JSON secret** where sensible (for example, username, password, host and port in one secret rather than four), and use **client-side caching** to reduce API-call charges. Choosing by requirement (rotation, size, replication, cost) beats choosing one service for everything.
+
+**Q5. The analytics team in a different AWS account needs to read one secret in your production account. Your first attempt, granting their role access in an IAM policy on your side, doesn’t work. What is needed?**
+
+**Answer:** Cross-account access requires **both sides to allow it**: a **resource policy on the secret** that allows the other account’s role (or the account) to call `GetSecretValue`, and an **IAM policy in their account** allowing that role to call the action on the secret’s ARN. Also, the secret must be encrypted with a **customer managed KMS key** whose **key policy** (and their role’s permissions) allows **`kms:Decrypt`**, because the **default `aws/secretsmanager` key can’t be used across accounts**. If the secret was created with the default key, you must change it to a customer managed key. Grant **only the needed action on only that secret**, and review the access in CloudTrail. Also consider whether giving them a **read-only copy of the data** is safer than sharing a production credential.
+
+---
+
+### 6. Scenario question
+
+**Scenario:** You are the cloud engineer at **PayLink**, a payments company, running on AWS in **Mumbai**, with a DR plan for **Singapore**.
+
+- Right now the **Aurora database passwords** are hard-coded in environment variables on Lambda functions and in a config file in a Git repository, and have **never been changed**.
+- Auditors require **rotation every 30 days** with **no downtime**, plus a record of **who accessed production credentials**.
+- A **third-party card-network API key** is used by several Lambda functions. The provider supports creating new keys through an API, and the old key stays valid for 24 hours after a new one is issued.
+- There are three environments: **dev, staging and production**. A developer’s Lambda in dev must **never be able to read production secrets**, even by mistake.
+- The Lambda functions run **inside a VPC with no internet access** (no NAT gateway).
+- In the **Singapore DR Region**, the same applications must be able to read the credentials **when Mumbai is unavailable**.
+- The **analytics team in another AWS account** needs read access to one particular **reporting database** credential, and nothing else.
+- The security team wants an **alert if anyone other than the application’s role reads the production database secret**.
+- The team also has about **600 non-sensitive settings** (timeouts, endpoints, feature flags) and the finance team wants costs controlled.
+- Last month, a developer **accidentally deleted a secret** in staging, and the staging environment broke for hours.
+- A **leaked database password** was found in an old Git commit last week.
+
+Design the solution with Secrets Manager (and whatever else we’ve covered). For each point, name the features and explain your reasoning:
+
+1. How do you store and deliver the database credentials, and what changes in the Lambda code and Git?
+2. How do you implement 30-day rotation with no downtime, including what the application must do?
+3. How do you handle the third-party API key rotation?
+4. How do you keep dev from reading production secrets (give both the IAM and structural approaches)?
+5. How do the VPC-only Lambdas reach Secrets Manager?
+6. How do you make the secrets available in Singapore for DR?
+7. How do you give the analytics account access to exactly one secret?
+8. How do you produce the audit trail and the alert on unexpected access?
+9. Where do the 600 non-sensitive settings go, and why?
+10. How do you protect against accidental deletion, and what should you do about the leaked password in Git history?
+
+Also: **would you use a customer managed KMS key for these secrets or the default one, and why?**
