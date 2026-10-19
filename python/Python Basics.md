@@ -828,4 +828,53 @@ Input: `nums = [2, 7, 11, 15]`, `target = 9`
 |1|7|2|Yes!|Returns `(0, 1)`|
 
 ---
+## Functions
 
+- **Function**: a named, reusable block of code. It takes **parameters** (inputs) and gives back a result with `return`.
+- **Parameters** are the names in the `def` line. **Arguments** are the actual values you pass when calling it.
+- **Scope**: where a variable is visible. Variables created inside a function exist only inside it.
+
+**Industrial use:** a real pipeline is a chain of small functions: `read_file → parse_row → validate → transform → write`. Each does one job, and each can be tested alone.
+
+**Problem it solves:** without functions you copy-paste the same cleaning code into 10 places. When the rule changes, you fix 9 places and miss one, and now two reports disagree. With a function you fix it once. Functions are also what make code **testable**, which interviewers and teams both care about.
+
+## Code
+
+```python
+def calculate_tax(amount, rate=0.18):
+    """Return tax for an amount (docstring: describes the function)."""
+    return round(amount * rate, 2)
+
+print(calculate_tax(1000))                 # 180.0   (default rate used)
+print(calculate_tax(1000, 0.05))           # 50.0    (positional arguments)
+print(calculate_tax(rate=0.05, amount=1000))   # 50.0   (keyword arguments, order doesn't matter)
+```
+
+**`return` vs `print`: the #1 beginner confusion:**
+
+```python
+def show_double(x):
+    print(x * 2)        # displays it, but gives nothing back
+
+def get_double(x):
+    return x * 2        # hands the value back to the caller
+
+a = show_double(5)      # prints 10, but a is None
+b = get_double(5)       # prints nothing, b is 10
+print(b + 1)            # 11  (you can keep calculating with it)
+```
+
+**Returning multiple values** 
+
+```python
+def min_max(values):
+    return min(values), max(values)
+
+lo, hi = min_max([3, 1, 9])     # lo=1, hi=9
+```
+
+## `*args` and `**kwargs`
+
+if you don’t know in advance how many values will come in.
+
+`*args` collects all extra **positional** arguments (values passed without a name) into a **tuple**.
