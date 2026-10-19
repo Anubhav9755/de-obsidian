@@ -5325,3 +5325,91 @@ SELECT * FROM get_items_by_price_threshold(200.00);
 
 ---
 
+## Triggers
+
+### 1. Definition
+
+A **database trigger** is a stored procedural routine configured to execute automatically (fire) in response to a specific Data Modification Language (DML) event—such as an `INSERT`, `UPDATE`, or `DELETE`—occurring on a target table or view.
+
+- **Timing (`BEFORE`, `AFTER`, `INSTEAD OF`):** Determines whether the trigger runs before the table modification is written, after the change is committed, or in place of the standard operation (commonly used on views).
+
+- **Granularity (`FOR EACH ROW` vs. `FOR EACH STATEMENT`):** Row-level triggers execute once for every individual row affected by the statement, whereas statement-level triggers execute exactly once per DML statement regardless of how many rows are modified.
+
+- **Transition Variables (`NEW` and `OLD`):** Special record references available inside row-level triggers. `NEW` holds the incoming row state (for `INSERT` and `UPDATE`), and `OLD` holds the existing row state prior to modification (for `UPDATE` and `DELETE`).
+
+### 2. Application
+
+- **Automated Audit Logging:** Capturing historical snapshots or change logs whenever sensitive rows are modified or deleted.
+- **Enforcing Invariant Business Rules:** Automatically maintaining derived columns, such as auto-updating `updated_at` timestamps or recalculating aggregate balances across related tables.
+
+### 3. Real-World Problem and How Topic Solves It
+
+- **Problem:** An application updates sensitive user records across five different microservices. Developers frequently forget to update the `updated_at` timestamp column or log modification events in application code, leading to stale audit trails and missing data lineage.
+- **Solution:** Attaching a `BEFORE UPDATE` trigger directly to the database table ensures that every time an `UPDATE` statement executes—regardless of which application service sent it—the `updated_at` timestamp is automatically refreshed at the storage layer.
+
+### 4. Industrial Example
+
+A financial ledger system uses an `AFTER INSERT OR UPDATE` trigger to write transaction event payloads into an immutable audit table. This guarantees strict regulatory compliance without depending on application-tier logging reliability.
+
+### 5. Code and Explanation
+
+```sql
+-- Target Table Setup
+CREATE TABLE employee_records (
+    emp_id INT PRIMARY KEY,
+    emp_name VARCHAR(50),
+    salary DECIMAL(10, 2),
+    updated_at TIMESTAMP
+);
+
+-- 1. Create a Trigger Function to auto-update timestamps
+CREATE OR REPLACE FUNCTION set_updated_timestamp()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Automatically stamp the current time on the incoming row
+    NEW.updated_at := CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$;
+
+-- 2. Bind the Function to a Table via a BEFORE UPDATE Trigger
+CREATE TRIGGER trg_auto_timestamp
+    BEFORE UPDATE ON employee_records
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_timestamp();
+
+-- Test Insert
+INSERT INTO employee_records VALUES (1, 'Alice', 75000.00, NULL);
+
+-- Test Update (Trigger fires automatically)
+UPDATE employee_records SET salary = 80000.00 WHERE emp_id = 1;
+```
+
+- **`RETURNS TRIGGER`:** Declares that the function is built specifically to operate as a trigger callback.
+- **`NEW.updated_at := CURRENT_TIMESTAMP`:** Mutates the incoming record's column value dynamically before the actual write hits the disk.
+- **`BEFORE UPDATE ... FOR EACH ROW`:** Instructs the database engine to execute the function for every single individual row right before the update operation is finalized.
+
+### 6. Interview Questions
+
+#### Question 1: What is the operational difference between a row-level trigger (`FOR EACH ROW`) and a statement-level trigger (`FOR EACH STATEMENT`)?
+
+- **Solution Approach:**
+    - _Row-Level Triggers_ execute once for every individual record impacted by the DML statement. They have access to `NEW` and `OLD` transition variables, making them ideal for row-specific validation or column mutations.
+    - _Statement-Level Triggers_ execute only once per SQL query, regardless of whether the query modifies 0 rows or 10 million rows. They are typically used for bulk auditing, batch validation checks, or resetting session caches.
+        
+#### Question 2: Explain how `NEW` and `OLD` transition variables behave during an `UPDATE` operation versus an `INSERT` or `DELETE` operation.
+
+- **Solution Approach:**
+    - During an `INSERT`, only the `NEW` variable is populated with the incoming row data (`OLD` is `NULL`).
+    - During a `DELETE`, only the `OLD` variable is populated with the deleted row data (`NEW` is `NULL`).
+    - During an `UPDATE`, both `OLD` (containing pre-image values) and `NEW` (containing post-image values) are available, allowing triggers to compare old and new values to detect if specific columns were altered.
+        
+#### Question 3: What are the primary architectural risks of relying heavily on database triggers for core business logic in large-scale applications ("hidden logic")?
+
+- **Solution Approach:**
+    - _Hidden Logic & Debugging Difficulty:_ Triggers execute implicitly behind the scenes. Developers debugging application code may not realize database-level triggers are mutating data, causing unexpected side effects or difficult-to-trace bugs.
+    - _Performance Impact:_ Complex or poorly written row-level triggers executing across large bulk updates can severely degrade database write performance due to recursive overhead and transaction lock contention.
+
+---
