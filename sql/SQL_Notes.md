@@ -5440,4 +5440,109 @@ UPDATE employee_records SET salary = 80000.00 WHERE emp_id = 1;
 
 - **Solution:** Using `GRANT SELECT` gives the analytics user base read access to the necessary tables, while explicitly omitting `INSERT`, `UPDATE`, and `DELETE` permissions, physically preventing unauthorized data modifications at the database engine level.
 
+### Industrial Example
 
+An enterprise SaaS platform maintains strict database security boundaries. The backend application role is granted `SELECT`, `INSERT`, and `UPDATE` on transaction tables, while third-party BI analytics tools connect using a separate database user restricted exclusively to `SELECT` privileges via explicit `GRANT` statements.
+
+### Code and Explanation
+
+```sql
+-- 1. Granting Table-Level Privileges
+GRANT SELECT ON customers TO reporting_analyst;
+GRANT INSERT, UPDATE ON customers TO app_service_role;
+
+-- 2. Granting Column-Level Privileges (PostgreSQL / Oracle style)
+-- Restricts the analyst to reading only non-sensitive columns
+GRANT SELECT (customer_id, signup_date, country) ON customers TO junior_analyst;
+
+-- 3. Granting Privileges with GRANT OPTION
+GRANT SELECT ON financial_ledger TO security_admin WITH GRANT OPTION;
+
+-- 4. Revoking Privileges
+REVOKE INSERT ON customers FROM reporting_analyst;
+```
+
+- **`GRANT SELECT ON customers TO reporting_analyst`:** Assigns read-only access rights to the specified user or role.
+
+- **`GRANT SELECT (customer_id, country) ...`:** Limits access strictly to named columns, hiding sensitive fields (like email or phone numbers) from the user.
+
+- **`WITH GRANT OPTION`:** Empowers the grantee to pass these same permissions on to other system users.
+
+- **`REVOKE INSERT ... FROM ...`:** Strips previously assigned permissions from a user or role immediately.
+
+### Interview Questions
+
+#### Question 1: What is the purpose of the `WITH GRANT OPTION` clause, and what security risk does it introduce?
+
+- **Solution Approach:**
+    - _Purpose:_ It allows the grantee to delegate the assigned privileges to other users or roles in the database.
+    - _Security Risk:_ It introduces the risk of permission escalation and privilege proliferation, where tracking who holds access becomes difficult, potentially creating unintended backdoors or unauthorized privilege chains.
+
+#### Question 2: How do table-level privileges differ from column-level privileges in relational databases?
+
+- **Solution Approach:**
+    - _Table-Level Privileges_ grant or revoke access to the entire relational table (all rows and all columns).
+    - _Column-Level Privileges_ restrict access to specific subsets of columns within a table, enabling fine-grained security control (e.g., hiding PII columns like salaries or SSNs while permitting read access to general attributes).
+
+#### Question 3: What happens to dependent objects or permissions when you execute a `REVOKE` command on a base table?
+
+- **Solution Approach:**
+    - When privileges are revoked from a user or role, their ability to query or modify the target object is immediately terminated. If the revoked user had extended permissions via `GRANT OPTION`, cascading revokes may also strip permissions from downstream users who received access through them, depending on the database engine's DCL implementation.
+
+---
+
+## Roles & Permissions
+
+A **database role** is a named collection of privileges and permissions used as a security container to manage access control across multiple users.
+
+- **Users vs. Roles:** In modern database engines (like PostgreSQL), users and roles are effectively unified (users are simply roles with login privileges).
+
+- **Role Inheritance:** The ability for one role to inherit all permissions assigned to another role (`GRANT parent_role TO child_role`).
+
+- **Principle of Least Privilege (PoLP):** A security concept dictating that every user or service account must be given only the minimum necessary privileges required to complete its tasks and nothing more.
+
+### Application
+
+- **Centralized Access Management:** Grouping permissions by operational job functions (such as `data_engineer`, `bi_analyst`, or `app_service`) instead of assigning permissions to individual user accounts one by one.
+
+- **Streamlined Onboarding & Offboarding:** Adding a new employee simply requires assigning them to the appropriate role, instantly granting all required permissions without manual grant scripts.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A company hires 20 new data analysts simultaneously. If the database administrator grants individual table permissions to each analyst one by one, it creates administrative overhead and leaves room for human error—such as accidentally granting write access where only read access is permitted.
+
+- **Solution:** Creating a centralized `analyst_role` with predefined read permissions (`GRANT SELECT`) allows the administrator to add all 20 users to that single role instantly via inheritance, ensuring uniform and secure access governance.
+
+### Industrial Example
+
+An enterprise cloud data warehouse organizes access using hierarchical roles. The `reporting_base` role holds `SELECT` permissions on staging tables, the `bi_analyst` role inherits from `reporting_base`, and individual analyst accounts inherit from `bi_analyst`, establishing clean permission lineage.
+
+### Code and Explanation
+
+
+```sql
+-- 1. Creating Roles (PostgreSQL style)
+CREATE ROLE bi_analyst NOLOGIN;
+CREATE ROLE data_engineer NOLOGIN;
+
+-- 2. Assigning Privileges to Roles
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO bi_analyst;
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO data_engineer;
+
+-- 3. Creating a User Account with Login Privileges
+CREATE USER alex_analyst WITH PASSWORD 'SecurePassword123!';
+
+-- 4. Granting Role Membership (Inheritance)
+GRANT bi_analyst TO alex_analyst;
+
+-- 5. Setting Default Role Behavior for the User
+ALTER USER alex_analyst SET ROLE bi_analyst;
+```
+
+#### Code Breakdown:
+
+- **`CREATE ROLE ... NOLOGIN`:** Creates a security group container that holds privileges but cannot be used to log in directly by clients.
+    
+- **`GRANT bi_analyst TO alex_analyst`:** Assigns the role to a user account, enabling the user to inherit all privileges associated with `bi_analyst`.
+    
+- **`NOLOGIN`:** A security best practice ensuring that operational roles cannot be used as direct login entry points by unauthorized actors.
