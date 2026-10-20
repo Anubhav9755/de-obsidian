@@ -4363,3 +4363,4 @@ Design the solution with Secrets Manager (and whatever else we’ve covered). Fo
 10. How do you protect against accidental deletion, and what should you do about the leaked password in Git history?
 
 Also: **would you use a customer managed KMS key for these secrets or the default one, and why?**
+

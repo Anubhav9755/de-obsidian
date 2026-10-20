@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "sql/SQL_Notes.md",
+                "file": "aws/AWS NOTES.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "SQL_Notes"
+              "title": "AWS NOTES"
             }
           }
         ]
@@ -203,6 +203,7 @@
   },
   "active": "23fd4ed94bf3020b",
   "lastOpenFiles": [
+    "sql/SQL_Notes.md",
     "python/Python Basics.md",
     "python/Python Advanced.md",
     "Pasted image 20261020000242.png",
@@ -211,7 +212,6 @@
     "Untitled.canvas",
     "Pasted image 20261019201337.png",
     "Pasted image 20261019190329.png",
-    "sql/SQL_Notes.md",
     "resources/Pasted image 20261015201309.png",
     "resources/Pasted image 20261015201216.png",
     "resources/Pasted image 20261015102859.png",
