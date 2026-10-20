@@ -4535,3 +4535,122 @@ They’re **often used together**: the user logs in to the **user pool**, gets a
 
 ![[Pasted image 20261020211725.png]]
 
+#### Security basics you must remember
+
+- **Always verify the token signature on the server** (against the pool’s public keys, published at the `.well-known/jwks.json` URL), and check the **issuer, expiry, token type and audience or client ID**. A JWT is **readable by anyone**, so don’t treat it as secret, and never trust one you haven’t verified.
+- Prefer the **authorization code flow with PKCE** (or the hosted UI) over the older implicit flow.
+- **Never put long-term AWS access keys in a mobile or web app.** Use identity pool credentials (temporary), or have your backend create **pre-signed URLs**.
+- Make sensitive attributes **read-only for the client** (the app client’s write permissions), because users can otherwise edit their own attributes.
+
+### The industry problem it solves
+
+**Example: a fitness app with 2 million users on iOS, Android and the web.**
+
+If the team builds authentication themselves:
+
+1. They must **store and hash passwords** correctly, build **password reset emails**, **email verification**, **brute-force protection** and **MFA**. Any mistake becomes a data breach.
+2. Users demand **“Sign in with Google” and “Sign in with Apple”** (Apple requires it for many iOS apps), each with its own protocol.
+3. **Enterprise customers** want to log in with their company accounts (SAML).
+4. The mobile app needs to **upload progress photos straight to S3**, and the shortcut is to embed an AWS access key in the app, which someone extracts within a day.
+5. A growth spike means the home-built login service melts down.
+
+With Cognito: a **user pool** takes over sign-up, login, MFA and recovery. **Federation** adds Google, Apple and SAML. An **identity pool** gives each user temporary credentials limited to **their own S3 folder**, so no keys are embedded in the app. **API Gateway** checks tokens before Lambda runs, and the whole thing scales to millions of users without the team operating login servers.
+
+**Where it is a poor fit:** when you need **very custom login UX and flows** that fight the service’s design (some teams outgrow the hosted UI), when **you must keep the user store** in your own database for business reasons, for **workforce SSO to AWS accounts** (use IAM Identity Center), or when per-MAU pricing becomes expensive at very large scale compared with alternatives.
+
+## CODE
+
+**Create a user pool and app client (CLI):**
+
+```bash
+# 1. User pool: email as the username, email verification, a password policy
+aws cognito-idp create-user-pool \
+  --pool-name shop-users \
+  --username-attributes email \
+  --auto-verified-attributes email \
+  --policies 'PasswordPolicy={MinimumLength=10,RequireUppercase=true,RequireLowercase=true,RequireNumbers=true,RequireSymbols=false}'
+
+# 2. Enable authenticator-app MFA as optional
+aws cognito-idp set-user-pool-mfa-config \
+  --user-pool-id ap-south-1_AbCdEfGhI \
+  --software-token-mfa-configuration Enabled=true \
+  --mfa-configuration OPTIONAL
+
+# 3. App client for a web or mobile app (public client, so no secret)
+aws cognito-idp create-user-pool-client \
+  --user-pool-id ap-south-1_AbCdEfGhI \
+  --client-name shop-web \
+  --no-generate-secret \
+  --explicit-auth-flows ALLOW_USER_SRP_AUTH ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH
+
+# 4. Sign up, confirm (admin shortcut for testing), then sign in
+aws cognito-idp sign-up --client-id <client-id> \
+  --username user@example.com --password 'Str0ngPassword1'
+aws cognito-idp admin-confirm-sign-up \
+  --user-pool-id ap-south-1_AbCdEfGhI --username user@example.com
+aws cognito-idp initiate-auth --client-id <client-id> \
+  --auth-flow USER_PASSWORD_AUTH \
+  --auth-parameters USERNAME=user@example.com,PASSWORD='Str0ngPassword1'
+```
+
+`initiate-auth` returns the **ID, access and refresh tokens**. `USER_PASSWORD_AUTH` is convenient for testing, while production apps normally use **SRP** (the password never travels) through an SDK, or the **hosted UI with the authorization code flow and PKCE**.
+
+**Verifying a token on your backend (Python):**
+
+```python
+import jwt                      # pip install pyjwt[crypto]
+from jwt import PyJWKClient
+
+REGION = "ap-south-1"
+POOL_ID = "ap-south-1_AbCdEfGhI"
+CLIENT_ID = "your-app-client-id"
+ISSUER = f"https://cognito-idp.{REGION}.amazonaws.com/{POOL_ID}"
+
+jwks_client = PyJWKClient(f"{ISSUER}/.well-known/jwks.json")
+
+def verify_access_token(token: str) -> dict:
+    signing_key = jwks_client.get_signing_key_from_jwt(token).key
+    claims = jwt.decode(
+        token, signing_key,
+        algorithms=["RS256"],
+        issuer=ISSUER,
+        options={"verify_aud": False},     # access tokens carry client_id, not aud
+    )
+    if claims.get("token_use") != "access":
+        raise ValueError("Not an access token")
+    if claims.get("client_id") != CLIENT_ID:
+        raise ValueError("Token was issued for a different app client")
+    return claims                           # contains sub, cognito:groups, scope, exp ...
+```
+
+**An identity pool role policy that lets each user touch only their own S3 folder:**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["s3:PutObject", "s3:GetObject"],
+    "Resource": "arn:aws:s3:::fit-user-uploads/${cognito-identity.amazonaws.com:sub}/*"
+  }]
+}
+```
+
+**What this does:**
+
+- `--username-attributes email` means users sign in with their email. This choice is **fixed at creation**.
+- The **app client has no secret** because a browser or phone app can’t keep a secret. Server-side apps can use a client secret.
+- The verification code **checks the signature against Cognito’s public keys**, then the **issuer**, **token type** and **client ID**, plus the **expiry** (the library checks `exp` automatically). Skipping any of these is a classic vulnerability.
+- The policy variable `${cognito-identity.amazonaws.com:sub}` becomes **the caller’s own identity ID** at request time, so user A’s credentials can’t read user B’s folder, even though both use the same role.
+- With **API Gateway**, you’d skip the manual verification by adding a **Cognito authorizer** pointing at the user pool.
+
+### Interview questions with answers
+
+**Q1. A mobile app must let each signed-in user upload photos directly to S3 and see only their own photos. A teammate says “use a user pool.” Is that enough?**
+
+**Answer:** No. A **user pool authenticates** the user and returns **JWTs**, but JWTs are **not AWS credentials**, so S3 won’t accept them directly. You need an **identity pool** that **exchanges the user pool token for temporary AWS credentials** (through STS) tied to an **IAM role**. The role’s policy uses the **`${cognito-identity.amazonaws.com:sub}`** variable to restrict access to a per-user S3 prefix. An alternative design is to keep S3 private and have your backend (authorized through the user pool token) generate **pre-signed URLs**, so the app never receives AWS credentials at all. That is simpler to reason about when the backend already exists.
+
+**Q2. A security review finds an AWS access key and secret embedded in your Android app, used to upload to S3. How bad is it, and what’s the fix?**
+
+**Answer:** Very bad. Anyone can **extract the key from the app package** in minutes, and it’s a **long-term credential** shared by every user, so it can’t be limited per user, and revoking it breaks every installed app. First **deactivate and rotate the key**, and check CloudTrail and S3 logs for misuse. The replacement is **identity pool temporary credentials** (short-lived, scoped per user with policy variables, and possibly with a separate restricted role for guests), or **pre-signed URLs** issued by the backend after checking the user’s token. Apply **least privilege** (only `PutObject` on the user’s prefix), and never put long-term secrets in client apps.
+
