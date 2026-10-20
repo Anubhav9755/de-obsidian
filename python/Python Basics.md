@@ -1712,7 +1712,7 @@ totals["user_a"] += 150.0                      # works on first use
 
 ### Writing your own module
 
-`if __name__ == "__main__":` - 
+`if __name__ == "__main__":` - it means run this code only when this Python file is executed directly, not when it is imported into another file.
 
 
 Create **two files in the same folder**.
