@@ -5390,7 +5390,7 @@ UPDATE employee_records SET salary = 80000.00 WHERE emp_id = 1;
 - `CREATE OR REPLACE FUNCTION`: Creates the function or replaces its existing definition.
 - `RETURNS TRIGGER`: Indicates that this function is designed to be called by a trigger.
 - `NEW`: Represents the new version of the row being updated.
-- `NEW.updated_at := CURRENT_TIMESTAMP`: Sets the timestamp to the current transaction's time.
+- `NEW.updated_at := CURRENT_TIMESTAMP`: Sets the timestamp to the current transaction's time. `:=` → assigns a value to that field.
 - `RETURN NEW`: Sends the modified row back so PostgreSQL can save it.
 - `BEFORE UPDATE`: Runs the trigger before an update is saved.
 - `ON employee_records`: Applies it to this table.
