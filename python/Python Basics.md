@@ -1712,6 +1712,9 @@ totals["user_a"] += 150.0                      # works on first use
 
 ### Writing your own module
 
+`if __name__ == "__main__":` - 
+
+
 Create **two files in the same folder**.
 
 `cleaning.py`:
