@@ -5649,3 +5649,82 @@ SELECT * FROM tenant_invoices;
     - The **`WITH CHECK` clause** validates the newly mutated row state _after_ the update or insert is applied, ensuring that the modified row does not violate policy boundaries (preventing a user from updating a row and shifting its ownership to another tenant). If omitted during an `UPDATE`, the `USING` expression is used for `WITH CHECK` validation by default.
 
 ---
+## SQL Injection & Parameterized Queries
+
+**SQL Injection (SQLi)** is a critical security vulnerability that occurs when untrusted user input is directly concatenated into a dynamic SQL query string instead of being safely isolated from the query structure.
+
+- **Mechanism:** Malicious input manipulates the syntax of the SQL statement, altering its intended logic (e.g., bypassing authentication, extracting sensitive data via `UNION`, or executing administrative commands like `DROP TABLE`).
+
+- **Parameterized Queries (Prepared Statements):** A defense mechanism where the SQL query structure is compiled and sent to the database engine _first_ with placeholders (`?`, `$1`). User inputs are then sent separately as raw data parameters, ensuring the database treats input strictly as literal values rather than executable code.
+
+### Application
+
+- **Secure Application Integration:** Preventing attackers from compromising web applications, APIs, and microservices connected to the database.
+
+- **Safe Dynamic SQL:** Executing dynamic database routines, stored procedures, or ORM queries without exposing schema boundaries to injection attacks.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A login query concatenates user-supplied form fields: `SELECT * FROM users WHERE username = '` + `userInput` + `' AND password = '` + `passInput` + `'`. An attacker inputs `' OR '1'='1` into the username field, transforming the query into: `SELECT * FROM users WHERE username = '' OR '1'='1' AND password = ''`. The condition evaluates to `TRUE`, granting administrative access without a valid password.
+
+- **Solution:** Using a parameterized query sends `SELECT * FROM users WHERE username = $1 AND password = $2` to the database engine. The database binds `' OR '1'='1` strictly as a literal text parameter for `$1`, matching zero users and blocking the bypass attempt completely.
+
+### Industrial Example
+
+An enterprise web application uses parameterized queries (prepared statements) across all API endpoints. When an attacker attempts to pass payload strings containing nested SQL commands (`admin'; DROP TABLE orders; --`) into a search endpoint, the database engine escapes and treats the entire payload as a raw search string parameter, protecting table integrity.
+
+### Code and Explanation
+
+
+```sql
+-- Vulnerable Dynamic Query Pattern (Do NOT use in production)
+-- String concatenation allows structural manipulation:
+-- Query string: 'SELECT * FROM accounts WHERE acc_id = ' || user_input;
+
+-- 1. Prepared Statement (PostgreSQL Syntax)
+PREPARE fetch_account (INT) AS
+SELECT account_id, balance, status 
+FROM accounts 
+WHERE account_id = $1;
+
+-- 2. Safe Execution with Parameter Binding
+-- The parameter value (101) is bound strictly as a literal value
+EXECUTE fetch_account(101);
+
+-- 3. Deallocating Prepared Statements
+DEALLOCATE fetch_account;
+```
+
+#### Code Breakdown:
+
+- **`PREPARE fetch_account (INT)`:** Pre-compiles the SQL command structure on the database server and specifies explicit data types for parameters (`$1`).
+
+- **`EXECUTE fetch_account(101)`:** Passes input parameters safely to the prepared query payload. The input cannot break out of its scalar type boundary.
+
+- **`DEALLOCATE`:** Frees server memory allocated to the pre-compiled execution plan.
+
+### 6. Interview Questions
+
+#### Question 1: Explain the fundamental technical difference between how a relational database processes dynamic string-concatenated SQL queries versus parameterized queries (prepared statements).
+
+- **Solution Approach:**
+    - _Dynamic String Concatenation:_ The database treats the incoming string as a single unit of text, parsing, compiling, and building an execution tree _after_ user inputs are mixed into the statement. This allows user input to inject SQL tokens (`OR`, `UNION`, `;`, `--`) directly into the parser.
+    - _Parameterized Queries:_ Query compilation occurs in two separate phases:
+        1. The query structure containing placeholders (`$1`, `?`) is parsed, validated, and compiled into an execution tree.
+        2. User parameters are transmitted separately over the wire as raw scalar data values. The execution engine binds these values directly to pre-allocated nodes in the execution tree without re-parsing them, rendering code injection physically impossible.
+
+#### Question 2: Can stored procedures or ORM frameworks still be vulnerable to SQL injection? If so, give a concrete example of how it occurs.
+
+- **Solution Approach:**
+    - Yes. Stored procedures and ORMs are not inherently immune if they use dynamic SQL concatenation internally.
+    - _Stored Procedure Example:_ If a procedure uses `EXECUTE IMMEDIATE 'SELECT * FROM ' || user_table_var;` or PostgreSQL's `EXECUTE 'SELECT * FROM users WHERE name = ''' || input_str || '''';`, string concatenation inside the procedure reinstates the vulnerability.
+    - _Fix:_ Use explicit identifier/literal escaping built-ins (e.g., `quote_ident()` or `quote_literal()` in PL/pgSQL, or parameterized dynamic execution via `USING`).
+
+#### Question 3: What is the difference between In-band (Classic) SQL Injection, Inferential (Blind) SQL Injection, and Out-of-Band SQL Injection?
+
+- **Solution Approach:**
+    
+    - _In-band (Classic):_ The attacker uses the same channel of communication to launch the attack and gather results (e.g., displaying stolen database records directly on the web application page via `UNION` queries or raw database error messages).
+    - _Inferential (Blind):_ No data or error messages are returned directly on the page. The attacker reconstructs data byte-by-byte by asking true/false questions and observing application behavior (Boolean-based) or injecting database delay functions like `pg_sleep()` or `WAITFOR DELAY` (Time-based).
+        
+    - _Out-of-Band:_ Used when server responses are asynchronous or unstable. The attacker crafts payloads that force the database server to make external network calls (e.g., DNS requests or HTTP requests via database extensions) to a server controlled by the attacker to exfiltrate data.
