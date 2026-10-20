@@ -1714,6 +1714,35 @@ totals["user_a"] += 150.0                      # works on first use
 
 `if __name__ == "__main__":` - it means run this code only when this Python file is executed directly, not when it is imported into another file.
 
+Suppose you have two files.
+
+File 1: `helper.py`
+
+```python
+def greet():    
+	print("Hello!")
+	
+if __name__ == "__main__":    
+	print("Helper file running directly")
+```
+
+File 2: `main.py`
+
+```python
+import helper
+
+helper.greet()
+```
+
+When you run `main.py`, the output is:
+
+```
+Hello!
+```
+
+Why didn't `"Helper file running directly"` print?
+
+Because `helper.py` was imported, not executed directly. Therefore, its `__name__` was `"helper"`, not `"__main__"`.
 
 Create **two files in the same folder**.
 
