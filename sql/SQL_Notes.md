@@ -5418,3 +5418,19 @@ UPDATE employee_records SET salary = 80000.00 WHERE emp_id = 1;
     - _Performance Impact:_ Complex or poorly written row-level triggers executing across large bulk updates can severely degrade database write performance due to recursive overhead and transaction lock contention.
 
 ---
+## Security & Administration — `GRANT` / `REVOKE`
+
+`GRANT` and `REVOKE` are Data Control Language (DCL) commands used to manage access privileges and security permissions on database objects (such as tables, views, schemas, and procedures).
+
+- **Privilege Types:** Specific operations allowed on an object, including `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `EXECUTE`, and `USAGE`.
+
+- **`WITH GRANT OPTION`:** Allows the recipient user or role to grant those exact same privileges to other users.
+
+- **Column-Level Privileges:** Restricting access to specific columns within a table rather than granting access to the entire row structure.
+
+### Application
+
+- **Least Privilege Enforcement:** Ensuring that users, applications, and reporting tools possess only the minimum necessary permissions required to perform their specific tasks.
+
+- **Access Governance:** Restricting data modification rights (`INSERT`, `UPDATE`, `DELETE`) to application service roles while granting read-only access (`SELECT`) to analytics teams.
+
