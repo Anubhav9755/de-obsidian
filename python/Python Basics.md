@@ -1746,3 +1746,136 @@ python main.py         # prints 99.0   (and NOT 1200.5)
 
 **Why?** Python sets a special variable called `__name__` in every file. When you run a file **directly**, `__name__` is `"__main__"`. When another file **imports** it, `__name__` is the module’s name (`"cleaning"`). So the guard `if __name__ == "__main__":` means “run this part only when I’m run directly, not when I’m imported”. It’s where self-tests and the `main()` call live.
 
+**Two more facts:**
+
+- **Importing runs the file’s top-level code, once.** Python remembers loaded modules in a cache (`sys.modules`), so a second `import cleaning` does not run it again. So never put heavy work (database connections, big file reads) at the top level of a module.
+- **Where does Python look?** It searches a list of folders, in order: the folder of the script you ran, then the standard library, then installed packages. You can see it with `import sys; print(sys.path)`.
+
+**A package** is just a folder:
+
+```
+project/
+    main.py
+    pipeline/
+        __init__.py
+        cleaning.py
+        io_utils.py
+```
+
+and `main.py` uses `from pipeline.cleaning import parse_amount`.
+
+### Virtual environments, step by step
+
+A venv is created **once per project**. Open a terminal **inside your project folder**.
+
+**Windows (PowerShell):**
+
+```powershell
+python -m venv .venv                 # create (".venv" is the folder name; it's the convention)
+.venv\Scripts\Activate.ps1           # activate
+```
+
+If PowerShell says running scripts is disabled, run this once. It allows locally created scripts to run for your user account only:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+(Or use Command Prompt and run `.venv\Scripts\activate.bat`.)
+
+**Linux / macOS:**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+ From now on `python` and `pip` refer to the venv’s own copies. Then:
+
+```
+python -m pip install pandas        # install a package into THIS venv
+pip list                            # what's installed here
+pip freeze > requirements.txt       # save exact versions to a file
+pip install -r requirements.txt     # rebuild the same environment elsewhere
+deactivate                          # leave the venv
+```
+
+**Check you’re using the right Python:** `Get-Command python` (PowerShell) or `which python` (Linux/macOS). The path should point inside `.venv`.
+
+`python -m pip ...` is safer than a bare `pip ...`, because it guarantees pip belongs to the same Python you’re about to run.
+
+The `requirements.txt` file looks like `pandas==<version>` with one package per line, and `pip freeze` also lists the packages pandas itself depends on (its **dependencies**). Never commit `.venv/` itself to Git (list it in a `.gitignore` file, which tells Git what to ignore). It’s large and machine-specific. Commit `requirements.txt` instead.
+
+**TASK**: **modify.** Rewrite this grouping code from Lesson 4 using `defaultdict`, so the `if user not in by_user` check disappears:
+
+```python
+by_user = {}
+for tx_id, user, amount in transactions:
+    if user not in by_user:
+        by_user[user] = []
+    by_user[user].append(amount)
+```
+
+**Answer:**
+
+```python
+from collections import defaultdict
+
+by_user = defaultdict(list)
+for tx_id, user, amount in transactions:
+    by_user[user].append(amount)         # missing key → empty list is created automati
+```
+
+
+Part A, in the terminal:
+
+1. Create a folder `txn_project` and open a terminal inside it. CREATED 
+2. Create and activate a venv (commands in section 4). ACTIVATED
+3. Run `python -m pip install pandas` (we’ll need it soon), then `pip freeze > requirements.txt` and open the file to see what got saved. DONE
+
+Part B, create two files:
+
+`cleaning.py`:
+
+python
+
+```python
+def parse_row(line):
+    # your parse_row from Lesson 6: returns (tx_id, user, amount) or None 
+    ...
+
+# add a guard: when run directly, test parse_row on one good and one bad line
+```
+
+`main.py`:
+
+python
+
+```python
+# 1. from cleaning import parse_row
+# 2. from collections import defaultdict
+# 3. paste in raw_rows (below)
+# 4. totals = defaultdict(float); bad_rows = 0
+# 5. loop over raw_rows: call parse_row(line);
+#    if the result is None, add 1 to bad_rows and continue
+#    otherwise unpack into tx_id, user, amount and add amount to totals[user]
+# 6. print each user and total with 2 decimals, then the top user, then bad_rows
+# 7. wrap steps 3-6 in a function main(), and call it under the __main__ guard
+
+raw_rows = [
+    "tx_1, user_a, 150.50",
+    "tx_2, user_b, abc",
+    "tx_3, user_a, 300",
+    "",
+    "tx_4, user_c, -20",
+    "tx_5, user_b, 220.25",
+]
+
+# expected output of `python main.py`:
+# user_a: 450.50
+# user_b: 220.25
+# top user: user_a
+# bad rows: 3
+```
+
+Check: running `python cleaning.py` should show your test output, and running `python main.py` should **not** show it.
