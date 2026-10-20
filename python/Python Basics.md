@@ -1827,3 +1827,41 @@ for tx_id, user, amount in transactions:
 ```
 
 
+### Find the bugs
+
+**Bug A:** you save your own file as `random.py` in your project, and `main.py` contains `import random; print(random.randint(1, 6))`.  
+**Answer:** `AttributeError: module 'random' has no attribute 'randint'`. Python looks in the script’s folder **first**, so your `random.py` hides the real standard-library one. This is called **shadowing**. Never name your files after standard modules or libraries (`random.py`, `json.py`, `csv.py`, `pandas.py`). Rename the file, and delete the `__pycache__` folder next to it if the error lingers.
+
+**Bug B:** you ran `pip install pandas` and it succeeded, but your script says `ModuleNotFoundError: No module named 'pandas'`.  
+**Answer:** the pip you used belongs to a **different Python** from the one running your script (for example, you installed globally but your editor runs the venv, or the reverse). Fix: activate the venv, use `python -m pip install pandas`, and make sure your editor uses the same interpreter. To check, run `python -c "import sys; print(sys.executable)"`.
+
+### Interview questions 
+
+**Q1. What’s the difference between a module, a package, a library, and a framework?**  
+A module is one `.py` file. A package is a folder of modules. A library is a collection of code you **call** when you need it (pandas, requests). A framework is the reverse: it provides the structure and **calls your code** at set points (Django, Flask). The loose rule: with a library you’re in control, with a framework the framework is.
+
+**Q2. What does `if __name__ == "__main__":` do, and why do professionals use it?**  
+The code underneath runs only when the file is executed directly, not when it’s imported. It lets one file serve as both a reusable module and a runnable script. Without it, importing the module would trigger its script behaviour (reading files, printing, starting jobs) as an unwanted side effect, and it would also make the module impossible to test cleanly.
+
+**Q3. What happens if you import the same module twice?**  
+Nothing the second time. Python caches loaded modules in `sys.modules` and reuses them, so the module’s top-level code runs only once per program run. Corollary: edits to a module file aren’t picked up in a running session unless you restart (or reload it explicitly with `importlib.reload`). This matters in Jupyter notebooks.
+
+**Q4. Why is `from x import *` discouraged?**  
+It dumps every public name from `x` into your namespace (the set of names your file currently knows about). Readers can’t tell where a name came from, linters and editors can’t check it, and a later import can silently overwrite an earlier one or one of your own variables. The classic trap: `from os import *` then `from numpy import *` can shadow built-ins like `open` or `sum`, changing what your code does without any error.
+
+**Q5. What is a circular import, and how do you fix it?**  
+`a.py` imports `b.py`, and `b.py` imports `a.py`. When Python starts loading `a`, it hits `import b`, starts loading `b`, which tries to load `a` again, but `a` is only half-loaded, so names it needs don’t exist yet and you get an `ImportError` or `AttributeError`. Fixes: move the shared code into a third module that both import, restructure so dependencies run one way only, or (as a last resort) do the import inside the function that needs it.
+
+**Q6. Why use a virtual environment, and what’s the difference between `pip freeze` output and a hand-written `requirements.txt`?**  
+A venv isolates each project’s dependencies, so projects can need different versions without conflicts, and the environment can be recreated on any machine. `pip freeze` captures **everything** installed with exact versions, including dependencies of dependencies, which gives an exactly reproducible environment. A hand-written file lists only the libraries you chose, which is easier to read but leaves the sub-dependency versions to chance. Many teams keep both, or use a lock-file tool (conda, Poetry, and uv are common). The venv with pip is the baseline interviewers expect you to know.
+
+**Q7. Scenario: a teammate clones your repo, runs `python main.py`, and gets `ModuleNotFoundError: No module named 'pandas'`. Walk through your diagnosis.**
+
+1. Is a virtual environment active? Check the `(.venv)` prefix and `Get-Command python` / `which python`.
+2. If not, create and activate one, then run `python -m pip install -r requirements.txt`.
+3. If it’s active and the error persists, check which Python the editor uses (`sys.executable`), and that the packages were installed into that same one.
+4. Check that `requirements.txt` actually lists pandas and is committed. If it’s missing, the repo is incomplete, and the fix is to add it.
+5. Check the Python version matches what the project expects. Some package versions need a minimum Python version.
+
+**Q8. Scenario: the same server runs two projects, one needing library `X` version 1 and the other version 2. How do you handle it?**  
+One virtual environment per project, each with its own `requirements.txt` pinned to the right version. (Container tools like Docker take the same isolation idea further, but venvs are the foundation.)
