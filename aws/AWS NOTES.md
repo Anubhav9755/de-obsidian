@@ -4454,3 +4454,23 @@ The trade-offs are a small monthly cost per key, and the risk that a **misconfig
 ---
 ## Amazon Cognito
 
+- **MFA** (multi-factor authentication): a second proof beyond the password, like a code from an app or an SMS.
+- **Token**: a small signed piece of data that proves something, handed to the client after a successful login so it doesn’t have to send the password again.
+- **JWT (JSON Web Token)**: a common token format: three Base64 parts (header, payload of **claims** such as user ID and email, and a **signature**). Anyone can **read** the payload, but only the issuer can **sign** it, so a server verifies the signature to trust it.
+- **Identity provider (IdP)**: a service that authenticates users (Google, Apple, Microsoft, your company’s login system).
+- **SAML, OIDC and OAuth 2.0**: standard protocols for logging in through another provider. **OAuth 2.0** is about delegated access, **OIDC (OpenID Connect)** adds identity on top of OAuth, and **SAML** is an older XML-based standard common in enterprises.
+- **API Gateway**: the AWS service that exposes your Lambda functions and backends as a public HTTP API, and can check tokens before letting requests through.
+
+A **concert venue with a ticket office and a wristband desk**.
+
+- The **ticket office** checks who you are (your ID, your booking) and gives you a **signed ticket**. That’s a **Cognito user pool**: it signs you up, checks your password and MFA, and issues tokens (the signed tickets).
+- The **wristband desk** swaps your valid ticket for a **colored wristband** that opens specific doors inside the venue (the VIP lounge, the backstage-for-artists area) for tonight only. That’s a **Cognito identity pool**: it takes your ticket and hands you **temporary AWS credentials** that open specific AWS resources.
+- The **guests can also arrive with a ticket from a partner** (a Google or corporate ticket), and the ticket office recognizes it. That’s **federation**.
+
+The venue never gives anyone a permanent master key.
+
+## Definition
+
+**Amazon Cognito** is AWS’s **customer identity and access management** service for web and mobile apps. It handles **sign-up, sign-in, password reset, MFA, social and enterprise login**, issues **tokens**, and can give signed-in users **temporary AWS credentials**. It scales to millions of users without you running any authentication servers.
+
+
