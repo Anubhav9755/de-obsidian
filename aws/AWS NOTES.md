@@ -4654,3 +4654,42 @@ def verify_access_token(token: str) -> dict:
 
 **Answer:** Very bad. Anyone can **extract the key from the app package** in minutes, and it’s a **long-term credential** shared by every user, so it can’t be limited per user, and revoking it breaks every installed app. First **deactivate and rotate the key**, and check CloudTrail and S3 logs for misuse. The replacement is **identity pool temporary credentials** (short-lived, scoped per user with policy variables, and possibly with a separate restricted role for guests), or **pre-signed URLs** issued by the backend after checking the user’s token. Apply **least privilege** (only `PutObject` on the user’s prefix), and never put long-term secrets in client apps.
 
+**Q3. A user logs out, but their stolen access token still works against your API for another 40 minutes. Why, and what can you do?**
+
+**Answer:** JWTs are **self-contained**: the API validates the **signature and expiry locally** and doesn’t ask Cognito, so a token stays valid until it expires, even after logout. Options: **shorten the access token lifetime** (for example 5 to 15 minutes, with refresh tokens renewing it quietly); call **global sign-out and revoke the refresh token**, which stops new tokens being issued; check whether your integration **honors token revocation** (don’t assume the default authorizer does; test it); and for strict, immediate logout of high-risk actions, **validate against Cognito** (for example, the user info endpoint) or keep a **deny list of revoked token IDs** in a fast store like DynamoDB or a cache. Also protect tokens in transit and storage, because the real fix for theft is not letting it be stolen (HTTPS, secure storage, short lifetimes).
+
+**Q4. Customers complain they have two accounts and lost their data: they first signed up with email and password, later clicked “Sign in with Google” using the same email. Why does it happen, and how do you handle it?**
+
+**Answer:** In a user pool, a **federated login creates a separate user profile** (with a username like `Google_1234...`), and Cognito doesn’t merge it automatically with the existing native user, even if the email matches. The fix is to link them: use a **pre sign-up Lambda trigger** that detects the existing user with the same **verified** email and calls **`AdminLinkProviderForUser`** to link the external identity to the existing profile. Be careful to link only when the email is **verified by the provider**, otherwise an attacker could register a provider account with someone else’s email and take over their account. Plan this **early**, because merging duplicates after launch is painful
+
+**Q5. The app decides who is an admin from a `custom:role` attribute in the ID token. A tester edits their own profile through the Cognito API, sets `custom:role=admin`, and gets full access. What went wrong?**
+
+**Answer:** The attribute was **writable by the app client**, so users could change their own value, and the backend **trusted a user-controlled claim for authorization**. Fixes: make sensitive attributes **read-only for app clients** (configure the app client’s write permissions), and manage roles with **Cognito groups** that only administrators (or backend code with IAM permissions) can change, then read `cognito:groups` from the verified token. You can also add trusted claims through a **pre token generation Lambda** that looks up permissions in your own database. And always **verify the token signature on the server**: any decision based on unverified token contents is unsafe.
+
+**Scenario:** You are the cloud engineer at **FitTrack**, a fitness platform with **iOS, Android and web apps**, expected to reach **2 million users**.
+
+- Users must sign up and log in with **email and password**, **Google** and **Apple**. Customers also tell you some of them will use **both** email login and Google with the **same email address**.
+- Admin staff and **premium coaches** must use **MFA**, while regular users get MFA as an option.
+- Users upload **progress photos** directly from the apps to S3, and must **only ever see their own photos**. A security review found **long-term AWS keys inside the Android app**.
+- The backend is **API Gateway and Lambda**, and it must reject calls without a valid login. Some endpoints are only for the **`coaches` group**.
+- A **partner company’s server** must call one specific API **without any human user**, limited to read access on workout data.
+- The company’s **employees** must sign in to the internal **admin dashboard** with their **corporate Microsoft Entra ID** accounts.
+- There are **200,000 existing users** in a legacy database with **bcrypt password hashes**, and the business doesn’t want to force everyone to reset their password.
+- A penetration test showed that after logout, an **access token kept working for nearly an hour**, and that a tester could **grant themselves the coach role** by editing a profile attribute.
+- The product team wants a **branded login page** quickly, and the security team wants **protection against password guessing and leaked passwords**.
+- There must be separate **dev and production** setups, and finance wants cost kept under control.
+
+Design the solution with Cognito (and whatever else we’ve covered). For each point, name the features and explain your reasoning:
+
+1. How do you set up authentication for email, Google and Apple, and how do you prevent duplicate accounts for the same email?
+2. How do you enforce MFA for admins and coaches but keep it optional for regular users?
+3. How do users upload to S3 only into their own folder, and what happens to the embedded AWS keys?
+4. How does API Gateway reject unauthenticated calls, and how do you restrict endpoints to coaches?
+5. How does the partner server call your API with no user involved?
+6. How do employees sign in with corporate Entra ID?
+7. How do you migrate the 200,000 legacy users without forcing a password reset?
+8. How do you fix the two penetration-test findings (access token after logout, self-granted role)?
+9. How do you deliver a branded login page, and how do you protect against password guessing and leaked passwords?
+10. How do you separate environments and keep costs under control?
+
+Also tell me: **when would you choose IAM Identity Center instead of Cognito, and could point 6 use it?**
