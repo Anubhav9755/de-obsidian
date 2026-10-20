@@ -5542,7 +5542,110 @@ ALTER USER alex_analyst SET ROLE bi_analyst;
 #### Code Breakdown:
 
 - **`CREATE ROLE ... NOLOGIN`:** Creates a security group container that holds privileges but cannot be used to log in directly by clients.
-    
+
 - **`GRANT bi_analyst TO alex_analyst`:** Assigns the role to a user account, enabling the user to inherit all privileges associated with `bi_analyst`.
-    
+
 - **`NOLOGIN`:** A security best practice ensuring that operational roles cannot be used as direct login entry points by unauthorized actors.
+
+#### Question 1: What is the functional difference between a database User and a database Role in enterprise database management?
+
+- **Solution Approach:**
+    - A _User_ represents an identity capable of authenticating and logging into the database (possessing login credentials).
+    - A _Role_ represents a collection of permissions and privileges. In modern database architectures (like PostgreSQL), users and roles are unified—a user is simply a role with login privileges (`LOGIN` attribute enabled), allowing permissions to be managed collectively via role inheritance rather than per individual.
+
+#### Question 2: How does role inheritance work in relational database management systems?
+
+- **Solution Approach:**
+    - Role inheritance allows a child role or user to inherit all privileges assigned to a parent role. When `GRANT parent_role TO child_role` is executed, any permissions granted to `parent_role` automatically apply to `child_role` without needing duplicate grant statements, simplifying multi-layered security hierarchies.
+        
+#### Question 3: What is the Principle of Least Privilege (PoLP), and why is it critical when configuring database user permissions?
+
+- **Solution Approach:**
+    - The Principle of Least Privilege dictates that users, applications, and system processes should operate with the bare minimum permissions necessary to perform their functions. Applying PoLP in databases prevents lateral movement during security breaches, stops rogue scripts or compromised application credentials from executing unauthorized DDL/DML commands, and protects sensitive data from internal exposure.
+
+---
+
+## Row-Level Security (RLS)
+
+**Row-Level Security (RLS)** is an advanced database access control mechanism that allows database administrators to restrict which data rows are visible or modifiable by a user or role during standard DML operations (`SELECT`, `INSERT`, `UPDATE`, `DELETE`).
+
+- **`ENABLE ROW LEVEL SECURITY`:** Activates the security enforcement layer on a specified relational table.
+
+- **`CREATE POLICY`:** Defines specific security rules governing row access.
+
+- **`USING` Clause:** Evaluates existing rows for read, update, or delete operations (acts as a dynamic `WHERE` filter).
+
+- **`WITH CHECK` Clause:** Validates incoming rows during `INSERT` or `UPDATE` operations to ensure new/modified data complies with policy boundaries.
+
+### Application
+
+- **Multi-Tenant Architectures:** Hosting multiple corporate clients in a single shared database table while mathematically guaranteeing that Tenant A can never view or modify Tenant B’s data.
+
+- **Territorial Data Partitioning:** Restricting regional sales managers to query only customer records belonging to their assigned geographic territory.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A multi-tenant SaaS application stores all customer orders in a single monolithic `orders` table. If a developer forgets to append `WHERE tenant_id = X` in an application query, or if an analyst runs an ad-hoc query, data leaks across tenants, resulting in a severe security breach.
+
+- **Solution:** Enabling Row-Level Security directly on the database table automatically injects security predicates into _every_ query executed by database roles, ensuring that data isolation is enforced at the storage engine level rather than relying entirely on application-tier code.
+
+### Industrial Example
+
+An enterprise healthcare platform manages patient records. Database administrators implement RLS policies linked to session variables (`current_setting('app.current_user_id')`). When a doctor queries the records table, the database transparently filters out all rows except those associated with the doctor's authorized patient list.
+
+### Code and Explanation
+
+```sql
+-- Target Table Setup
+CREATE TABLE tenant_invoices (
+    invoice_id INT PRIMARY KEY,
+    tenant_id VARCHAR(50),
+    amount DECIMAL(10, 2),
+    status VARCHAR(20)
+);
+
+-- 1. Enable Row-Level Security on the Table
+ALTER TABLE tenant_invoices ENABLE ROW LEVEL SECURITY;
+
+-- 2. Create a Security Policy for Multi-Tenant Isolation
+CREATE POLICY tenant_isolation_policy ON tenant_invoices
+    AS RESTRICTIVE
+    FOR ALL
+    TO PUBLIC
+    USING (tenant_id = current_setting('app.current_tenant_id', true));
+
+-- 3. Setting the session variable and querying the table
+-- (Only rows matching the current session tenant variable will be returned)
+SET LOCAL app.current_tenant_id = 'tenant_alpha_99';
+
+SELECT * FROM tenant_invoices;
+```
+
+#### Code Breakdown:
+
+- **`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`:** Turns on the RLS enforcement switch. Without this, security policies are ignored.
+- **`USING (tenant_id = current_setting(...))`:** Dynamically evaluates every row against a runtime session variable, acting as an invisible security filter on all queries.
+- **`AS RESTRICTIVE`:** Ensures that multiple policies on the same table are combined using logical `AND` operators, tightening security boundaries.
+
+### Advanced Interview Questions
+
+#### Question 1: How does Row-Level Security (RLS) impact query optimization and execution plans at scale, and how do database optimizers handle implicit predicate injection?
+
+- **Solution Approach:**
+    - _Execution Impact:_ RLS injects dynamic security predicates (such as function calls like `current_setting()`) into the query parse tree during execution planning. If not carefully designed, these dynamic filters can prevent the optimizer from leveraging indexes effectively, causing sequential table scans (`Seq Scan`) across large datasets.
+    - _Mitigation:_ Indexing the tenant/filtering column explicitly and ensuring security functions are marked `IMMUTABLE` or optimized allows the query planner to treat RLS predicates like standard `WHERE` clauses during cost-based optimization.
+
+#### Question 2: By default, who bypasses Row-Level Security policies in PostgreSQL, and what architectural considerations must be addressed when setting up application connection pools (like PgBouncer in transaction mode) where database sessions are reused across different end-users?
+
+- **Solution Approach:**
+    - _Bypass:_ Table owners and superusers bypass RLS policies by default (`BYPASSRLS` attribute).
+    - _Connection Pooling Pitfall:_ In connection poolers operating in _transaction mode_ (e.g., PgBouncer), database sessions are pooled and recycled across different clients. If session-level variables (like `SET LOCAL app.current_user_id`) are used to drive RLS policies, a connection returned to the pool can accidentally retain the previous user's security context, leaking data to the next client.
+    - _Solution:_ Explicitly reset session state, issue `RESET ALL` upon connection checkout, or pass user context per query statement rather than relying on persistent session variables.
+
+#### Question 3: Compare the execution behavior and operational scope of the `USING` clause versus the `WITH CHECK` clause when defining a security policy for an `UPDATE` operation.
+
+- **Solution Approach:**
+    - The **`USING` clause** determines which existing rows are visible and eligible to be targeted or modified by the operation (acting as the pre-image filter).
+    - The **`WITH CHECK` clause** validates the newly mutated row state _after_ the update or insert is applied, ensuring that the modified row does not violate policy boundaries (preventing a user from updating a row and shifting its ownership to another tenant). If omitted during an `UPDATE`, the `USING` expression is used for `WITH CHECK` validation by default.
+
+---
