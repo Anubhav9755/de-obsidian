@@ -1843,12 +1843,12 @@ python
 def parse_row(line):
 	
 	parts  = [line.strip().split(",") for l in line]
-			return 
+			return tx_id, user, amount = parts
 
     # your parse_row from Lesson 6: returns (tx_id, user, amount) or None 
     ...
-
-# add a guard: when run directly, test parse_row on one good and one bad line
+dont know how to add guard. is it try and finally block
+# add a guard: when run directly, test parse_row on one good and one bad line 
 ```
 
 `main.py`:
@@ -1857,7 +1857,9 @@ python
 
 ```python
 # 1. from cleaning import parse_row
+	from cleaning import parse row
 # 2. from collections import defaultdict
+	from collections import defaultdict
 # 3. paste in raw_rows (below)
 # 4. totals = defaultdict(float); bad_rows = 0
 # 5. loop over raw_rows: call parse_row(line);
