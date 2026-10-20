@@ -5434,3 +5434,10 @@ UPDATE employee_records SET salary = 80000.00 WHERE emp_id = 1;
 
 - **Access Governance:** Restricting data modification rights (`INSERT`, `UPDATE`, `DELETE`) to application service roles while granting read-only access (`SELECT`) to analytics teams.
 
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** An analytics team connects directly to the production database to build weekly reports. If an analyst accidentally executes an improper `UPDATE` or `DROP TABLE` statement, it can cause catastrophic production data loss or downtime.
+
+- **Solution:** Using `GRANT SELECT` gives the analytics user base read access to the necessary tables, while explicitly omitting `INSERT`, `UPDATE`, and `DELETE` permissions, physically preventing unauthorized data modifications at the database engine level.
+
+
