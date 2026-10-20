@@ -4693,3 +4693,4 @@ Design the solution with Cognito (and whatever else we’ve covered). For each p
 10. How do you separate environments and keep costs under control?
 
 Also tell me: **when would you choose IAM Identity Center instead of Cognito, and could point 6 use it?**
+

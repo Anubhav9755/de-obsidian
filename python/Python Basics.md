@@ -1650,3 +1650,5 @@ back = json.loads(text)
 
 ---
 
+## Lesson 8: Modules, Imports & Virtual Environments
+
