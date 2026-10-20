@@ -1841,6 +1841,10 @@ python
 
 ```python
 def parse_row(line):
+	
+	parts  = [line.strip().split(",") for l in line]
+			return 
+
     # your parse_row from Lesson 6: returns (tx_id, user, amount) or None 
     ...
 
