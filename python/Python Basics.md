@@ -1652,3 +1652,97 @@ back = json.loads(text)
 
 ## Lesson 8: Modules, Imports & Virtual Environments
 
+- **Module**: a single `.py` file whose functions, classes, and variables can be reused from another file.
+- **Package**: a folder of modules (usually with a file called `__init__.py` inside it, which marks the folder as a package; it can be empty).
+- **`import`**: the statement that loads a module so you can use what’s inside it.
+- **Standard library**: modules that ship with Python itself (`math`, `json`, `csv`, `pathlib`, `collections`, `datetime`). Nothing to install.
+- **Third-party package**: code written by others that you install, like `pandas` or `requests`. They live on **PyPI** (the Python Package Index, the public online catalogue).
+- **`pip`**: Python’s package installer. `pip install pandas` downloads a package from PyPI.
+- **Virtual environment (venv)**: an isolated folder holding its own copy of Python and its own installed packages, for one project only.
+
+**Industrial use:** a real project is never one giant file. It’s `cleaning.py`, `io_utils.py`, `main.py`, and so on, each with one job. And each project depends on specific library versions.
+
+**Problem it solves:**
+
+- **Many files:** without modules you’d copy-paste functions between scripts, and fix the same bug in five places.
+- **Version conflicts:** Project A needs `pandas` version 1.5 and Project B needs 2.x. If both install into the same global Python, one of them breaks. A venv gives each project its own packages.
+- **“Works on my machine”:** a `requirements.txt` file (a list of the exact packages the project needs) lets a teammate, or a server, rebuild the same environment in one command.
+
+### Importing in code
+
+```python
+import math                       # use as math.something
+print(math.sqrt(16))              # 4.0
+
+from math import sqrt, pi         # bring specific names in directly
+print(sqrt(25), pi)               # 5.0 3.14159...
+
+import datetime as dt             # "as" gives a short nickname (an alias)
+print(dt.date.today())
+
+from math import *                # AVOID: dumps every name into your file
+```
+
+|Style|Use when|Watch out|
+|---|---|---|
+|`import math`|default choice; the origin of every name stays visible (`math.sqrt`)|slightly longer to type|
+|`from math import sqrt`|you use one or two names a lot|the name could clash with your own|
+|`import x as y`|long names / conventions (`import pandas as pd`)|use only the standard nicknames|
+|`from x import *`|almost never|you can’t tell where a name came from, and names can silently overwrite each other|
+A taste of the standard library:
+
+```python
+from collections import Counter, defaultdict
+
+# Counter: counts items for you
+print(Counter("banana"))                       # Counter({'a': 3, 'n': 2, 'b': 1})
+words = ["apple", "banana", "apple", "cherry", "banana", "apple"]
+print(Counter(words).most_common(2))           # [('apple', 3), ('banana', 2)]
+
+# defaultdict: a dict that creates a default value for a missing key automatically.
+# You give it a "factory" (list, int, float) that builds the default.
+by_user = defaultdict(list)
+by_user["user_a"].append(150.0)                # no KeyError, no "if key not in dict" check
+by_user["user_a"].append(300.0)
+print(dict(by_user))                           # {'user_a': [150.0, 300.0]}
+
+totals = defaultdict(float)                    # float() is 0.0
+totals["user_a"] += 150.0                      # works on first use
+```
+
+### Writing your own module
+
+Create **two files in the same folder**.
+
+`cleaning.py`:
+
+```python
+def parse_amount(raw):
+    """Convert text like '1,200.50' to a float, or None if invalid."""
+    try:
+        return float(raw.replace(",", "").strip())
+    except (ValueError, AttributeError):
+        return None
+
+
+if __name__ == "__main__":
+    print(parse_amount("1,200.50"))
+```
+
+`main.py`:
+
+```python
+from cleaning import parse_amount
+
+print(parse_amount(" 99 "))      # 99.0
+```
+
+Run each from a terminal:
+
+```
+python cleaning.py     # prints 1200.5
+python main.py         # prints 99.0   (and NOT 1200.5)
+```
+
+**Why?** Python sets a special variable called `__name__` in every file. When you run a file **directly**, `__name__` is `"__main__"`. When another file **imports** it, `__name__` is the module’s name (`"cleaning"`). So the guard `if __name__ == "__main__":` means “run this part only when I’m run directly, not when I’m imported”. It’s where self-tests and the `main()` call live.
+
