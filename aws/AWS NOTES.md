@@ -4473,4 +4473,65 @@ The venue never gives anyone a permanent master key.
 
 **Amazon Cognito** is AWS’s **customer identity and access management** service for web and mobile apps. It handles **sign-up, sign-in, password reset, MFA, social and enterprise login**, issues **tokens**, and can give signed-in users **temporary AWS credentials**. It scales to millions of users without you running any authentication servers.
 
+It has **two main components** (the most tested topic):
+
+#### User pools: “who are you?” (authentication)
+
+A **user pool** is a **user directory and authentication service**. It stores your app’s users and returns **JWT tokens** after login.
+
+- **Sign-up and sign-in** with email, phone number or username, with **email or SMS verification**, **password policies** and **account recovery** (forgot password).
+
+- **MFA** with authenticator apps (TOTP), SMS or email codes, and in newer feature plans **passwordless and passkey** options (check the current documentation for which plan includes what).
+
+- **Social and enterprise federation**: sign in with **Google, Facebook, Amazon, Apple**, and any **SAML or OIDC** provider (like a company’s Microsoft Entra ID or Okta).
+
+- **Hosted UI / managed login**: a ready-made, customizable login page, so you don’t build one.
+
+- **Groups**: put users in groups (like `admins`), which appear in the token (`cognito:groups`) for authorization.
+
+- **Custom attributes**: extra user fields (for example `custom:plan`). Some choices, such as which attribute users sign in with, are **fixed when the pool is created**, so design the pool carefully.
+
+- **Lambda triggers**: run your code at points in the flow, such as **pre sign-up** (validate or auto-confirm), **post confirmation** (create a profile row), **pre token generation** (add custom claims), **custom authentication challenges**, and **user migration** (move users from an old system on their first login).
+
+- **App clients**: each app (web, mobile, server) registers as an **app client**, with its own client ID (and optionally a secret), allowed OAuth flows and callback URLs.
+
+- **Threat protection** (feature-plan dependent): adaptive authentication, **compromised-credential detection** and brute-force protection. You can also attach **AWS WAF** to the pool’s endpoints.
+
+- **Machine-to-machine (M2M)**: the OAuth **client credentials** flow, with **resource servers and scopes**, for server-to-server API calls without a human user.
+
+- **Pricing** is mainly per **monthly active user (MAU)**, and depends on the **feature plan** you pick, with a free tier for a limited number of MAUs. Check the pricing page for current numbers.
+
+#### The tokens a user pool issues
+
+|Token|What it is for|Notes|
+|---|---|---|
+|**ID token**|**Who the user is** (name, email, attributes, groups)|For your app’s UI and your own backend; has an `aud` (audience) claim|
+|**Access token**|**What the user may access** (scopes, groups)|Sent to APIs; carries `client_id` and `scope`, not `aud`|
+|**Refresh token**|Get **new** ID and access tokens without logging in again|Long-lived; keep it secure; can be revoked|
+
+Access and ID tokens are **short-lived** (default 1 hour, configurable). Refresh tokens last much longer (default 30 days, configurable).
+
+#### Identity pools: “what AWS access do you get?” (authorization to AWS)
+
+An **identity pool** (also called federated identities) **exchanges a token** (from a user pool, Google, Apple, SAML, OIDC, or none at all for guests) for **temporary AWS credentials** through STS, tied to an **IAM role**.
+
+- Separate IAM roles for **authenticated** and **unauthenticated (guest)** users.
+- **Fine-grained access**: IAM policy variables like **`${cognito-identity.amazonaws.com:sub}`** let each user reach **only their own** S3 prefix or DynamoDB items.
+- Use it when the **client itself** (a mobile app) talks **directly to AWS services** such as S3, DynamoDB or IoT.
+
+#### User pool vs identity pool: the trap everyone gets wrong
+
+![[Pasted image 20261020211652.png]]
+
+They’re **often used together**: the user logs in to the **user pool**, gets a token, and the app gives that token to the **identity pool**, which returns AWS credentials.
+
+#### Where Cognito plugs in
+
+- **API Gateway**: a **Cognito authorizer** validates the user pool token before your Lambda runs.
+- **Application Load Balancer (Lesson 20)**: the **authenticate-cognito** action handles login before forwarding traffic to your servers.
+- **AWS AppSync** and your own backends (which verify the JWT themselves).
+
+#### Cognito vs IAM Identity Center vs IAM users (a classic confusion)
+
+![[Pasted image 20261020211725.png]]
 
