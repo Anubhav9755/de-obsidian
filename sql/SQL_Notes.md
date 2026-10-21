@@ -6656,6 +6656,17 @@ ORDER BY buffers_in_ram DESC
 LIMIT 5;
 ```
 
+- **`pg_stat_database`:** A cumulative system statistics view in PostgreSQL that tracks connection counts, transaction rollbacks/commits, tuple fetches, and block read metrics for every database on the cluster.
+- **`blks_read` vs. `blks_hit`:**
+    - `blks_read`: The total number of physical disk page reads performed by the database engine since the last statistics reset.
+    - `blks_hit`: The number of times a requested data page was already present in the shared buffer cache (`shared_buffers`), avoiding a physical disk fetch.
+- **`NULLIF(..., 0)`:** Protects against division-by-zero errors on a freshly booted or idle database where no block reads have occurred yet
+- **Interpretation:** We want to see `cache_hit_ratio_pct` at **99% or higher**. If this number drops into the 80s or 90s, it indicates that our `shared_buffers` allocation is too small or our queries are causing excessive table bloat/sequential scans, forcing the engine to thrash the disk.
+
+- **`pg_buffercache`:** An internal extension that inspects the live contents of the shared buffer memory pool in real-time.
+- **`relfilenode`:** The unique physical file identifier mapped between system catalog relations (`pg_class`) and buffer blocks (`pg_buffercache`).
+- **`* 8192`:** Standard PostgreSQL data block size is 8 Kilobytes (8,192 bytes). Multiplying the count of cached buffers by 8,192 gives us the exact amount of RAM space each table currently occupies in the buffer cache.
+- **Interpretation:** This query shows us which specific tables are consuming our RAM footprint. If an unexpected table is dominating the cache, or if our hot working dataset exceeds available memory, we can use this to optimize indexes or tune our query patterns.
 
 ### Interview Questions
 
@@ -6681,3 +6692,5 @@ LIMIT 5;
     - _Concurrency Control:_ To prevent race conditions, the engine uses **Buffer Content Locks** (shared locks for reading, exclusive locks for writing data modifications) and **Buffer Pins** (reference counters preventing the background writer or eviction algorithm from swapping out a page while an active query is reading or modifying it).
 
 ---
+## Module 18: Performance Tuning & Diagnostic Architecture — VACUUM, Autovacuum, and Bloat Analysis
+
