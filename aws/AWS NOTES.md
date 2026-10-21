@@ -4694,3 +4694,151 @@ Design the solution with Cognito (and whatever else we’ve covered). For each p
 
 Also tell me: **when would you choose IAM Identity Center instead of Cognito, and could point 6 use it?**
 
+#### 1. Email, Google and Apple login, without duplicate accounts
+
+- Create a **user pool** with `--username-attributes email`. This is fixed at creation, so decide it up front.
+- Add **Google** and **Apple** as social identity providers. Map their attributes (email, name) to the pool’s attributes.
+- Use the **hosted UI / managed login** with the authorization code flow and PKCE.
+- **Duplicates:** a federated login creates a separate profile (like `Google_1234...`). Add a **pre sign-up Lambda trigger**. It looks up an existing user with the same email and calls `AdminLinkProviderForUser` to attach the Google or Apple identity to the existing profile. Link only when the provider says the email is verified, otherwise an attacker could take over someone’s account. Decide this before launch, because merging duplicates later is painful.
+
+#### 2. MFA for admins and coaches, optional for others
+
+- Set the pool’s MFA to **optional**, with authenticator-app (TOTP) enabled. Regular users can opt in.
+- Put admins and coaches in **groups** (`admins`, `coaches`), and enforce MFA for those groups. The common ways:
+    - A **pre token generation or post-authentication Lambda** that checks group membership and refuses sessions where MFA wasn’t used.
+    - Or a stricter pool for staff (a separate **staff pool**) with MFA **required**. Because admins sign in with Entra ID anyway (point 6), their MFA is enforced at the company’s IdP too.
+- Prefer authenticator apps over SMS (SMS can be intercepted or SIM-swapped, and costs money).
+
+#### 3. Uploads to S3, and the embedded keys
+
+- **First, deactivate and rotate the leaked AWS key**, and check CloudTrail and S3 logs for misuse. Then ship an app update that removes it. Old app versions break, so plan a forced upgrade.
+- **Option A, identity pool:** the app logs in to the user pool, gets a token, and the **identity pool** exchanges it for temporary credentials via STS. The role’s policy is limited with `${cognito-identity.amazonaws.com:sub}` to `fit-user-uploads/<identity-id>/*`, with only `PutObject` and `GetObject`.
+- **Option B, pre-signed URLs:** the backend (already behind Cognito) generates a short-lived pre-signed URL for the user’s own prefix, and the app uploads with it. The app never receives AWS credentials. Since FitTrack already has a Lambda backend, Option B is simpler.
+- Either way, keep the bucket private with Block Public Access, and restrict the unauthenticated (guest) role to nothing, since all uploads need a login.
+
+#### 4. API Gateway rejecting calls, and coach-only endpoints
+
+- Attach a **Cognito authorizer** (or a JWT authorizer on an HTTP API) pointing at the user pool. Calls without a valid token get a 401 before Lambda runs.
+- For **coach-only** endpoints, use **groups**: the token contains `cognito:groups`. Either use **scopes** (custom scopes on a resource server) at the gateway, or check `cognito:groups` inside the Lambda from the verified claims. Because API Gateway has validated the token, the Lambda can trust the claims it receives.
+
+#### 5. Partner server, no human
+
+- Use the **OAuth 2.0 client credentials flow (M2M)**: create a **resource server** with a scope like `workouts/read`, and an **app client with a secret** for the partner. The partner exchanges client ID and secret at the token endpoint for an access token carrying only that scope.
+- API Gateway checks the scope on that one route, so the partner can’t call anything else. Rotate the secret periodically, and store it in Secrets Manager on your side if you hold a copy (Lesson 35).
+
+#### 6. Employees with Entra ID
+
+- Add **Microsoft Entra ID as a SAML or OIDC identity provider** in the user pool (or in a separate staff pool), and map attributes (email, groups).
+- Map Entra groups to Cognito groups, so only the right employees get `admins`. Employees authenticate at the company’s IdP, and company MFA and conditional access apply.
+- **Where IAM Identity Center fits:** see the end of this answer.
+
+#### 7. Migrating 200,000 users with bcrypt hashes
+
+- Use the **user migration Lambda trigger**. When a legacy user signs in the first time, Cognito calls your Lambda with the username and password. The Lambda checks them against the **legacy database** (verifying the bcrypt hash), and if correct, returns the user’s attributes. Cognito creates the user with the password they just typed, so no reset is needed.
+- Cognito can’t import bcrypt hashes directly, which is why this just-in-time approach is the standard answer.
+- After a transition period, send a reset prompt to users who never logged in, and then retire the legacy database.
+
+#### 8. The two penetration-test findings
+
+- **Token valid after logout:** JWTs are checked locally until expiry. Shorten the access token lifetime (for example 5 to 15 minutes), use **global sign-out and refresh token revocation** so no new tokens are issued, and for high-risk actions validate more strictly (for example a revoked-token deny list in DynamoDB, or checking against Cognito). Test whether your authorizer honors revocation instead of assuming.
+- **Self-granted role:** the role was a writable custom attribute. Make sensitive attributes **read-only** in the app client’s write permissions, and use **groups** that only administrators (or backend code) can change. Read `cognito:groups` from the **verified** token, and optionally add trusted claims in a **pre token generation Lambda**.
+
+#### 9. Branded login, and password-guessing and leaked-password protection
+
+- **Branded login:** the hosted UI / managed login with your logo, colors and CSS, live in hours. If the product team later needs total control, build a custom UI with the SDK, but that costs engineering time.
+- **Password guessing and leaked passwords:** turn on **threat protection** (adaptive authentication, compromised-credentials detection, with actions like block or require MFA), subject to the feature plan you choose. Also set a strong **password policy**, and put **AWS WAF** with rate-based rules in front of the pool’s endpoints.
+
+#### 10. Environments and cost
+
+- **Separate user pools per environment** (dev, prod), ideally in separate AWS accounts, deployed from the same **CloudFormation** template (Lesson 34), so dev never touches real users.
+- **Cost:** Cognito is priced per monthly active user (MAU) based on the feature plan. Use the cheapest plan that covers the needed features, enable advanced threat protection only where needed (prod, and maybe staff), prefer pre-signed URLs over extra services, and set **AWS Budgets** alerts. At very large scale, compare per-MAU cost with alternatives.
+
+#### IAM Identity Center vs Cognito
+
+- Choose **IAM Identity Center** for your **workforce**: employees signing in to AWS accounts and business apps with single sign-on. Choose **Cognito** for **customers** of your app (millions of them).
+- **Could point 6 use it?** Partly. If the internal admin dashboard is an AWS-managed or SAML-integrated business app, Identity Center can give employees SSO to it. But the dashboard here is FitTrack’s own app that already uses the user pool for tokens and groups, so federating Entra ID into the **user pool** keeps one token format for the whole backend. Identity Center is the right tool for engineers signing in to the AWS accounts themselves.
+
+---
+## Amazon Inspector
+
+- **Vulnerability / CVE:** a known weakness in software. A **CVE** (Common Vulnerabilities and Exposures) is a public ID like `CVE-2024-12345`, so everyone talks about the same flaw. A **CVSS score** (0 to 10) rates how severe it is.
+- **Patching:** installing the vendor’s fix. Attackers scan the internet for unpatched systems within hours of a CVE going public.
+- **EC2**: virtual servers you manage, including the operating system, so **you** patch them (Shared Responsibility).
+- **Lambda** : your code plus its libraries (dependencies), which can also contain vulnerable packages.
+- **Container image / ECR:** a container image is a packaged app with its libraries. **ECR (Elastic Container Registry)** is AWS’s store for those images.
+- **Security group**: a virtual firewall on an instance. A **network path** is the route from the internet to a resource through gateways, route tables and security groups.
+- **Systems Manager (SSM) Agent:** a small program on an instance that lets AWS Systems Manager talk to it (run commands, collect inventory). It needs an IAM role on the instance.
+- **AWS Organizations:** a way to manage many AWS accounts under one management account, with a **delegated administrator** account for a service.
+- **EventBridge** and **SNS**: the event bus and notification service used to route alerts.
+
+A **building inspector with a checklist who keeps coming back**.
+
+- He walks through your building (EC2 instances, container images, Lambda functions) and compares everything inside against a public list of known defects (the CVE database).
+- He also checks the doors: which rooms can be reached directly from the street (network reachability).
+- When a **new defect** is added to the list, he re-checks the building without being asked.
+- He writes up a report ranked by danger: “this one is critical **and** reachable from the street, fix it first.”
+- He **does not repair anything**. Fixing is a different job (patching).
+
+## Definition
+
+**Amazon Inspector** is an automated, continuous **vulnerability management service**. It scans your AWS workloads for **software vulnerabilities** and **unintended network exposure**, and produces prioritized **findings**.
+
+## What it scans
+
+|Resource|What it finds|
+|---|---|
+|**EC2 instances**|Vulnerable OS and application packages. Optional **CIS benchmark** scans for OS hardening.|
+|**Container images in ECR**|Vulnerable packages inside images, on push and continuously afterwards|
+|**Lambda functions**|Vulnerable dependencies (standard scanning), and optionally flaws in your own code (code scanning)|
+|**Network reachability** (EC2)|Open paths from the internet to your instances, such as an exposed SSH port|
+
+(Inspector also has code-security scanning for source repositories and can export an **SBOM**, a software bill of materials listing every package you run. Check the current documentation for exactly what your account supports.)
+
+## How it works
+
+1. **Enable it** (per account and Region, or for a whole organization).
+2. **EC2 scanning:** by default it uses the **SSM Agent** to collect the software inventory. Inspector can also do **agentless scanning** by reading snapshots of the instance’s volumes, which helps with instances that have no agent. Instances without either won’t be covered, so always check the **coverage** view.
+3. **Continuous scanning:** Inspector rescans when a **new package is installed**, when a **new CVE** is published, or when an image or function changes. You don’t schedule scans.
+4. **Findings** appear in the console, and are sent to **EventBridge** and **Security Hub** automatically.
+
+## Findings and the Inspector score
+
+- Finding types: **package vulnerability**, **network reachability**, **code vulnerability**.
+- Each has a **severity** (Critical, High, Medium, Low, Informational) and an **Inspector risk score**. The score takes the base CVSS score and **adjusts it for your environment**, for example lowering it if the vulnerable instance isn’t reachable from the internet. Findings also show whether a known **exploit** exists and whether a **fix is available**.
+- **Suppression rules** hide findings you’ve accepted (for example, a test account), without deleting them.
+
+## Multi-account
+
+Use **AWS Organizations** with a **delegated administrator** account, so security can see and manage findings for every account in one place, and new accounts are enrolled automatically.
+
+## Pricing (shape only)
+
+Charged per **resource scanned** per month (per instance, per image scanned, per Lambda function), with a free trial period for new accounts. Check the pricing page for numbers.
+
+## The confusion table 
+
+|Service|Question it answers|
+|---|---|
+|**Inspector**|“Which of my workloads have **known vulnerabilities** or **exposed paths**?” (before an attack)|
+|**GuardDuty**|“Is someone **attacking or behaving suspiciously** right now?” (threat detection)|
+|**Macie**|“Where is **sensitive data** (PII) sitting in S3?”|
+|**Security Hub**|“Show me all findings from all security services in **one dashboard**.”|
+|**Config**|“Is this resource **configured** the way policy says?”|
+|**Systems Manager Patch Manager**|“**Install the fixes** across my fleet.” (Inspector finds, Patch Manager fixes)|
+|**Trusted Advisor**|Broad best-practice checks (cost, limits, some security), not CVE scanning|
+### The industry problem it solves
+
+**Example: a digital bank with 400 EC2 instances across 8 accounts, plus containers and Lambda functions.**
+
+Without Inspector:
+
+- Security runs a quarterly scan with a third-party scanner. Between scans, a critical CVE appears and nobody knows for weeks.
+- Engineers launch instances nobody tracks, so they are never scanned.
+- Container images with vulnerable libraries get deployed because nobody checks them.
+- Auditors ask “prove you find and fix critical vulnerabilities within 7 days”, and the answer is a spreadsheet.
+- A thousand findings arrive with no ranking, so the team can’t tell the critical, reachable one from the harmless, unreachable ones.
+
+With Inspector: scanning is continuous and automatic, every new account is enrolled, images are scanned on push, findings are ranked by real risk, and alerts flow into the ticketing and chat tools through EventBridge and Security Hub. Patch Manager then fixes the flagged instances.
+
+**Where it’s a poor fit:** it won’t detect attacks in progress (GuardDuty), it doesn’t scan non-AWS workloads in the same way, it doesn’t fix anything, and it isn’t a replacement for secure code review and penetration testing of your business logic.
+
