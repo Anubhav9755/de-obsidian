@@ -1858,7 +1858,72 @@ for tx_id, user, amount in transactions:
     by_user[user].append(amount)         # missing key → empty list is created automati
 ```
 
+**MAIN TASK**
 
+Part B, create two files:
+
+`cleaning.py`:
+
+```python
+def parse_row(line):
+	line = line.strip()
+	if not line:
+		return None
+		
+	parts= [p.strip() for p in line.split(",")]
+	if len(parts)!=3:
+		return None
+		
+	tx_id, user, amount_raw = parts
+	
+	try:
+		amount = float(amount_raw)
+	except ValueError:
+		return None
+		
+	if amount<=0:
+		return None
+		
+	return (tx_id, user, amount)
+	
+	if __name__ == "__main__":
+		print(parse_row("tx_1, user_a, 150.50"))
+		print(parse_row("tx_2, user_b, abc"))
+    # your parse_row from Lesson 6: returns (tx_id, user, amount) or None
+    ...
+
+# add a guard: when run directly, test parse_row on one good and one bad line
+```
+
+`main.py`:
+
+
+```python
+# 1. from cleaning import parse_row
+# 2. from collections import defaultdict
+# 3. paste in raw_rows (below)
+# 4. totals = defaultdict(float); bad_rows = 0
+# 5. loop over raw_rows: call parse_row(line);
+#    if the result is None, add 1 to bad_rows and continue
+#    otherwise unpack into tx_id, user, amount and add amount to totals[user]
+# 6. print each user and total with 2 decimals, then the top user, then bad_rows
+# 7. wrap steps 3-6 in a function main(), and call it under the __main__ guard
+
+raw_rows = [
+    "tx_1, user_a, 150.50",
+    "tx_2, user_b, abc",
+    "tx_3, user_a, 300",
+    "",
+    "tx_4, user_c, -20",
+    "tx_5, user_b, 220.25",
+]
+
+# expected output of `python main.py`:
+# user_a: 450.50
+# user_b: 220.25
+# top user: user_a
+# bad rows: 3
+```
 
 ### Find the bugs
 
