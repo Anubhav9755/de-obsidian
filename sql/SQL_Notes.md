@@ -6521,3 +6521,19 @@ SELECT TRY_CAST('abc' AS INT);
 
 The **Query Execution Planner** (or Optimizer) is the core database component that transforms a declarative SQL query into an optimized procedural execution plan. It evaluates statistical data, index availability, and table sizes to choose the most cost-effective access paths and join algorithms:
 
+**Access Paths:**
+
+- _Sequential Scan (Seq Scan):_ Reads the entire table block-by-block from disk/buffer cache.
+
+- _Index Scan:_ Traverses a B-Tree index to find row pointers (`TIDs`), then fetches corresponding table blocks (risk of random I/O).
+
+- _Bitmap Index Scan:_ Combines multiple index lookups into an in-memory bitmap of physical block locations, converting random disk reads into sequential block access.
+
+**Join Algorithms:**
+
+- _Nested Loop Join:_ Iterates through an outer table and searches the inner table for matching rows. Ideal for small datasets with indexes on the join key.
+
+- _Hash Join:_ Builds an in-memory hash table from the smaller relation, then probes it with the larger relation. Highly efficient for large, unindexed datasets.
+
+- _Merge Join (Sort-Merge):_ Sorts both input relations on the join key and merges them sequentially. Requires sorted inputs or pre-existing indexes.
+
