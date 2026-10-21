@@ -1,174 +1,846 @@
+# Module 1: Core Querying Foundations
 
+## Practice Setup (Run This First)
 
-SELECT: Tells the database which columns you want to look at.
-
-FROM: Tells the database which table contains those columns.
-
-LIMIT - Tells the database exactly how many rows of data to show.
+Every example in this module uses the `customers` table below. It deliberately contains **NULL values**, **mixed-case text**, and **duplicate countries** so the edge cases in each topic actually show up.
 
 ```sql
-SELECT first_name, country 
+DROP TABLE IF EXISTS customers;
+
+CREATE TABLE customers (
+    customer_id  SERIAL PRIMARY KEY,
+    first_name   VARCHAR(50),
+    country      VARCHAR(50),
+    total_spent  DECIMAL(10, 2),
+    email        VARCHAR(100)
+);
+
+INSERT INTO customers (first_name, country, total_spent, email) VALUES
+('Amit',   'India',  250.00, 'amit@mail.com'),
+('Sarah',  'USA',    120.50, 'sarah@mail.org'),
+('Aarav',  'India',  NULL,   'aarav@mail.com'),
+('Diana',  'UK',     310.00, 'diana@mail.co.uk'),
+('Priya',  'India',   95.75, 'priya@mail.com'),
+('Ana',    'Canada', 180.00, NULL),
+('John',   'USA',    NULL,   'john@mail.com'),
+('Maria',  'UK',     300.00, 'maria@mail.org'),
+('Hari',   'India',  250.00, 'hari@mail.net'),
+('Neha',   'USA',    200.00, 'neha@mail.com');
+```
+
+**Clause order you will keep using (write order):**
+
+```text
+SELECT -> FROM -> WHERE -> GROUP BY -> HAVING -> ORDER BY -> LIMIT
+```
+
+The database does not _run_ them in this order (see Module 10, Logical Query Execution Order), but this is the order you must _write_ them in.
+
+---
+
+## SELECT, FROM, and LIMIT
+
+`SELECT` chooses **which columns** you want to see, `FROM` names **which table** holds them, and `LIMIT` caps **how many rows** come back. Together they form the smallest useful query.
+
+- **`SELECT *`:** Returns every column. Fine for exploring a table, but avoid it in production code because it returns unneeded data and breaks when columns change.
+- **Column aliases (`AS`):** Rename a column in the output only (`total_spent AS revenue`). The table is not changed.
+- **`LIMIT n`:** Returns at most `n` rows. **`OFFSET m`** skips the first `m` rows (used for pagination).
+- **`LIMIT` without `ORDER BY` is not deterministic.** Tables have no guaranteed row order, so "the first 2 rows" can differ between runs.
+
+### Application
+
+- **Data Exploration:** Peeking at a few rows of an unfamiliar table before writing real logic.
+- **Report Building:** Selecting only the fields a dashboard needs, with friendly column names.
+- **Pagination:** Showing results 10 at a time in an application (`LIMIT 10 OFFSET 20`).
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A data analyst receives a 50-million-row `customers` table and runs `SELECT * FROM customers;` to "see what's in it." The query floods the network, freezes the client tool, and loads the database for everyone else.
+- **Solution:** Selecting only the needed columns and capping rows with `LIMIT` returns instantly, uses a fraction of the resources, and still shows the table's structure.
+
+### Industrial Example
+
+An e-commerce admin panel lists customers 25 per page. Each page request runs `SELECT customer_id, first_name, country FROM customers ORDER BY customer_id LIMIT 25 OFFSET ...`, fetching only the columns the screen displays instead of the whole row.
+
+### Code and Explanation
+
+```sql
+-- 1. Choose specific columns and cap the rows
+SELECT first_name, country
 FROM customers
 LIMIT 2;
+
+-- 2. Rename an output column with an alias
+SELECT first_name, total_spent AS revenue
+FROM customers
+LIMIT 3;
+
+-- 3. Deterministic pagination: ORDER BY + LIMIT + OFFSET
+SELECT customer_id, first_name
+FROM customers
+ORDER BY customer_id
+LIMIT 3 OFFSET 3;       -- rows 4 to 6
 ```
 
-DISTINCT - Removes duplicate values from your output. It gives you a list of unique values.
+#### Code Breakdown:
+
+- **`SELECT first_name, country`:** Returns only these two columns, in this order.
+- **`AS revenue`:** Gives the output column a new label without touching the table.
+- **`LIMIT 3 OFFSET 3`:** Skips 3 rows, then returns the next 3. Always pair it with `ORDER BY` so "page 2" is the same rows every time.
+
+### Interview Questions
+
+#### Question 1: Why is `SELECT *` discouraged in production queries?
+
+- **Solution Approach:**
+    - It returns every column, wasting network and memory on unused data.
+    - It prevents the optimizer from using **covering indexes** (an index-only scan is impossible if you ask for all columns).
+    - It breaks downstream code silently when columns are added, removed, or reordered.
+
+#### Question 2: Is `SELECT * FROM t LIMIT 5` guaranteed to return the same 5 rows each time?
+
+- **Solution Approach:**
+    - No. Relational tables are unordered sets; without `ORDER BY` the engine returns rows in whatever order its plan produces (which can change after updates, `VACUUM`, or a different plan).
+    - Always add `ORDER BY` (on a unique or tie-broken column) when the specific rows matter.
+
+#### Question 3: What is the downside of `OFFSET`-based pagination on large tables?
+
+- **Solution Approach:**
+    - The database must still read and discard all skipped rows, so deep pages (`OFFSET 1000000`) get progressively slower.
+    - **Keyset pagination** (`WHERE id > last_seen_id ORDER BY id LIMIT 25`) jumps straight to the right place using an index.
+
+---
+
+## DISTINCT
+
+`DISTINCT` removes duplicate rows from the output so each unique combination appears once.
+
+- **Single column:** `SELECT DISTINCT country` returns each country once.
+- **Multiple columns:** `DISTINCT` applies to the **whole combination** of selected columns, not to each column separately.
+- **`COUNT(DISTINCT col)`:** Counts unique non-NULL values instead of returning them.
+- **NULL handling:** `DISTINCT` treats all NULLs as one group, so NULL appears once.
+
+### Application
+
+- **Building Dropdowns and Filters:** Listing every unique country or category in a product UI.
+- **Data Profiling:** Checking how many distinct values a column has before deciding how to model it.
+- **Cardinality Checks:** Verifying a column that should be unique actually is.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A marketing team wants to know which countries they have customers in. A plain `SELECT country FROM customers` returns thousands of repeated values.
+- **Solution:** `SELECT DISTINCT country` returns one row per country, instantly showing the market footprint.
+
+### Industrial Example
+
+A telecom analytics team counts how many unique subscribers used the network each day with `COUNT(DISTINCT subscriber_id)`. Counting raw rows would overstate usage because one subscriber generates many events.
+
+### Code and Explanation
 
 ```sql
+-- 1. Unique countries
 SELECT DISTINCT country
 FROM customers;
-```
 
-WHERE - It filters rows based on specific conditions.
-
-EX- "Show me only customers from India" or "Show me transactions over $100"
-
-```sql
-SELECT first_name, country, total_spent
-        FROM customers
-        WHERE country = 'India' and total_spent > 100.00;
-```
-
-LOGIC OPERATORS - AND, OR, NOT
-
-```sql
-SELECT *
-    FROM customers
-    WHERE country = 'INDIA' OR total_spent > 200.00;
-```
-
-IN - instead of writing "WHERE country = 'INDIA' OR country = 'India', it can group into a simple list using parentheses;
-
-```sql
-SELECT *
-        FROM customers
-        Where country IN('USA','UK');
-```
-
-BETWEEN -   Instead of "WHERE total_spent >= 100 AND total_spent <= 300",  use BETWEEN to target continuous range.
-
-```sql
-SELECT *
-        FROM customers
-        WHERE total_spent BETWEEN 100 AND 300;
-```
-
-Condition - Find all customers whose names start with the letter 'A'" or "Find all email addresses ending in '.com'
-
-LIKE - relies on two special placeholder symbols:
-
-% (Percent sign): Represents zero, one, or multiple characters.
-
-_ (Underscore): Represents exactly one single character.
-
-NAME STARTS WITH 'A'-
-
-```sql
-SELECT first_name, country
-        FROM customers
-        WHERE first_name LIKE 'A%';
-```
-
-NAME ENDS WITH 'A'
-
-```sql
-SELECT * 
-FROM customers 
-WHERE first_name LIKE '_a%';
-```
-
-ANYWHERE INSIDE THE TEXT-
-
-```sql
-SELECT *
-        FROM customers
-            WHERE first_name LIKE '%n%';
-```
-
-SECOND LETTER MUST BE 'A'-
-
-```sql
-SELECT * 
-FROM customers 
-WHERE country LIKE '__d%';
-```
-
-IS NULL or IS NOT NULL - Finds rows where data is completely missing or present.
-
-```sql
-SELECT *
-        FROM customers
-        WHERE total_spent IS NULL;
-```
-
-```sql
-SELECT *
-        FROM customers
-        WHERE total_spent IS NOT NULL;
-```
-
-ORDER BY - Tells the database which column to use for sorting the rows.
-
-ASC (Ascending): Sorts numbers from smallest to largest, or text from A to Z. This is the default if you don't specify.
-
-DESC (Descending): Sorts numbers from largest to smallest, or text from Z to A.
-
-Rule (Order): It always goes after the WHERE clause, but before the LIMIT clause.
-
-```sql
-SELECT *
-        FROM customers
-        ORDER BY total_spent DESC;
-```
-
-COUNT(): Counts how many rows contain data.
-
-SUM(): Adds up all the numeric values in a column.
-
-AVG(): Calculates the mathematical average (mean) of a column.
-
-MAX(): Finds the highest value in a column.
-
-MIN(): Finds the lowest value in a column.
-
-Never mix * (or any raw column name) with an aggregate function (SUM, AVG, COUNT) unless you are grouping the data.
-
-```sql
-SELECT *, 
-       SUM(total_spent) OVER() AS total_revenue,
-       AVG(total_spent) OVER() AS average_spend,
-       MAX(total_spent) OVER() AS highest_purchase,
-       MIN(total_spent) OVER() AS lowest_purchase
-FROM customers;
-```
-
-what if so many thing are happening inside and where we have to use * as well as SUM and other function. so what i do there
-
-1. Keep Every Row and Add Totals Next to Them -
-
- Use a Window Function. Do this by adding the keyword OVER() right after your aggregate function. This tells the database: "Calculate the sum, but don't collapse my table."
-
-```sql
-SELECT *, 
-       SUM(total_spent) OVER() AS company_total,
-       MAX(total_spent) OVER() AS max_spent
-FROM customers;
-```
-
-Scenario B: Collapse Rows into Categorical Buckets
-
-If you don't care about seeing individual people like Amit or Sarah, but you want to see the totals broken down by Country, you drop the * and use GROUP BY.
-
-```sql
-SELECT country, 
-       COUNT(*) AS total_customers
+-- 2. Unique combinations (DISTINCT applies to the pair)
+SELECT DISTINCT country, first_name
 FROM customers
-GROUP BY country;
+LIMIT 5;
+
+-- 3. How many unique countries?
+SELECT COUNT(DISTINCT country) AS unique_countries
+FROM customers;
 ```
 
-If you need individual rows (*) + Totals  ->  Use OVER().
+#### Code Breakdown:
 
-If you need categorical rows + Totals ->  Use GROUP BY.
+- **`SELECT DISTINCT country`:** Returns India, USA, UK, and Canada once each.
+- **`DISTINCT country, first_name`:** A row is a duplicate only if **both** values match another row. It does **not** give "unique countries with a sample name."
+- **`COUNT(DISTINCT country)`:** Returns one number (4) instead of a list.
+
+### Interview Questions
+
+#### Question 1: Does `SELECT DISTINCT a, b` deduplicate `a` and `b` independently?
+
+- **Solution Approach:**
+    - No. It deduplicates the **combination** `(a, b)`. Two rows with the same `a` but different `b` both survive.
+
+#### Question 2: How does `COUNT(DISTINCT col)` differ from `COUNT(col)` and `COUNT(*)`?
+
+- **Solution Approach:**
+    - `COUNT(*)` counts all rows. `COUNT(col)` counts non-NULL values. `COUNT(DISTINCT col)` counts unique non-NULL values.
+
+#### Question 3: What is a performance concern with `DISTINCT` on large tables?
+
+- **Solution Approach:**
+    - It forces a sort or hash aggregation of the entire result to find duplicates, which can spill to disk. Often a sign that a join is producing duplicate rows that should be fixed at the source instead of hidden with `DISTINCT`.
+
+---
+
+## WHERE
+
+`WHERE` filters rows **before** they are returned, keeping only the rows where the condition is true.
+
+- **Comparison operators:** `=`, `<>` (or `!=`), `<`, `>`, `<=`, `>=`. SQL uses a **single `=`** for equality, not `==`.
+- **Text values use single quotes** (`'India'`). Double quotes are for identifiers (column and table names).
+- **Text comparison is case-sensitive in PostgreSQL:** `'India'` and `'INDIA'` are different values.
+- **Three-valued logic:** A condition can be TRUE, FALSE, or UNKNOWN (when NULL is involved). `WHERE` keeps **only TRUE** rows.
+
+### Application
+
+- **Targeted Retrieval:** "Customers from India," "orders above $100," "events from yesterday."
+- **Data Quality Checks:** Finding rows that violate expectations (negative amounts, impossible dates).
+- **Reducing Work Early:** Filtering first means less data flows into later steps such as joins and aggregates.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A finance analyst needs only high-value Indian customers for an audit, but the table holds customers from every country and spend level.
+- **Solution:** `WHERE country = 'India' AND total_spent > 100` returns exactly the audit population and nothing else.
+
+### Industrial Example
+
+A fraud-monitoring job scans a transactions table every minute with `WHERE amount > 10000 AND created_at >= NOW() - INTERVAL '1 minute'`, filtering millions of rows down to a handful of alerts that need review.
+
+### Code and Explanation
+
+```sql
+-- 1. Single condition
+SELECT first_name, country, total_spent
+FROM customers
+WHERE country = 'India';
+
+-- 2. Two conditions that must both be true
+SELECT first_name, country, total_spent
+FROM customers
+WHERE country = 'India' AND total_spent > 100.00;
+
+-- 3. Case sensitivity: this returns ZERO rows in PostgreSQL
+SELECT *
+FROM customers
+WHERE country = 'INDIA';
+
+-- 4. Not equal
+SELECT first_name, country
+FROM customers
+WHERE country <> 'India';
+```
+
+#### Code Breakdown:
+
+- **`country = 'India'`:** Keeps only rows whose country is exactly `India`.
+- **`country = 'INDIA'`:** Matches nothing because stored values are `India`. Use `LOWER(country) = 'india'` or `ILIKE` for case-insensitive matching.
+- **`<>`:** Excludes the given value. Rows where `country` is NULL are **also excluded** (NULL <> 'India' is UNKNOWN, not TRUE).
+
+### Interview Questions
+
+#### Question 1: Why does `WHERE country <> 'India'` not return rows where `country` is NULL?
+
+- **Solution Approach:**
+    - Comparing NULL to anything yields UNKNOWN, and `WHERE` keeps only TRUE rows. To include NULLs, write `WHERE country <> 'India' OR country IS NULL`, or use `IS DISTINCT FROM 'India'`.
+
+#### Question 2: What is the difference between `WHERE` and `HAVING`?
+
+- **Solution Approach:**
+    - `WHERE` filters individual rows **before** grouping and cannot use aggregates. `HAVING` filters groups **after** aggregation (covered in Module 2).
+
+#### Question 3: Can you use a column alias defined in `SELECT` inside `WHERE`?
+
+- **Solution Approach:**
+    - No. `WHERE` is evaluated before `SELECT`, so the alias does not exist yet. Repeat the expression, or wrap the query in a subquery or CTE.
+
+---
+
+## Logical Operators (AND, OR, NOT)
+
+Logical operators combine multiple conditions in a single `WHERE` clause.
+
+- **`AND`:** Both conditions must be true.
+- **`OR`:** At least one condition must be true.
+- **`NOT`:** Reverses a condition.
+- **Precedence:** `NOT` is evaluated first, then `AND`, then `OR`. **Use parentheses** to make intent explicit.
+
+### Application
+
+- **Multi-Criteria Filtering:** "Indian customers who spent over $200, or any customer from the UK."
+- **Exclusion Rules:** Removing flagged or test records with `NOT`.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A manager asks for customers who are from India **or** the USA **and** have spent over $100. The analyst writes the condition without parentheses and unknowingly returns every Indian customer regardless of spend, because `AND` binds tighter than `OR`.
+- **Solution:** Explicit parentheses, `(country = 'India' OR country = 'USA') AND total_spent > 100`, force the intended logic.
+
+### Industrial Example
+
+A compliance report flags accounts that are `(high_risk = true OR country IN (...)) AND NOT verified`. Misplaced parentheses in rules like this have caused real over-reporting and under-reporting, which is why analytics teams enforce parentheses in code review.
+
+### Code and Explanation
+
+```sql
+-- 1. OR: either condition qualifies
+SELECT first_name, country, total_spent
+FROM customers
+WHERE country = 'India' OR total_spent > 200.00;
+
+-- 2. NOT: exclude a group
+SELECT first_name, country
+FROM customers
+WHERE NOT country = 'India';
+
+-- 3. Precedence trap: AND runs before OR
+SELECT first_name, country, total_spent
+FROM customers
+WHERE country = 'India' OR country = 'USA' AND total_spent > 200;
+-- Read as: India (any spend) OR (USA AND spend > 200)
+
+-- 4. Parentheses make the intended logic explicit
+SELECT first_name, country, total_spent
+FROM customers
+WHERE (country = 'India' OR country = 'USA') AND total_spent > 200;
+```
+
+#### Code Breakdown:
+
+- **Query 3 vs 4:** Same conditions, different results. Query 3 returns every Indian customer (Amit, Aarav, Priya, Hari) plus only Americans who spent over 200 (none in this data). Query 4 returns only customers from either country who spent over 200 (Amit and Hari). Aarav drops out because his spend is NULL.
+- **`NOT country = 'India'`:** Equivalent to `country <> 'India'` and has the same NULL behavior.
+
+### Interview Questions
+
+#### Question 1: What does `WHERE a = 1 OR b = 2 AND c = 3` evaluate as?
+
+- **Solution Approach:**
+    - `AND` has higher precedence, so it is `a = 1 OR (b = 2 AND c = 3)`. Always add parentheses to remove ambiguity.
+
+#### Question 2: What does `TRUE AND NULL` evaluate to? What about `TRUE OR NULL`?
+
+- **Solution Approach:**
+    - `TRUE AND NULL` = UNKNOWN (so the row is dropped). `TRUE OR NULL` = TRUE. `FALSE AND NULL` = FALSE.
+
+---
+
+## IN
+
+`IN` checks whether a value matches **any value in a list**, replacing a chain of `OR` conditions.
+
+- **`IN (...)`:** Shorthand for multiple `=` comparisons joined by `OR`.
+- **`NOT IN (...)`:** True when the value matches none of the list.
+- **The NULL trap:** If the list for `NOT IN` contains a NULL, the whole condition never returns TRUE and the query returns **zero rows**.
+
+### Application
+
+- **Filtering by Category Lists:** "Orders with status in (`shipped`, `delivered`)."
+- **Reusable Filters:** A list is easier to read, edit, and generate from code than a long `OR` chain.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A report needs customers from USA, UK, and Canada. The `OR` version is long and error-prone: `country = 'USA' OR country = 'UK' OR country = 'Canada'`.
+- **Solution:** `country IN ('USA', 'UK', 'Canada')` says the same thing in one readable line.
+
+### Industrial Example
+
+A data pipeline filters events with `WHERE event_type IN ('purchase', 'refund', 'chargeback')` to build a revenue-events table, with the list maintained in one place as new event types appear.
+
+### Code and Explanation
+
+```sql
+-- 1. Match any value in the list
+SELECT *
+FROM customers
+WHERE country IN ('USA', 'UK');
+
+-- 2. Exclude a list
+SELECT *
+FROM customers
+WHERE country NOT IN ('USA', 'UK');
+
+-- 3. The NULL trap: this returns ZERO rows
+SELECT *
+FROM customers
+WHERE country NOT IN ('USA', NULL);
+```
+
+#### Code Breakdown:
+
+- **`IN ('USA', 'UK')`:** Equivalent to `country = 'USA' OR country = 'UK'`.
+- **Query 3:** `country NOT IN ('USA', NULL)` expands to `country <> 'USA' AND country <> NULL`. The second part is always UNKNOWN, so no row can pass.
+- **Real danger:** This usually appears as `NOT IN (SELECT ...)` where the subquery unexpectedly returns a NULL. Prefer `NOT EXISTS` for safety (see Module 8).
+
+### Interview Questions
+
+#### Question 1: Why can `NOT IN` return no rows even when matches obviously exist?
+
+- **Solution Approach:**
+    - If the list or subquery contains a NULL, `x NOT IN (...)` evaluates to UNKNOWN for every row. Fix by filtering NULLs out of the subquery or by using `NOT EXISTS`.
+
+#### Question 2: Is `IN` with a long list slower than `OR`?
+
+- **Solution Approach:**
+    - No. The optimizer treats them equivalently. For very large lists, join against a temporary table or use `= ANY(array)` instead.
+
+---
+
+## BETWEEN
+
+`BETWEEN` tests whether a value falls within a range and is **inclusive of both endpoints**.
+
+- **`x BETWEEN a AND b`:** Same as `x >= a AND x <= b`.
+- **`NOT BETWEEN`:** Values outside the range.
+- **Order matters:** `BETWEEN 300 AND 100` returns nothing, because the lower bound must come first.
+- **Dates and timestamps:** `BETWEEN '2026-01-01' AND '2026-01-31'` treats `'2026-01-31'` as midnight, so a timestamp later that day is excluded. Prefer `>= start AND < next_day` for timestamps.
+
+### Application
+
+- **Range Filters:** Price bands, salary ranges, age brackets.
+- **Date Windows:** Reports for a given month or quarter.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** Marketing wants customers who spent between $100 and $300. Writing `>= 100 AND <= 300` works but is wordy, and analysts sometimes mistakenly use `>` and `<` and silently drop the boundary customers.
+- **Solution:** `BETWEEN 100 AND 300` states the range clearly and includes both endpoints.
+
+### Industrial Example
+
+A billing system assigns tiered pricing with `CASE WHEN usage BETWEEN 0 AND 100 THEN 'tier_1' ...`. Knowing that `BETWEEN` is inclusive prevents boundary customers (usage exactly 100) from being placed in two tiers or none.
+
+### Code and Explanation
+
+```sql
+-- 1. Inclusive range
+SELECT first_name, total_spent
+FROM customers
+WHERE total_spent BETWEEN 100 AND 300;
+
+-- 2. Equivalent long form
+SELECT first_name, total_spent
+FROM customers
+WHERE total_spent >= 100 AND total_spent <= 300;
+
+-- 3. Outside the range
+SELECT first_name, total_spent
+FROM customers
+WHERE total_spent NOT BETWEEN 100 AND 300;
+```
+
+#### Code Breakdown:
+
+- **Customers at exactly 300 (Maria) and 250 (Amit, Hari):** All included, since both endpoints are inclusive.
+- **`NOT BETWEEN`:** Does **not** return rows with NULL `total_spent` (NULL comparisons are UNKNOWN).
+
+### Interview Questions
+
+#### Question 1: Is `BETWEEN` inclusive or exclusive?
+
+- **Solution Approach:**
+    - Inclusive on both ends: `x BETWEEN 1 AND 5` includes 1 and 5.
+
+#### Question 2: Why is `BETWEEN` risky for timestamp ranges?
+
+- **Solution Approach:**
+    - A date literal like `'2026-01-31'` means `2026-01-31 00:00:00`, so events later on January 31 are missed. Use `ts >= '2026-01-01' AND ts < '2026-02-01'`.
+
+---
+
+## LIKE and ILIKE (Pattern Matching)
+
+`LIKE` matches text against a pattern built from two wildcards. `ILIKE` (PostgreSQL) is the **case-insensitive** version.
+
+- **`%`:** Matches zero, one, or many characters.
+- **`_`:** Matches exactly one character.
+- **`LIKE` is case-sensitive in PostgreSQL;** use `ILIKE` for case-insensitive matching.
+- **Escaping:** To match a literal `%` or `_`, escape it with a backslash (`LIKE '100\%'`).
+- **Performance:** A pattern with a **leading wildcard** (`'%n%'`) generally cannot use a normal B-tree index and may scan the whole table.
+
+|Pattern|Meaning|Example match|
+|---|---|---|
+|`'A%'`|Starts with A|Amit, Aarav, Ana|
+|`'%a'`|Ends with a|Diana, Priya, Ana, Maria, Neha|
+|`'%n%'`|Contains a lowercase n|Diana, Ana, John|
+|`'_a%'`|Second letter is a|Sarah, Aarav, Maria, Hari|
+|`'__d%'`|Third letter is d|India|
+
+### Application
+
+- **Search Boxes:** "Customers whose name contains `ana`."
+- **Data Cleaning:** Finding email addresses ending in a given domain.
+- **Code Lookups:** Product SKUs starting with a prefix.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** Support staff need every customer with a `.com` email, but they only remember the ending. An exact `=` cannot express that.
+- **Solution:** `WHERE email LIKE '%.com'` matches any email ending in `.com`, whatever comes before it.
+
+### Industrial Example
+
+A CRM's autocomplete runs `WHERE first_name ILIKE 'ana%'` as the user types. Because the pattern has a trailing (not leading) wildcard, a suitable index can serve it quickly.
+
+### Code and Explanation
+
+```sql
+-- 1. Starts with 'A'
+SELECT first_name, country
+FROM customers
+WHERE first_name LIKE 'A%';
+
+-- 2. Ends with 'a'
+SELECT first_name
+FROM customers
+WHERE first_name LIKE '%a';
+
+-- 3. Contains 'n' anywhere
+SELECT first_name
+FROM customers
+WHERE first_name LIKE '%n%';
+
+-- 4. Second letter must be 'a'
+SELECT first_name
+FROM customers
+WHERE first_name LIKE '_a%';
+
+-- 5. Third letter of country is 'd'
+SELECT DISTINCT country
+FROM customers
+WHERE country LIKE '__d%';
+
+-- 6. Case-insensitive match (PostgreSQL)
+SELECT first_name
+FROM customers
+WHERE first_name ILIKE 'a%';
+
+-- 7. Emails ending with .com
+SELECT first_name, email
+FROM customers
+WHERE email LIKE '%.com';
+```
+
+#### Code Breakdown:
+
+- **Position matters:** `'A%'` anchors the start, `'%a'` anchors the end, `'%n%'` anchors nothing.
+- **`'_a%'`:** One unknown character, then `a`, then anything. It matches _second letter is a_, **not** _ends with a_. (A common mix-up.)
+- **`ILIKE 'a%'`:** Matches `Amit`, `Aarav`, and `Ana` regardless of case. Plain `LIKE 'a%'` (lowercase `a`) returns nothing, because every stored name starts with a capital letter.
+- **NULL emails:** Ana's email is NULL, so she is excluded from any `LIKE` match.
+
+### Interview Questions
+
+#### Question 1: What is the difference between `%` and `_`?
+
+- **Solution Approach:**
+    - `%` matches any number of characters (including none). `_` matches exactly one character.
+
+#### Question 2: Why can `LIKE '%smith'` be slow on a large indexed column?
+
+- **Solution Approach:**
+    - A leading wildcard means the engine cannot use the index's sorted order to jump to a starting point, so it scans every row. Options: trigram indexes (`pg_trgm`), full-text search, or storing a reversed column.
+
+#### Question 3: How do you do a case-insensitive match in PostgreSQL vs other databases?
+
+- **Solution Approach:**
+    - PostgreSQL: `ILIKE`, or `LOWER(col) LIKE 'x%'`. MySQL's default collation is already case-insensitive for `LIKE`. SQL Server depends on the collation. Never assume; test.
+
+---
+
+## IS NULL and IS NOT NULL
+
+`NULL` means **missing or unknown**, not zero and not an empty string. Because NULL is "unknown," it cannot be tested with `=`.
+
+- **`IS NULL` / `IS NOT NULL`:** The only correct tests for missing values.
+- **`col = NULL` never returns rows;** the result is always UNKNOWN.
+- **NULL vs empty string:** `''` is a known empty value; NULL is no value. They behave differently.
+- **Aggregates skip NULLs** (except `COUNT(*)`), which affects averages and counts.
+
+### Application
+
+- **Data Quality Audits:** Finding records with missing emails or amounts.
+- **Distinguishing "Zero" from "Unknown":** A customer who spent $0 is different from one with no recorded spend.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A data analyst writes `WHERE total_spent = NULL` to find customers with missing spend data and gets an empty result, wrongly concluding the data is complete.
+- **Solution:** `WHERE total_spent IS NULL` correctly finds Aarav and John.
+
+### Industrial Example
+
+A nightly data-quality job counts missing values per column with `COUNT(*) - COUNT(column)` and alerts when the NULL percentage crosses a threshold.
+
+### Code and Explanation
+
+```sql
+-- 1. Find missing values
+SELECT first_name, total_spent
+FROM customers
+WHERE total_spent IS NULL;
+
+-- 2. Find present values
+SELECT first_name, total_spent
+FROM customers
+WHERE total_spent IS NOT NULL;
+
+-- 3. The common mistake: returns ZERO rows
+SELECT *
+FROM customers
+WHERE total_spent = NULL;
+
+-- 4. Count NULLs per column
+SELECT COUNT(*) - COUNT(total_spent) AS missing_spend,
+       COUNT(*) - COUNT(email)       AS missing_email
+FROM customers;
+```
+
+#### Code Breakdown:
+
+- **`= NULL`:** Evaluates to UNKNOWN for every row, so nothing is returned and no error is raised, which makes the bug easy to miss.
+- **`COUNT(*) - COUNT(col)`:** `COUNT(*)` counts all rows, `COUNT(col)` counts non-NULL values, so the difference is the number of NULLs.
+
+### Interview Questions
+
+#### Question 1: Why does `WHERE col = NULL` return nothing?
+
+- **Solution Approach:**
+    - NULL means unknown, so `col = NULL` is UNKNOWN for every row, and `WHERE` keeps only TRUE rows. Use `IS NULL`.
+
+#### Question 2: How do NULLs affect `AVG`, `COUNT`, and `SUM`?
+
+- **Solution Approach:**
+    - `AVG`, `SUM`, `MIN`, `MAX`, and `COUNT(col)` ignore NULLs. `COUNT(*)` counts every row. So `AVG` is computed over non-NULL values only, which can overstate the typical value if NULL should mean zero.
+
+#### Question 3: How would you compare two columns that may contain NULLs and treat NULL = NULL as equal?
+
+- **Solution Approach:**
+    - `a IS NOT DISTINCT FROM b` (NULL-safe equality). `a IS DISTINCT FROM b` is the NULL-safe "not equal."
+
+---
+
+## ORDER BY
+
+`ORDER BY` sorts the result rows by one or more columns.
+
+- **`ASC`:** Smallest to largest, or A to Z. This is the default.
+- **`DESC`:** Largest to smallest, or Z to A.
+- **Multiple columns:** Later columns break ties from earlier ones.
+- **Position in the query:** After `WHERE` and `GROUP BY`, before `LIMIT`.
+- **NULL ordering in PostgreSQL:** NULLs sort as **larger than every value**, so they come **last in ASC** and **first in DESC**. Control it with `NULLS FIRST` or `NULLS LAST`.
+- **Aliases are allowed in `ORDER BY`** (unlike `WHERE`), because sorting happens after `SELECT`.
+
+### Application
+
+- **Leaderboards and Rankings:** Top customers by spend.
+- **Reproducible Output:** Stable ordering for reports and for pagination.
+- **Time-Based Views:** Most recent events first.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A sales manager asks for the top 3 customers by spend, but the analyst sorts `DESC` and the top rows are customers with **NULL** spend, because PostgreSQL places NULLs first in descending order.
+- **Solution:** `ORDER BY total_spent DESC NULLS LAST` pushes unknown values to the bottom, so real top spenders appear first.
+
+### Industrial Example
+
+A product-ranking service orders items with `ORDER BY rating DESC NULLS LAST, review_count DESC, product_id`. The third column guarantees a deterministic order when ratings and counts tie, so pages do not shuffle between requests.
+
+### Code and Explanation
+
+```sql
+-- 1. Highest spenders first (NULLs appear at the TOP in PostgreSQL)
+SELECT first_name, total_spent
+FROM customers
+ORDER BY total_spent DESC;
+
+-- 2. Fix: push NULLs to the end
+SELECT first_name, total_spent
+FROM customers
+ORDER BY total_spent DESC NULLS LAST;
+
+-- 3. Multi-column sort: country A-Z, then spend high-to-low within each country
+SELECT first_name, country, total_spent
+FROM customers
+ORDER BY country ASC, total_spent DESC NULLS LAST;
+
+-- 4. Top 3 customers by spend
+SELECT first_name, total_spent
+FROM customers
+ORDER BY total_spent DESC NULLS LAST
+LIMIT 3;
+```
+
+#### Code Breakdown:
+
+- **Query 1 vs 2:** Same data, different top rows. Query 1 starts with Aarav and John (NULL spend). Query 2 starts with Diana (310).
+- **`ORDER BY country ASC, total_spent DESC`:** Sorts by country first, then orders customers within each country.
+- **Clause order:** `ORDER BY` comes before `LIMIT`, so the sort happens first and the top rows are then taken.
+
+### Interview Questions
+
+#### Question 1: Where do NULLs appear with `ORDER BY` in PostgreSQL?
+
+- **Solution Approach:**
+    - Last for ascending, first for descending. Use `NULLS FIRST` / `NULLS LAST` to override. Other databases differ (MySQL treats NULL as smallest).
+
+#### Question 2: Why add a unique column as the last `ORDER BY` key?
+
+- **Solution Approach:**
+    - Ties between rows leave their relative order undefined, which breaks pagination and test reproducibility. A unique tiebreaker such as the primary key makes the order fully deterministic.
+
+#### Question 3: Can you `ORDER BY` a column that is not in the `SELECT` list?
+
+- **Solution Approach:**
+    - Yes, in most databases (including PostgreSQL), except when using `SELECT DISTINCT`, where the sort key must appear in the select list.
+
+---
+
+## Aggregate Functions (COUNT, SUM, AVG, MAX, MIN)
+
+Aggregate functions collapse many rows into a **single summary value**.
+
+- **`COUNT()`:** Counts rows. `COUNT(*)` counts all rows, `COUNT(col)` counts non-NULL values.
+- **`SUM()`:** Adds numeric values.
+- **`AVG()`:** Mean of non-NULL values.
+- **`MAX()` / `MIN()`:** Highest and lowest value (works on numbers, text, and dates).
+- **NULLs are ignored** by every aggregate except `COUNT(*)`.
+- **Mixing rule:** A plain column cannot appear next to an aggregate in `SELECT` unless the data is grouped (`GROUP BY`) or the aggregate is a window function (`OVER`).
+
+### Application
+
+- **KPIs:** Total revenue, average order value, number of customers.
+- **Boundaries:** Earliest signup date, largest order.
+- **Sanity Checks:** Row counts before and after a data load.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** Leadership asks for total revenue, average spend, and the biggest and smallest purchase, and wants them without exporting the table to a spreadsheet.
+- **Solution:** One query with `SUM`, `AVG`, `MAX`, and `MIN` returns all four numbers in a single pass over the data.
+
+### Industrial Example
+
+A daily dashboard job runs `SELECT COUNT(*), SUM(amount), AVG(amount), MAX(amount) FROM orders WHERE order_date = CURRENT_DATE`, producing the headline tiles from one query.
+
+### Code and Explanation
+
+```sql
+-- 1. One-row summary of the whole table
+SELECT COUNT(*)            AS total_rows,
+       COUNT(total_spent)  AS rows_with_spend,
+       SUM(total_spent)    AS total_revenue,
+       AVG(total_spent)    AS average_spend,
+       MAX(total_spent)    AS highest_purchase,
+       MIN(total_spent)    AS lowest_purchase
+FROM customers;
+
+-- 2. AVG ignores NULLs; treat NULL as 0 when that is the business meaning
+SELECT AVG(total_spent)                AS avg_ignoring_nulls,
+       AVG(COALESCE(total_spent, 0))   AS avg_nulls_as_zero
+FROM customers;
+
+-- 3. This FAILS: plain column mixed with an aggregate, no GROUP BY
+-- SELECT first_name, SUM(total_spent) FROM customers;
+-- ERROR: column "customers.first_name" must appear in the GROUP BY clause
+--        or be used in an aggregate function
+```
+
+#### Code Breakdown:
+
+- **`COUNT(*)` vs `COUNT(total_spent)`:** 10 rows, but only 8 have a spend value.
+- **`AVG` NULL behavior:** The first average divides by 8, the second by 10, so the numbers differ. Which is correct depends on whether "no record" means "unknown" or "zero."
+- **The error in query 3:** The database cannot decide which single `first_name` to show next to one total. Section below shows the two valid fixes.
+
+### Interview Questions
+
+#### Question 1: What is the difference between `COUNT(*)`, `COUNT(col)`, and `COUNT(DISTINCT col)`?
+
+- **Solution Approach:**
+    - All rows; non-NULL values; unique non-NULL values.
+
+#### Question 2: Why does `AVG(col)` differ from `SUM(col) / COUNT(*)`?
+
+- **Solution Approach:**
+    - `AVG` divides by the count of non-NULL values; `COUNT(*)` includes rows where `col` is NULL, so the denominator is larger.
+
+#### Question 3: What does `SUM` return on an empty set, and what does `COUNT` return?
+
+- **Solution Approach:**
+    - `SUM`, `AVG`, `MIN`, and `MAX` return NULL (not 0). `COUNT` returns 0. Wrap with `COALESCE(SUM(x), 0)` when a report needs zero.
+
+---
+
+## Row Detail + Totals Together: `OVER()` vs `GROUP BY`
+
+Aggregates normally **collapse** rows. Two tools control that behavior, and choosing the right one is a core SQL skill.
+
+- **`GROUP BY`:** Collapses rows into one row per group (per country, per month). Individual rows disappear.
+- **`OVER()` (window function):** Computes the aggregate but **keeps every row**, attaching the result as an extra column.
+
+|You need|Use|
+|---|---|
+|Every individual row **plus** a total or average beside it|`aggregate(...) OVER ()`|
+|One summary row **per category**|`GROUP BY`|
+
+### Application
+
+- **Percent-of-Total Reports:** Each customer's share of overall revenue.
+- **Benchmarking:** Showing each row next to the company average or maximum.
+- **Category Summaries:** Customers and revenue by country.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A manager wants a customer list that also shows each person's spend next to the company total. Adding `SUM(total_spent)` beside `first_name` throws an error, and using `GROUP BY` first_name loses the company-wide total.
+- **Solution:** `SUM(total_spent) OVER ()` attaches the company total to every row without collapsing anything. For a by-country summary, `GROUP BY country` is the right tool.
+
+### Industrial Example
+
+A sales dashboard shows each rep's revenue next to the team total and each rep's percentage of it (`revenue / SUM(revenue) OVER ()`), while a separate regional tile uses `GROUP BY region` for one row per region.
+
+### Code and Explanation
+
+```sql
+-- Scenario A: keep every row, add totals beside them
+SELECT first_name,
+       country,
+       total_spent,
+       SUM(total_spent) OVER ()  AS company_total,
+       AVG(total_spent) OVER ()  AS company_average,
+       MAX(total_spent) OVER ()  AS highest_purchase
+FROM customers;
+
+-- Scenario A+: percent of total per customer
+SELECT first_name,
+       total_spent,
+       ROUND(100.0 * total_spent / SUM(total_spent) OVER (), 1) AS pct_of_total
+FROM customers
+WHERE total_spent IS NOT NULL
+ORDER BY pct_of_total DESC;
+
+-- Scenario B: collapse into one row per country
+SELECT country,
+       COUNT(*)           AS total_customers,
+       SUM(total_spent)   AS country_revenue
+FROM customers
+GROUP BY country
+ORDER BY country_revenue DESC NULLS LAST;
+```
+
+#### Code Breakdown:
+
+- **`SUM(total_spent) OVER ()`:** The empty parentheses mean "the whole table is one window." Every row gets the same total, and no row is removed.
+- **`GROUP BY country`:** Produces one row per country, so individual names can no longer appear unless aggregated.
+- **Decision rule:** Individual rows + totals → `OVER()`. Categorical rows + totals → `GROUP BY`. (`PARTITION BY` inside `OVER()` gives per-group totals while keeping rows; see Module 6.)
+
+### Interview Questions
+
+#### Question 1: What is the difference between `GROUP BY` and a window function with `OVER()`?
+
+- **Solution Approach:**
+    - `GROUP BY` reduces the number of rows (one per group). A window function keeps all input rows and adds the computed value as a new column.
+
+#### Question 2: Why does `SELECT name, SUM(amount) FROM t` fail?
+
+- **Solution Approach:**
+    - `SUM` returns one value for the whole table while `name` has many; the engine cannot pair them. Fix with `GROUP BY name` (one row per name) or `SUM(amount) OVER ()` (keep all rows).
+
+#### Question 3: Can you filter on a window function result in `WHERE`?
+
+- **Solution Approach:**
+    - No. Window functions are evaluated after `WHERE`. Wrap the query in a subquery or CTE and filter in the outer query.
+
+---
+
+- "Name ends with A" used `LIKE '_a%'`, which actually means _second letter is a_. The correct pattern is `'%a'`.
+- `WHERE country = 'INDIA'` returns nothing in PostgreSQL because text comparison is case-sensitive.
 
 ----------------------------------------------------------------
 
@@ -5726,5 +6398,6 @@ DEALLOCATE fetch_account;
     
     - _In-band (Classic):_ The attacker uses the same channel of communication to launch the attack and gather results (e.g., displaying stolen database records directly on the web application page via `UNION` queries or raw database error messages).
     - _Inferential (Blind):_ No data or error messages are returned directly on the page. The attacker reconstructs data byte-by-byte by asking true/false questions and observing application behavior (Boolean-based) or injecting database delay functions like `pg_sleep()` or `WAITFOR DELAY` (Time-based).
-        
     - _Out-of-Band:_ Used when server responses are asynchronous or unstable. The attacker crafts payloads that force the database server to make external network calls (e.g., DNS requests or HTTP requests via database extensions) to a server controlled by the attacker to exfiltrate data.
+
+---
