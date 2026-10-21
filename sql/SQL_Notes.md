@@ -6577,7 +6577,7 @@ ANALYZE orders;
 
 - **`ANALYZE`:** Refreshes the database catalog statistics (`pg_statistic`), ensuring the cost-based optimizer has accurate row count estimates.
 
-### Advanced Interview Questions
+### Interview Questions
 
 #### Question 1: Explain the internal operational differences between a Hash Join and a Merge Join, and describe what happens when a Hash Join exhausts the allocated `work_mem` parameter.
 
@@ -6593,4 +6593,38 @@ ANALYZE orders;
     
     - If the query filter selects a large percentage of the table's total rows (e.g., returning 40% of a 1-million-row table), an Index Scan requires looking up the index and then performing random page fetches (`TIDs`) for 400,000 separate blocks.
     - A Sequential Scan reads contiguous disk blocks sequentially, which is significantly faster for large table fractions than thrashing the disk cache with hundreds of thousands of random index pointer jumps. The optimizer's cost model switches to a Seq Scan when estimated random I/O exceeds sequential scan cost.
+
+#### Question 3: How does a Bitmap Index Scan bridge the performance gap between a pure Index Scan and a Sequential Scan?
+
+- **Solution Approach:**
+    
+    - A Bitmap Index Scan first scans the index to find matching row pointers (`TIDs`) and constructs an in-memory bit vector (bitmap) representing the physical disk pages containing those rows.
+    - It then sorts these page IDs and visits each physical data block _exactly once_ in sequential physical order. This eliminates the random disk thrashing of a standard index scan while avoiding the full table scan penalty of a sequential scan when querying moderate-selectivity ranges.
+
+---
+## Module 18: Performance Tuning & Diagnostic Architecture — Buffer Cache & Disk I/O Metrics
+
+The **Buffer Cache** (`shared_buffers` in PostgreSQL) is a dedicated region of system RAM allocated by the database engine to cache active data pages (tables and indexes) in memory. This eliminates the need to fetch data repeatedly from slower persistent disk storage.
+
+- **Buffer Hit Ratio:** The percentage of data page requests satisfied directly from RAM (`shared_buffers` or OS page cache) versus physical disk reads (`disk reads`). A healthy production system typically maintains a cache hit ratio above 99%.
+
+- **Dirty Pages:** Modified data pages residing in RAM that have not yet been written back to physical disk storage.
+
+- **Checkpointing:** The background process that flushes dirty pages from RAM to disk in a controlled batch to ensure crash recovery safety and limit recovery time.
+
+### Application
+
+- **I/O Bottleneck Diagnosis:** Identifying whether poor query performance stems from insufficient RAM allocation, missing indexes causing excessive disk thrashing, or aggressive checkpoint flushing.
+
+- **Memory Tuning:** Sizing `shared_buffers` and maintenance work memories appropriately relative to available host infrastructure.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A high-throughput database experiences sudden latency spikes during peak hours. Disk I/O utilization hits 100%, and query execution times degrade even though the working dataset is relatively small.
+
+- **Solution:** Inspecting system catalog views reveals a low buffer hit ratio and frequent disk reads caused by `shared_buffers` being set to default low values. Increasing `shared_buffers` allows the entire hot working dataset to reside in RAM, eliminating disk bottlenecks.
+
+### Industrial Example
+
+An enterprise analytics platform uses database monitoring tools (`pg_stat_database`) to track cache hit ratios and buffer usage trends across read-heavy workloads, ensuring that caching layers remain optimal and reducing cloud EBS volume IOPS costs.
 
