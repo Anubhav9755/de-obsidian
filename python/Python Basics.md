@@ -1859,6 +1859,7 @@ for tx_id, user, amount in transactions:
 ```
 
 
+
 ### Find the bugs
 
 **Bug A:** you save your own file as `random.py` in your project, and `main.py` contains `import random; print(random.randint(1, 6))`.  
@@ -1897,3 +1898,6 @@ A venv isolates each project’s dependencies, so projects can need different ve
 
 **Q8. Scenario: the same server runs two projects, one needing library `X` version 1 and the other version 2. How do you handle it?**  
 One virtual environment per project, each with its own `requirements.txt` pinned to the right version. (Container tools like Docker take the same isolation idea further, but venvs are the foundation.)
+
+---
+

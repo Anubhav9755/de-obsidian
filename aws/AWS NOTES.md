@@ -4817,15 +4817,15 @@ Charged per **resource scanned** per month (per instance, per image scanned, per
 
 ## The confusion table 
 
-|Service|Question it answers|
-|---|---|
-|**Inspector**|“Which of my workloads have **known vulnerabilities** or **exposed paths**?” (before an attack)|
-|**GuardDuty**|“Is someone **attacking or behaving suspiciously** right now?” (threat detection)|
-|**Macie**|“Where is **sensitive data** (PII) sitting in S3?”|
-|**Security Hub**|“Show me all findings from all security services in **one dashboard**.”|
-|**Config**|“Is this resource **configured** the way policy says?”|
-|**Systems Manager Patch Manager**|“**Install the fixes** across my fleet.” (Inspector finds, Patch Manager fixes)|
-|**Trusted Advisor**|Broad best-practice checks (cost, limits, some security), not CVE scanning|
+| Service                           | Question it answers                                                                             |
+| --------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Inspector**                     | “Which of my workloads have **known vulnerabilities** or **exposed paths**?” (before an attack) |
+| **GuardDuty**                     | “Is someone **attacking or behaving suspiciously** right now?” (threat detection)               |
+| **Macie**                         | “Where is **sensitive data** (PII) sitting in S3?”                                              |
+| **Security Hub**                  | “Show me all findings from all security services in **one dashboard**.”                         |
+| **Config**                        | “Is this resource **configured** the way policy says?”                                          |
+| **Systems Manager Patch Manager** | “**Install the fixes** across my fleet.” (Inspector finds, Patch Manager fixes)                 |
+| **Trusted Advisor**               | Broad best-practice checks (cost, limits, some security), not CVE scanning                      |
 ### The industry problem it solves
 
 **Example: a digital bank with 400 EC2 instances across 8 accounts, plus containers and Lambda functions.**

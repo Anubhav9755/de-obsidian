@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "aws/AWS NOTES.md",
+                "file": "python/Python Basics.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "AWS NOTES"
+              "title": "Python Basics"
             }
           }
         ]
@@ -203,9 +203,9 @@
   },
   "active": "23fd4ed94bf3020b",
   "lastOpenFiles": [
+    "aws/AWS NOTES.md",
     "sql/SQL_Notes.md",
     "python/Python Basics.md",
-    "aws/AWS NOTES.md",
     "Pasted image 20261020211725.png",
     "Pasted image 20261020211652.png",
     "python/Python Advanced.md",
