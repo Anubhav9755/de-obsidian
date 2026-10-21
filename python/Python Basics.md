@@ -2091,3 +2091,78 @@ Fix: create the list per object, inside `__init__`: `self.items = []`.
 ### Protecting data with `@property`
 
 A **decorator** is a line starting with `@` placed above a function. It wraps the function and changes how it behaves.
+
+By convention, a name starting with an underscore (`_amount`) means “internal, please don’t touch directly”. Python doesn’t enforce it, it’s a signal to other programmers.
+
+`@property` makes a method behave like an attribute, so you can run code (like validation) when someone reads or sets it:
+
+```python
+
+class Transaction:
+    def __init__(self, tx_id, user, amount):
+        self.tx_id = tx_id
+        self.user = user
+        self.amount = amount              # this line runs the setter below
+
+    @property
+    def amount(self):                     # runs on:  t.amount
+        return self._amount
+
+    @amount.setter
+    def amount(self, value):              # runs on:  t.amount = ...
+        if value <= 0:
+            raise ValueError("amount must be positive")
+        self._amount = value
+
+t = Transaction("tx_1", "user_a", 150.5)
+print(t.amount)            # 150.5
+t.amount = -5              # ValueError: amount must be positive
+```
+
+Callers still write `t.amount` and never know a function runs. Since `__init__` also goes through the setter, a bad object can **never be created**. That’s the real value: your data is valid by construction.
+
+### `@classmethod`: alternative constructors
+
+```python
+class Transaction:
+    def __init__(self, tx_id, user, amount):
+        self.tx_id = tx_id
+        self.user = user
+        self.amount = amount
+
+    @classmethod
+    def from_line(cls, line):                       # cls = the class itself (not an object)
+        tx_id, user, amount_raw = [p.strip() for p in line.split(",")]
+        return cls(tx_id, user, float(amount_raw))  # cls(...) builds a Transaction
+
+
+t = Transaction.from_line("tx_1, user_a, 150.50")
+print(t.amount)       # 150.5
+```
+
+A **classmethod** receives the class (`cls`) as its first argument instead of an object (`self`). The typical use is exactly this: **a second way to build an object** (from a line of text, a dict, a database row). 
+
+A **`@staticmethod`** receives neither `self` nor `cls`. It’s an ordinary function that sits inside the class only because it belongs there logically (for example, a helper that cleans an amount string).
+
+### Inheritance (a first look)
+
+**Inheritance** lets a new class (the **child**) reuse everything from an existing class (the **parent**) and add or change things.
+
+```python
+class Refund(Transaction):                       # Refund IS A Transaction
+    def __init__(self, tx_id, user, amount, reason):
+        super().__init__(tx_id, user, amount)    # run the parent's setup
+        self.reason = reason
+
+    def signed_amount(self):
+        return -self.amount
+
+
+r = Refund("tx_9", "user_a", 40.0, "damaged")
+print(r.is_high_value())               # False (inherited method)
+print(r.signed_amount())               # -40.0
+print(isinstance(r, Transaction))      # True
+```
+
+`super()` means “the parent class”, so `super().__init__(...)` runs the parent’s setup. Use inheritance only when the relationship is truly **“is a”**. When it’s “has a” (a `Ledger` _has_ transactions), the ledger holds them in an attribute instead. That’s called **composition**.
+
