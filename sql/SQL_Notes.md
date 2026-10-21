@@ -6426,65 +6426,98 @@ DEALLOCATE fetch_account;
 
 ---
 
-## Module 17: Advanced Scalability — Table Partitioning (Range, List, Hash)
+## Module 17: Dialect Fluency — Multi-Engine Comparison & Cheat Sheet
 
-**Table partitioning** is a database storage architecture technique that splits a single logical table into smaller, physically independent physical sub-tables (partitions) on disk, managed transparently by the query engine through a single parent table interface.
+**Dialect Fluency** is the ability to write, translate, and optimize SQL code across major database engines—specifically **PostgreSQL**, **MySQL**, **SQL Server (T-SQL)**, and Cloud Data Warehouses (**Snowflake / Google BigQuery**). While ANSI SQL defines standard syntax rules, each engine implements proprietary extensions, functions, and configuration behaviors.
 
+### Comprehensive Engine Comparison Reference
 
+|**Feature / Operation**|**PostgreSQL**|**MySQL (8.0+)**|**SQL Server (T-SQL)**|**Snowflake / BigQuery**|
+|---|---|---|---|---|
+|**Row Limiting**|`LIMIT 10`|`LIMIT 10`|`SELECT TOP 10 ...`|`LIMIT 10` (Both)|
+|**String Concatenation**|`col1 \| col2` or `CONCAT()`|`CONCAT(c1, c2)` or `c1 + c2`|`c1 + c2` or `CONCAT()`|`col1 \| col2` or `CONCAT()`|
+|**Current Timestamp**|`CURRENT_TIMESTAMP` / `NOW()`|`NOW()` / `CURRENT_TIMESTAMP()`|`GETDATE()` / `SYSDATETIME()`|`CURRENT_TIMESTAMP()`|
+|**NULL Substitution**|`COALESCE(c1, val)`|`IFNULL()` / `COALESCE()`|`ISNULL(c1, val)` / `COALESCE()`|`NVL()` / `COALESCE()`|
+|**Auto-Increment ID**|`SERIAL` / `GENERATED ALWAYS AS IDENTITY`|`AUTO_INCREMENT`|`IDENTITY(1,1)`|`AUTOINCREMENT` (Snowflake) / `AUTO` (BQ)|
+|**String Aggregation**|`STRING_AGG(col, ',')`|`GROUP_CONCAT(col SEPARATOR ',')`|`STRING_AGG(col, ',')`|`LISTAGG(col, ',')` (Snowflake) / `STRING_AGG()` (BQ)|
+|**Safe Type Casting**|`CAST(col AS TYPE)` _(throws error on failure)_|`CAST` / `CONVERT`|`TRY_CAST(col AS TYPE)`|`TRY_CAST(col AS TYPE)`|
+|**Identifier Quoting**|`"column_name"`|`` `column_name` ``|`[column_name]`|`"column_name"`|
+|**Filter Window Results**|Requires Subquery / CTE|Requires Subquery / CTE|Requires Subquery / CTE|**`QUALIFY`** clause supported natively|
 
-### Application
+### Key Syntax Variations Deep-Dive
 
-- **Massive Scale Management:** Handling tables containing hundreds of millions or billions of rows without degrading index performance or maintenance speeds.
+#### A. UPSERT Syntax
 
-- **Rapid Data Lifecycle Management (Archival):** Dropping an entire historical partition instantly via metadata operations (`DROP TABLE`) rather than running slow, resource-heavy `DELETE` statements that lock tables and bloat write transaction logs.
-
-### Real-World Problem and How Topic Solves It
-
-- **Problem:** A fintech platform stores 400 million transaction records in a single monolithic table. Index maintenance (`VACUUM`, reindexing) and historical data purges (deleting transactions older than 5 years) lock the table for hours, causing severe production downtime and transaction log bloat.
-
-- **Solution:** Partitioning the table by monthly ranges (`RANGE (transaction_date)`) allows the database to store each month's data in its own physical table file. Purging old data requires executing a single metadata drop command on the specific month's partition (`DROP TABLE`), completing instantly with zero table locking or write amplification.
-
-### Industrial Example
-
-An enterprise IoT telemetry platform ingests 50 million sensor data points daily. The data engineering architecture organizes the core sensor logs table using daily Range partitioning, ensuring real-time aggregation queries target only the active day's partition index while older partitions remain isolated on cheaper storage tiers.
-
-### Code and Explanation
-
+- **PostgreSQL:**
 
 ```sql
--- 1. Creating a Partitioned Parent Table (PostgreSQL style)
-CREATE TABLE telemetry_logs (
-    log_id BIGINT,
-    device_id INT,
-    recorded_at TIMESTAMP NOT NULL,
-    payload JSONB
-) PARTITION BY RANGE (recorded_at);
-
--- 2. Creating Explicit Monthly Partitions
-CREATE TABLE telemetry_logs_2026_06 PARTITION OF telemetry_logs
-    FOR VALUES FROM ('2026-06-01 00:00:00') TO ('2026-07-01 00:00:00');
-
-CREATE TABLE telemetry_logs_2026_07 PARTITION OF telemetry_logs
-    FOR VALUES FROM ('2026-07-01 00:00:00') TO ('2026-08-01 00:00:00');
-
--- 3. Inserting Data (Routed automatically to the correct partition)
-INSERT INTO telemetry_logs VALUES 
-(1, 101, '2026-06-15 10:30:00', '{"cpu": 45}'),
-(2, 102, '2026-07-02 14:00:00', '{"cpu": 82}');
-
--- 4. Query demonstrating Partition Pruning
--- The query planner automatically prunes telemetry_logs_2026_06 from the execution plan
-EXPLAIN ANALYZE
-SELECT * FROM telemetry_logs 
-WHERE recorded_at >= '2026-07-01 00:00:00';
+    INSERT INTO users (id, name) VALUES (1, 'Alice')
+    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 ```
 
-- **`PARTITION BY RANGE (recorded_at)`:** Instructs the database engine to treat this table as a partitioned master table keyed on the timestamp column.
+- **MySQL:**
 
-- **`PARTITION OF telemetry_logs FOR VALUES FROM ... TO ...`:** Defines the explicit boundary limits for physical sub-tables.
+```sql
+    INSERT INTO users (id, name) VALUES (1, 'Alice')
+    ON DUPLICATE KEY UPDATE name = VALUES(name);
+```
 
-- **Partition Pruning (`EXPLAIN ANALYZE`):** When filtering by date, the query optimizer inspects partition boundaries and excludes irrelevant tables from the physical scan phase entirely, saving substantial CPU and disk I/O.
+- **SQL Server (T-SQL) / Snowflake:**
+ 
+ ```sql
+    MERGE INTO users AS target
+    USING (SELECT 1 AS id, 'Alice' AS name) AS source
+    ON target.id = source.id
+    WHEN MATCHED THEN UPDATE SET target.name = source.name
+    WHEN NOT MATCHED THEN INSERT (id, name) VALUES (source.id, source.name);
+ ```
 
+#### B. The `QUALIFY` Clause (Snowflake & BigQuery)
 
+In standard SQL, you cannot filter window function results directly in the same `WHERE` clause because of logical execution order. Snowflake and BigQuery provide the `QUALIFY` clause to filter window function outputs cleanly:
+
+```sql
+SELECT 
+    employee_id,
+    department,
+    salary,
+    ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rk
+FROM employees
+QUALIFY rk = 1; -- Filters directly without needing an outer CTE wrapper
+```
+
+#### C. Safe Casting (`TRY_CAST`)
+
+When cleaning dirty ETL text data, standard `CAST` fails the entire query if a row cannot be converted. `TRY_CAST` safely returns `NULL` on failure:
+
+```sql
+-- Returns NULL instead of throwing a syntax/conversion error if string is non-numeric
+SELECT TRY_CAST('abc' AS INT); 
+```
+
+###  Interview Questions
+
+#### Question 1: How does MySQL's string concatenation behavior differ from PostgreSQL and SQL Server when handling `NULL` values?
+
+- **Solution Approach:**
+    - In PostgreSQL and standard SQL, using the concatenation operator (`||`) with any `NULL` operand evaluates the entire expression to `NULL` (unless using the `CONCAT()` function which treats `NULL` as an empty string).
+    - In MySQL, the `+` operator treats `NULL` mathematically (resulting in `NULL`), but MySQL's proprietary `CONCAT()` function automatically skips or converts `NULL` arguments to empty strings, whereas SQL Server's `+` operator evaluates to `NULL` if any input is `NULL`.
+
+#### Question 2: What are the performance and architectural implications of migrating a large data pipeline from PostgreSQL's `ON CONFLICT` UPSERT mechanism to SQL Server's `MERGE` statement?
+
+- **Solution Approach:**
+    - `ON CONFLICT` in PostgreSQL is optimized specifically for single-table insert-or-update concurrency using index locks and snapshot isolation.
+    - `MERGE` in SQL Server processes relational sources against target tables through execution plan joins. If the source dataset is large and lacks proper indexing on the join keys, `MERGE` can trigger costly Hash Joins or table scans, and historically suffered from race conditions under high concurrent concurrency unless serialized or isolated carefully.
+
+#### Question 3: Why is the `QUALIFY` clause in Snowflake and BigQuery considered a major syntax improvement over traditional ANSI SQL when working with analytical window functions?
+
+- **Solution Approach:**
+    - In traditional ANSI SQL, to filter rows based on a window function result (e.g., finding the top 1 row per partition), you must wrap the query inside a CTE or derived subquery, then apply a `WHERE rk = 1` filter in the outer scope.
+    - The `QUALIFY` clause evaluates window functions and applies filters in the same logical evaluation step, eliminating the need for boilerplate CTE nesting and making complex analytical queries significantly more readable and maintainable.
 
 ---
+
+## Module 18: Performance Tuning & Diagnostic Architecture — Query Execution Plans & Join Strategies
+
+The **Query Execution Planner** (or Optimizer) is the core database component that transforms a declarative SQL query into an optimized procedural execution plan. It evaluates statistical data, index availability, and table sizes to choose the most cost-effective access paths and join algorithms:
+
