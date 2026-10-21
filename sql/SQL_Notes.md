@@ -6664,5 +6664,20 @@ LIMIT 5;
 - **Solution Approach:**
     
     - _Optimal Sizing:_ Typically configured between 25% to 40% of total system RAM.
-        
     - _Why Excessive Sizing Harms Performance:_ Operating systems rely heavily on the **OS Page Cache** (filesystem cache) to cache files, temporary sorts, and WAL writes. If `shared_buffers` consumes 80% of RAM, the OS page cache is starved. This creates double-buffering overhead (caching the same data twice in RAM) and reduces available memory for sort operations (`work_mem`) and OS background operations.
+
+#### Question 2: Explain how checkpointing works in MVCC databases, and describe the performance impact of an improperly configured checkpoint schedule (e.g., checkpoint timeout set too low).
+
+- **Solution Approach:**
+    
+    - _Mechanism:_ Checkpointing flushes dirty memory pages to disk, establishing a known consistent point for crash recovery and allowing older WAL (Write-Ahead Log) segments to be recycled.
+    - _Impact of Low Timeout:_ If checkpoints occur too frequently, the storage subsystem is bombarded with massive, sudden bursts of sequential and random disk writes (`checkpoint spikes`), saturating disk I/O bandwidth and causing query latency spikes across the database.
+
+#### Question 3: How does the database engine determine whether a requested data page is already in the buffer cache, and what locking mechanisms prevent race conditions when multiple concurrent threads access the same buffer block?
+
+- **Solution Approach:**
+    
+    - _Buffer Lookup:_ The engine uses a shared **Buffer Hash Table** mapping table file nodes and block numbers to buffer header addresses in RAM.
+    - _Concurrency Control:_ To prevent race conditions, the engine uses **Buffer Content Locks** (shared locks for reading, exclusive locks for writing data modifications) and **Buffer Pins** (reference counters preventing the background writer or eviction algorithm from swapping out a page while an active query is reading or modifying it).
+
+---
