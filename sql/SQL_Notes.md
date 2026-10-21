@@ -6537,3 +6537,60 @@ The **Query Execution Planner** (or Optimizer) is the core database component th
 
 - _Merge Join (Sort-Merge):_ Sorts both input relations on the join key and merges them sequentially. Requires sorted inputs or pre-existing indexes.
 
+### Application
+
+- **Query Latency Diagnosis:** Identifying why a critical production query is executing a sequential table scan instead of leveraging an index.
+
+- **Optimizer Tuning:** Adjusting table statistics and memory work-sets (`work_mem`) to prevent inefficient hash join spilling to disk (temp files).
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A reporting query joining an orders table (10 million rows) with an items table executes slowly, taking 14 seconds. Examining `EXPLAIN ANALYZE` reveals that the query engine chose a Nested Loop join, scanning the large table repeatedly and causing severe CPU spikes.
+
+- **Solution:** Analyzing the execution plan identifies missing indexes or outdated statistics. Updating table statistics via `ANALYZE` and forcing or enabling proper memory thresholds guides the optimizer to select a Hash Join or Bitmap Scan, reducing query time from 14 seconds to 120 milliseconds.
+
+### Industrial Example
+
+An enterprise e-commerce platform monitors nightly batch processing jobs using `EXPLAIN (ANALYZE, BUFFERS)`. Database engineers inspect shared buffer hit ratios and execution node timings to eliminate disk I/O bottlenecks caused by incorrect join strategies on unindexed foreign keys.
+
+### Code and Explanation
+
+```sql
+-- 1. Inspecting an Execution Plan with Detailed Metrics
+EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+SELECT 
+    c.customer_name,
+    SUM(o.total_amount) AS lifetime_spend
+FROM customers c
+JOIN orders o ON c.customer_id = o.customer_id
+WHERE o.order_date >= '2026-01-01'
+GROUP BY c.customer_name;
+
+-- 2. Forcing Statistics Update for the Query Planner
+ANALYZE customers;
+ANALYZE orders;
+```
+
+- **`EXPLAIN (ANALYZE, BUFFERS)`:** Executes the query live (`ANALYZE`) and reports exact execution time, row counts, and memory buffer hit/read statistics (`BUFFERS`), showing how many pages were fetched from RAM versus disk.
+
+- **`Seq Scan` vs `Bitmap Index Scan`:** The output plan reveals whether the engine read physical pages sequentially or utilized index bitmaps.
+
+- **`ANALYZE`:** Refreshes the database catalog statistics (`pg_statistic`), ensuring the cost-based optimizer has accurate row count estimates.
+
+### Advanced Interview Questions
+
+#### Question 1: Explain the internal operational differences between a Hash Join and a Merge Join, and describe what happens when a Hash Join exhausts the allocated `work_mem` parameter.
+
+- **Solution Approach:**
+    
+    - _Hash Join:_ Builds an in-memory hash table of the inner relation and probes it with the outer relation. It requires enough memory to hold the entire hash table.
+    - _Merge Join:_ Requires both inputs to be sorted on the join key, iterating through them sequentially. It has a very small memory footprint.
+    - _Memory Exhaustion (Spilling to Disk):_ If the hash table exceeds `work_mem`, the database engine splits the hash table into smaller partitions and writes overflow buckets to temporary disk storage (_multiphase hash join_ or disk spilling), introducing heavy disk I/O and sharply degrading query performance.
+
+#### Question 2: Why might the query optimizer choose a Sequential Scan (`Seq Scan`) over an Index Scan even when an index exists on the filtered column?
+
+- **Solution Approach:**
+    
+    - If the query filter selects a large percentage of the table's total rows (e.g., returning 40% of a 1-million-row table), an Index Scan requires looking up the index and then performing random page fetches (`TIDs`) for 400,000 separate blocks.
+    - A Sequential Scan reads contiguous disk blocks sequentially, which is significantly faster for large table fractions than thrashing the disk cache with hundreds of thousands of random index pointer jumps. The optimizer's cost model switches to a Seq Scan when estimated random I/O exceeds sequential scan cost.
+
