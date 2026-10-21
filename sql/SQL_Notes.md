@@ -4513,15 +4513,39 @@ DROP TABLE order_logs_y2026_q1; -- Instant metadata drop, zero row-by-row log bl
 **Important Points Related to It**
 
 - Partition Strategies:
-    - Range Partitioning: Routes rows based on numeric or date ranges (e.g., monthly/yearly metrics).
+    - **Range Partitioning:** Divides data based on continuous value ranges (such as dates, timestamps, or numerical ID intervals). Perfect for time-series and log data.
 
-    - List Partitioning: Routes rows based on discrete key values (e.g., region IN ('US-EAST', 'US-WEST')).
+	- **List Partitioning:** Divides data by matching explicit discrete lists of values (such as country codes, status types, or region identifiers).
 
-    - Hash Partitioning: Distributes rows across $N$ partitions using a modulo hash on keys (e.g., balancing tenant workloads evenly across nodes).
-    
-    - Primary Key / Unique Constraint Requirement: Unique and primary key constraints on a partitioned table must include all columns specified in the partition key.
+	- **Hash Partitioning:** Divides data by applying a hashing algorithm to a partition key column, distributing rows evenly across a predefined number of sub-tables to prevent hot-spotting.
+
+	- **Partition Pruning:** An optimization feature where the query planner analyzes the `WHERE` clause at runtime and completely skips (prunes) scanning partitions that cannot possibly contain matching data.
     
     - Over-Partitioning Anti-Pattern: Avoid creating too many small partitions (e.g., partitioning by minute or second). Thousands of tiny partitions overhead the query planner during execution planning, consuming memory and degrading overall query throughput.
+
+### Interview Questions
+
+#### Question 1: How does partition pruning function at the query execution level, and what query design anti-patterns prevent the optimizer from successfully pruning partitions?
+
+- **Solution Approach:**
+    
+    - _Mechanism:_ Partition pruning occurs during query planning. The optimizer evaluates predicates in the `WHERE` clause against the partition boundary metadata constraints. If a partition's declared range or list values fall entirely outside the predicate conditions, the planner drops that partition descriptor from the execution tree.
+    - _Anti-Patterns:_ Wrapping partition key columns inside SQL functions or implicit type conversions (e.g., `WHERE DATE(recorded_at) = '2026-07-01'` instead of `recorded_at >= '2026-07-01' AND recorded_at < '2026-07-02'`) masks the raw column value, blinding the optimizer and forcing a full scan across all partitions.
+
+#### Question 2: Compare Range, List, and Hash partitioning strategies, and describe a production scenario where choosing Hash partitioning is mandatory over Range partitioning.
+
+- **Solution Approach:**
+    
+    - _Range:_ Best for continuous chronological or numerical data (dates, financial IDs) where queries frequently filter by date intervals.
+    - _List:_ Best for categorical attributes with discrete, well-known values (regions, department codes, tenant IDs).
+    - _Hash:_ Best for uniform data distribution when there is no natural range or list boundary, or when a high-velocity single-key table (e.g., `user_id` or `device_id`) suffers from severe sequential write hot-spotting on a single range partition. Hash partitioning ensures writes are pseudo-randomly distributed across equal sub-tables.
+
+#### Question 3: What are the architectural challenges and performance trade-offs associated with maintaining unique constraints and primary keys on partitioned tables?
+
+- **Solution Approach:**
+    
+    - _The Challenge:_ In relational databases, primary keys enforce uniqueness across the entire table. For partitioned tables, enforcing a global unique constraint (e.g., `PRIMARY KEY (log_id, recorded_at)`) requires the database engine to verify uniqueness across _all_ physical partitions.
+    - _The Trade-Off:_ To guarantee global uniqueness, the partition key _must_ be included as part of the primary key or unique index definition. Without including the partition key in the index, the index becomes a global index spanning multiple physical files, creating heavy lock contention and slow distributed writes during partition maintenance operations.
 
 ---
 
@@ -6406,13 +6430,7 @@ DEALLOCATE fetch_account;
 
 **Table partitioning** is a database storage architecture technique that splits a single logical table into smaller, physically independent physical sub-tables (partitions) on disk, managed transparently by the query engine through a single parent table interface.
 
-- **Range Partitioning:** Divides data based on continuous value ranges (such as dates, timestamps, or numerical ID intervals). Perfect for time-series and log data.
 
-- **List Partitioning:** Divides data by matching explicit discrete lists of values (such as country codes, status types, or region identifiers).
-
-- **Hash Partitioning:** Divides data by applying a hashing algorithm to a partition key column, distributing rows evenly across a predefined number of sub-tables to prevent hot-spotting.
-
-- **Partition Pruning:** An optimization feature where the query planner analyzes the `WHERE` clause at runtime and completely skips (prunes) scanning partitions that cannot possibly contain matching data.
 
 ### Application
 
@@ -6467,28 +6485,6 @@ WHERE recorded_at >= '2026-07-01 00:00:00';
 
 - **Partition Pruning (`EXPLAIN ANALYZE`):** When filtering by date, the query optimizer inspects partition boundaries and excludes irrelevant tables from the physical scan phase entirely, saving substantial CPU and disk I/O.
 
-### Interview Questions
 
-#### Question 1: How does partition pruning function at the query execution level, and what query design anti-patterns prevent the optimizer from successfully pruning partitions?
-
-- **Solution Approach:**
-    
-    - _Mechanism:_ Partition pruning occurs during query planning. The optimizer evaluates predicates in the `WHERE` clause against the partition boundary metadata constraints. If a partition's declared range or list values fall entirely outside the predicate conditions, the planner drops that partition descriptor from the execution tree.
-    - _Anti-Patterns:_ Wrapping partition key columns inside SQL functions or implicit type conversions (e.g., `WHERE DATE(recorded_at) = '2026-07-01'` instead of `recorded_at >= '2026-07-01' AND recorded_at < '2026-07-02'`) masks the raw column value, blinding the optimizer and forcing a full scan across all partitions.
-
-#### Question 2: Compare Range, List, and Hash partitioning strategies, and describe a production scenario where choosing Hash partitioning is mandatory over Range partitioning.
-
-- **Solution Approach:**
-    
-    - _Range:_ Best for continuous chronological or numerical data (dates, financial IDs) where queries frequently filter by date intervals.
-    - _List:_ Best for categorical attributes with discrete, well-known values (regions, department codes, tenant IDs).
-    - _Hash:_ Best for uniform data distribution when there is no natural range or list boundary, or when a high-velocity single-key table (e.g., `user_id` or `device_id`) suffers from severe sequential write hot-spotting on a single range partition. Hash partitioning ensures writes are pseudo-randomly distributed across equal sub-tables.
-
-#### Question 3: What are the architectural challenges and performance trade-offs associated with maintaining unique constraints and primary keys on partitioned tables?
-
-- **Solution Approach:**
-    
-    - _The Challenge:_ In relational databases, primary keys enforce uniqueness across the entire table. For partitioned tables, enforcing a global unique constraint (e.g., `PRIMARY KEY (log_id, recorded_at)`) requires the database engine to verify uniqueness across _all_ physical partitions.
-    - _The Trade-Off:_ To guarantee global uniqueness, the partition key _must_ be included as part of the primary key or unique index definition. Without including the partition key in the index, the index becomes a global index spanning multiple physical files, creating heavy lock contention and slow distributed writes during partition maintenance operations.
 
 ---
