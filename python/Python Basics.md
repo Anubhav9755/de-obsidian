@@ -1934,7 +1934,17 @@ def main():
 			bad_rows += 1
 			continue
 		tx_id, user, amount  =  result
-		totals[user]+=amount
+		totals[user] += amount
+	
+	for user, total in totals.items():
+		print(f"{user}:{total:.2f}")
+		
+	top_user = max(totals, key=totals.get)
+	print(f"top user: {top_user}")
+	print(f"bad rows: {bad_rows}")
+	
+if __name__ "__main__":
+	main()
 # expected output of `python main.py`:
 # user_a: 450.50
 # user_b: 220.25
