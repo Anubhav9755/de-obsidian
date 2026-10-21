@@ -1934,7 +1934,7 @@ def main():
 			bad_rows += 1
 			continue
 		tx_id, user, amount  =  result
-		totals[user]+=am
+		totals[user]+=amount
 # expected output of `python main.py`:
 # user_a: 450.50
 # user_b: 220.25
