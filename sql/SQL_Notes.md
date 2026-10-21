@@ -6655,3 +6655,14 @@ GROUP BY c.relname, c.oid
 ORDER BY buffers_in_ram DESC
 LIMIT 5;
 ```
+
+
+### Interview Questions
+
+#### Question 1: What is the optimal starting percentage for configuring `shared_buffers` in PostgreSQL, and why can setting it excessively high (e.g., 80% of total system RAM) degrade overall performance?
+
+- **Solution Approach:**
+    
+    - _Optimal Sizing:_ Typically configured between 25% to 40% of total system RAM.
+        
+    - _Why Excessive Sizing Harms Performance:_ Operating systems rely heavily on the **OS Page Cache** (filesystem cache) to cache files, temporary sorts, and WAL writes. If `shared_buffers` consumes 80% of RAM, the OS page cache is starved. This creates double-buffering overhead (caching the same data twice in RAM) and reduces available memory for sort operations (`work_mem`) and OS background operations.
