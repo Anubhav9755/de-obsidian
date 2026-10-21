@@ -2004,7 +2004,7 @@ A venv isolates each project’s dependencies, so projects can need different ve
 One virtual environment per project, each with its own `requirements.txt` pinned to the right version. (Container tools like Docker take the same isolation idea further, but venvs are the foundation.)
 
 ---
-## Classes & Objects
+## Lesson 9: Classes & Objects
 
 - **Class**: a blueprint that describes what a kind of thing _has_ (data) and what it _can do_ (functions). `Transaction` is a class.
 - **Object (instance)**: one actual thing built from the blueprint. `Transaction("tx_1", "user_a", 150.5)` is one object. You can build thousands of objects from one class, and each holds its own data.
@@ -2049,3 +2049,45 @@ print(t)                         # Transaction('tx_1', 'user_a', 150.5)
 
 - **`__repr__`** is another dunder method: it controls how the object is displayed. Without it, `print(t)` shows something useless like `<__main__.Transaction object at 0x000001...>`. `!r` inside an f-string shows a value with quotes (`'tx_1'`), the way you’d type it in code.
 
+**Two objects from one class are independent:**
+
+```python
+a = Transaction("tx_1", "user_a", 150.5)
+b = Transaction("tx_2", "user_b", 45.5)
+a.amount = 999
+print(b.amount)      # 45.5, unaffected
+```
+
+### Instance attributes vs class attributes
+
+
+```python
+class Account:
+    bank = "PSB"                    # class attribute: one copy, shared by ALL objects
+
+    def __init__(self, owner):
+        self.owner = owner          # instance attribute: each object has its own
+
+x = Account("Asha")
+y = Account("Ravi")
+print(x.bank, y.bank)               # PSB PSB
+```
+
+**The trap:** a class attribute that is a **list or dict** is shared by every object, just like the mutable-default-argument trap.
+
+```python
+class Bad:
+    items = []                      # shared!
+    def add(self, x):
+        self.items.append(x)
+
+p, q = Bad(), Bad()
+p.add(1)
+print(q.items)                      # [1]  q changed even though we only touched p
+```
+
+Fix: create the list per object, inside `__init__`: `self.items = []`.
+
+### Protecting data with `@property`
+
+A **decorator** is a line starting with `@` placed above a function. It wraps the function and changes how it behaves.
