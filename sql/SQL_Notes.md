@@ -6628,3 +6628,30 @@ The **Buffer Cache** (`shared_buffers` in PostgreSQL) is a dedicated region of s
 
 An enterprise analytics platform uses database monitoring tools (`pg_stat_database`) to track cache hit ratios and buffer usage trends across read-heavy workloads, ensuring that caching layers remain optimal and reducing cloud EBS volume IOPS costs.
 
+### Code and Explanation
+
+```sql
+-- 1. Checking Database-Wide Cache Hit Ratios
+SELECT 
+    datname AS database_name,
+    numbackends AS active_connections,
+    blks_read AS disk_reads,
+    blks_hit AS buffer_hits,
+    ROUND(
+        (blks_hit::FLOAT / NULLIF(blks_hit + blks_read, 0)) * 100.0, 2
+    ) AS cache_hit_ratio_pct
+FROM pg_stat_database
+WHERE datname = current_database();
+
+-- 2. Inspecting Cached Buffer Usage per Table
+SELECT 
+    c.relname AS table_name,
+    pg_size_pretty(pg_table_size(c.oid)) AS table_size,
+    count(b.bufferid) AS buffers_in_ram,
+    pg_size_pretty(count(b.bufferid) * 8192) AS memory_in_ram
+FROM pg_class c
+JOIN pg_buffercache b ON b.relfilenode = c.relfilenode
+GROUP BY c.relname, c.oid
+ORDER BY buffers_in_ram DESC
+LIMIT 5;
+```
