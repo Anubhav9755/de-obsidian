@@ -2004,4 +2004,48 @@ A venv isolates each project’s dependencies, so projects can need different ve
 One virtual environment per project, each with its own `requirements.txt` pinned to the right version. (Container tools like Docker take the same isolation idea further, but venvs are the foundation.)
 
 ---
+## Classes & Objects
+
+- **Class**: a blueprint that describes what a kind of thing _has_ (data) and what it _can do_ (functions). `Transaction` is a class.
+- **Object (instance)**: one actual thing built from the blueprint. `Transaction("tx_1", "user_a", 150.5)` is one object. You can build thousands of objects from one class, and each holds its own data.
+- **Attribute**: a variable that belongs to an object (`t.amount`).
+- **Method**: a function that belongs to a class (`t.is_high_value()`).
+
+**Industrial use:** you’ve already been using objects without writing classes. A pandas `DataFrame` is an object. A file you opened with `open()` is an object. A machine-learning model in scikit-learn is an object, and you call its methods `model.fit(...)` and `model.predict(...)`. Database connections, API clients, and pipeline steps are all objects.
+
+**Problem it solves:** without classes, a record is a loose tuple or dict, and the functions that work on it live somewhere else. Nothing stops someone from putting a negative amount in a dict, or forgetting which key holds what. A class **bundles the data with the functions that use it, and can enforce rules on the data**. It also lets an object **remember state** (for example, a connection that stays open, or a running total).
+
+```python
+class Transaction:
+    def __init__(self, tx_id, user, amount):
+        self.tx_id = tx_id
+        self.user = user
+        self.amount = amount
+
+    def is_high_value(self, threshold=100):
+        return self.amount > threshold
+
+    def __repr__(self):
+        return f"Transaction({self.tx_id!r}, {self.user!r}, {self.amount})"
+
+
+t = Transaction("tx_1", "user_a", 150.5)     # create an object
+print(t.amount)                  # 150.5
+print(t.is_high_value())         # True
+print(t.is_high_value(200))      # False
+print(t)                         # Transaction('tx_1', 'user_a', 150.5)
+```
+
+- **`__init__`** is a **special method** (Python calls these “dunder” methods, short for “double underscore”) that runs automatically when you create an object. It sets up the object’s starting data. It’s often called the **constructor**.
+
+- **`self`** is the object the method is working on. When you write `t.is_high_value()`, Python passes `t` in as the first argument automatically. That’s why every method’s first parameter is `self`, and why you never pass it yourself. These two calls are exactly equivalent:
+
+```python
+  t.is_high_value(200)
+  Transaction.is_high_value(t, 200)
+```
+
+- **`self.amount = amount`** creates an attribute stored on the object. The left side is the attribute, the right side is the parameter.
+
+- **`__repr__`** is another dunder method: it controls how the object is displayed. Without it, `print(t)` shows something useless like `<__main__.Transaction object at 0x000001...>`. `!r` inside an f-string shows a value with quotes (`'tx_1'`), the way you’d type it in code.
 
