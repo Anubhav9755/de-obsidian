@@ -6694,3 +6694,87 @@ LIMIT 5;
 ---
 ## Module 18: Performance Tuning & Diagnostic Architecture — VACUUM, Autovacuum, and Bloat Analysis
 
+Because PostgreSQL uses Multi-Version Concurrency Control (MVCC), `UPDATE` and `DELETE` operations do not overwrite data in place. Instead, they mark old row versions (tuples) as dead. **VACUUM** is the maintenance process responsible for sweeping tables to reclaim dead tuple storage space, making those pages available for future insertions.
+
+- **Autovacuum Daemon:** A background worker process that automatically triggers `VACUUM` and `ANALYZE` operations based on configurable table modification thresholds.
+
+- **Table & Index Bloat:** Wasted physical disk space occurring when dead tuples are cleaned up, but the underlying disk pages cannot be returned to the operating system immediately (leaving empty gaps), slowing down sequential scans.
+
+- **Transaction ID (XID) Wraparound:** A critical system failure mode where PostgreSQL forces a read-only lockdown to prevent data loss when transaction IDs approach the 32-bit integer limit (2 billion transactions) without being frozen by vacuuming.
+
+### Application
+
+- **Storage Reclamation:** Preventing tables and indexes from expanding infinitely on disk due to high-frequency updates and deletes.
+
+- **Preventing System Outages:** Guaranteeing that the autovacuum daemon keeps pace with transaction write volume to avoid catastrophic XID wraparound shutdowns.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A high-throughput session-tracking table experiences 5,000 updates per second. Over three months, the active data size remains at 20 GB, but the physical table size on disk swells to 300 GB. Sequential scans crawl because the database reads hundreds of gigabytes of empty, bloated data pages.
+
+- **Solution:** Tuning autovacuum scale factors and cost limits ensures that dead tuples are cleaned up aggressively and space is reused efficiently, while targeted maintenance (`pg_repack` or `VACUUM FULL`) reorganizes physical storage to eliminate bloat.
+
+### Industrial Example
+
+An enterprise financial ledger platform configures aggressive autovacuum thresholds (`autovacuum_vacuum_scale_factor = 0.05`) on volatile transactional balance tables to prevent dead tuple accumulation and maintain consistent query performance under heavy write loads.
+
+```sql
+-- 1. Inspecting Table and Index Bloat / Dead Tuple Statistics
+SELECT 
+    schemaname,
+    relname AS table_name,
+    n_dead_tup AS dead_tuples,
+    n_live_tup AS live_tuples,
+    ROUND(
+        (n_dead_tup::FLOAT / NULLIF(n_live_tup + n_dead_tup, 0)) * 100.0, 2
+    ) AS dead_tuple_pct,
+    last_vacuum,
+    last_autovacuum
+FROM pg_stat_user_tables
+ORDER BY n_dead_tup DESC
+LIMIT 5;
+
+-- 2. Manually Executing a Non-Blocking Vacuum on a Table
+VACUUM VERBOSE ANALYZE transactions;
+
+-- 3. Adjusting Autovacuum Thresholds for a High-Volume Table
+ALTER TABLE transactions SET (
+    autovacuum_vacuum_scale_factor = 0.05, -- Triggers autovacuum when 5% of rows change
+    autovacuum_vacuum_threshold = 1000     -- Minimum changed rows required to trigger
+);
+```
+
+- **`pg_stat_user_tables`:** A built-in PostgreSQL system statistics view that aggregates live metrics for all user-created tables in the current database.
+- **`n_dead_tup` (Dead Tuples):** The number of obsolete row versions left behind by `UPDATE` and `DELETE` operations under MVCC (Multi-Version Concurrency Control). These consume disk space until vacuumed.
+- **`n_live_tup` (Live Tuples):** The number of currently active, visible rows in the table.
+- **`dead_tuple_pct`:** Calculates the proportion of dead weight to total tuples. A high percentage (e.g., above 20%–30%) on large tables indicates that autovacuuming is either falling behind or configured with thresholds that are too conservative.
+- **`last_vacuum` & `last_autovacuum`:** Timestamps showing when the table was last cleaned manually (`VACUUM`) or automatically by the background worker daemon (`AUTOVACUUM`). If these timestamps are days or weeks old on a heavily updated table, it signals a maintenance bottleneck.
+
+- **`VACUUM`:** Scans the `transactions` table to reclaim storage occupied by dead tuples, marking those spaces as reusable in the Free Space Map (FSM). Crucially, this runs **non-blocking** (allowing concurrent reads and writes).
+- **`VERBOSE`:** Outputs a detailed, multi-line progress report to the console/logs detailing pages scanned, dead tuples removed, and index maintenance stats.
+- **`ANALYZE`:** Immediately updates the table statistics catalog (`pg_statistic`) after cleaning, ensuring the query optimizer has fresh cost estimates.
+
+- **`autovacuum_vacuum_scale_factor = 0.05`:** Lowers the default trigger threshold (typically 20%) to **5%**. Autovacuum will now kick in when 5% of the table's total rows have changed.
+- **`autovacuum_vacuum_threshold = 1000`:** Adds a fixed minimum floor of 1000 changed rows required alongside the scale factor before triggering.
+- **Why Use It:** High-volume operational tables (like financial transactions or event logs) churn data rapidly. Tuning these parameters lower ensures that autovacuum runs more frequently in smaller, lightweight batches rather than waiting for massive accumulations of dead tuples that choke disk performance.
+### Interview Questions
+
+#### Question 1: What is Transaction ID (XID) wraparound in PostgreSQL, and why is it considered a catastrophic failure mode if autovacuum fails?
+
+- **Solution Approach:**
+    - PostgreSQL uses a 32-bit integer transaction ID (~2 billion limit) to track MVCC record age. Because IDs wrap around, the database must periodically "freeze" old transactions so they appear older than any active transaction.
+    - If autovacuum falls behind and transactions reach the wraparound limit, the database enters emergency read-only mode (or shuts down entirely) to prevent data corruption from data appearing to come from the "future".
+
+#### Question 2: Why does standard `VACUUM` not return physical disk space back to the operating system, and when must a database administrator resort to `VACUUM FULL` or table rewrites?
+
+- **Solution Approach:**
+    - Standard `VACUUM` marks space within data pages as reusable (free space map), but it does not truncate the physical file size on disk because doing so requires an exclusive table lock (`ACCESS EXCLUSIVE`), which blocks all reads and writes.
+    - `VACUUM FULL` (or tools like `pg_repack`) physically rewrites the entire table into a brand new disk file, stripping away all bloat and releasing disk space back to the OS, but it requires table-level locking and double the disk space during execution.
+
+#### Question 3: How does the autovacuum cost-based delay mechanism prevent background maintenance tasks from starving active user queries of CPU and I/O resources?
+
+- **Solution Approach:**
+    - Autovacuum uses internal cost limits (`autovacuum_vacuum_cost_limit`) and cost delays (`autovacuum_vacuum_cost_delay`). Every page read, dirty page modified, or page scanned incurs an artificial cost weight.
+    - Once the cumulative cost exceeds the limit, the background worker pauses execution for the configured delay duration. This throttles its resource consumption, ensuring production user queries retain priority for disk I/O and CPU cycles.
+
+---
