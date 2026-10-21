@@ -1838,6 +1838,10 @@ deactivate                          # leave the venv
 
 The `requirements.txt` file looks like `pandas==<version>` with one package per line, and `pip freeze` also lists the packages pandas itself depends on (its **dependencies**). Never commit `.venv/` itself to Git (list it in a `.gitignore` file, which tells Git what to ignore). It’s large and machine-specific. Commit `requirements.txt` instead.
 
+- `defaultdict(float)` → automatically starts missing values at `0.0`.
+- `defaultdict(int)` → automatically starts missing values at `0`.
+- `defaultdict(list)` → automatically starts missing values as an empty list `[]`.
+
 **TASK**: **modify.** Rewrite this grouping code from Lesson 4 using `defaultdict`, so the `if user not in by_user` check disappears:
 
 ```python
@@ -1859,8 +1863,6 @@ for tx_id, user, amount in transactions:
 ```
 
 **MAIN TASK**
-
-Part B, create two files:
 
 `cleaning.py`:
 
@@ -1898,7 +1900,6 @@ def parse_row(line):
 ```
 
 `main.py`:
-
 
 ```python
 # 1. from cleaning import parse_row
@@ -1951,6 +1952,17 @@ if __name__ "__main__":
 # top user: user_a
 # bad rows: 3
 ```
+
+Execution:
+1. Main file starts: `from collections import defaultdict` imports `defaultdict`, and `from cleaning import parse_row` imports the function from `cleaning.py`.
+
+2. Process each row: `parse_row(line)` strips whitespace, splits the row by commas, and checks that there are exactly three fields.
+
+3. Validate the amount: `float(amount_raw)` converts the amount to a number. Invalid amounts, empty rows, and amounts less than or equal to zero return `None`.
+
+4. Calculate totals: The main file skips invalid rows and counts them in `bad_rows`. Valid rows update `totals[user]` using `defaultdict(float)`, which initializes new users to `0.0`.
+
+5. Print results: The main file prints each user's total, finds the highest-total user using `max(totals, key=totals.get)`, and prints the number of invalid rows. With your current `parse_row`, `tx_4` with amount `-20` is invalid, so the final totals are `user_a: 450.50`, `user_b: 220.25`, and `bad_rows: 3`.
 
 ### Find the bugs
 
