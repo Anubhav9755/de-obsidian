@@ -6467,3 +6467,28 @@ WHERE recorded_at >= '2026-07-01 00:00:00';
 
 - **Partition Pruning (`EXPLAIN ANALYZE`):** When filtering by date, the query optimizer inspects partition boundaries and excludes irrelevant tables from the physical scan phase entirely, saving substantial CPU and disk I/O.
 
+### Interview Questions
+
+#### Question 1: How does partition pruning function at the query execution level, and what query design anti-patterns prevent the optimizer from successfully pruning partitions?
+
+- **Solution Approach:**
+    
+    - _Mechanism:_ Partition pruning occurs during query planning. The optimizer evaluates predicates in the `WHERE` clause against the partition boundary metadata constraints. If a partition's declared range or list values fall entirely outside the predicate conditions, the planner drops that partition descriptor from the execution tree.
+    - _Anti-Patterns:_ Wrapping partition key columns inside SQL functions or implicit type conversions (e.g., `WHERE DATE(recorded_at) = '2026-07-01'` instead of `recorded_at >= '2026-07-01' AND recorded_at < '2026-07-02'`) masks the raw column value, blinding the optimizer and forcing a full scan across all partitions.
+
+#### Question 2: Compare Range, List, and Hash partitioning strategies, and describe a production scenario where choosing Hash partitioning is mandatory over Range partitioning.
+
+- **Solution Approach:**
+    
+    - _Range:_ Best for continuous chronological or numerical data (dates, financial IDs) where queries frequently filter by date intervals.
+    - _List:_ Best for categorical attributes with discrete, well-known values (regions, department codes, tenant IDs).
+    - _Hash:_ Best for uniform data distribution when there is no natural range or list boundary, or when a high-velocity single-key table (e.g., `user_id` or `device_id`) suffers from severe sequential write hot-spotting on a single range partition. Hash partitioning ensures writes are pseudo-randomly distributed across equal sub-tables.
+
+#### Question 3: What are the architectural challenges and performance trade-offs associated with maintaining unique constraints and primary keys on partitioned tables?
+
+- **Solution Approach:**
+    
+    - _The Challenge:_ In relational databases, primary keys enforce uniqueness across the entire table. For partitioned tables, enforcing a global unique constraint (e.g., `PRIMARY KEY (log_id, recorded_at)`) requires the database engine to verify uniqueness across _all_ physical partitions.
+    - _The Trade-Off:_ To guarantee global uniqueness, the partition key _must_ be included as part of the primary key or unique index definition. Without including the partition key in the index, the index becomes a global index spanning multiple physical files, creating heavy lock contention and slow distributed writes during partition maintenance operations.
+
+---
