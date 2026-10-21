@@ -6401,3 +6401,69 @@ DEALLOCATE fetch_account;
     - _Out-of-Band:_ Used when server responses are asynchronous or unstable. The attacker crafts payloads that force the database server to make external network calls (e.g., DNS requests or HTTP requests via database extensions) to a server controlled by the attacker to exfiltrate data.
 
 ---
+
+## Module 17: Advanced Scalability — Table Partitioning (Range, List, Hash)
+
+**Table partitioning** is a database storage architecture technique that splits a single logical table into smaller, physically independent physical sub-tables (partitions) on disk, managed transparently by the query engine through a single parent table interface.
+
+- **Range Partitioning:** Divides data based on continuous value ranges (such as dates, timestamps, or numerical ID intervals). Perfect for time-series and log data.
+
+- **List Partitioning:** Divides data by matching explicit discrete lists of values (such as country codes, status types, or region identifiers).
+
+- **Hash Partitioning:** Divides data by applying a hashing algorithm to a partition key column, distributing rows evenly across a predefined number of sub-tables to prevent hot-spotting.
+
+- **Partition Pruning:** An optimization feature where the query planner analyzes the `WHERE` clause at runtime and completely skips (prunes) scanning partitions that cannot possibly contain matching data.
+
+### Application
+
+- **Massive Scale Management:** Handling tables containing hundreds of millions or billions of rows without degrading index performance or maintenance speeds.
+
+- **Rapid Data Lifecycle Management (Archival):** Dropping an entire historical partition instantly via metadata operations (`DROP TABLE`) rather than running slow, resource-heavy `DELETE` statements that lock tables and bloat write transaction logs.
+
+### Real-World Problem and How Topic Solves It
+
+- **Problem:** A fintech platform stores 400 million transaction records in a single monolithic table. Index maintenance (`VACUUM`, reindexing) and historical data purges (deleting transactions older than 5 years) lock the table for hours, causing severe production downtime and transaction log bloat.
+
+- **Solution:** Partitioning the table by monthly ranges (`RANGE (transaction_date)`) allows the database to store each month's data in its own physical table file. Purging old data requires executing a single metadata drop command on the specific month's partition (`DROP TABLE`), completing instantly with zero table locking or write amplification.
+
+### Industrial Example
+
+An enterprise IoT telemetry platform ingests 50 million sensor data points daily. The data engineering architecture organizes the core sensor logs table using daily Range partitioning, ensuring real-time aggregation queries target only the active day's partition index while older partitions remain isolated on cheaper storage tiers.
+
+### Code and Explanation
+
+
+```sql
+-- 1. Creating a Partitioned Parent Table (PostgreSQL style)
+CREATE TABLE telemetry_logs (
+    log_id BIGINT,
+    device_id INT,
+    recorded_at TIMESTAMP NOT NULL,
+    payload JSONB
+) PARTITION BY RANGE (recorded_at);
+
+-- 2. Creating Explicit Monthly Partitions
+CREATE TABLE telemetry_logs_2026_06 PARTITION OF telemetry_logs
+    FOR VALUES FROM ('2026-06-01 00:00:00') TO ('2026-07-01 00:00:00');
+
+CREATE TABLE telemetry_logs_2026_07 PARTITION OF telemetry_logs
+    FOR VALUES FROM ('2026-07-01 00:00:00') TO ('2026-08-01 00:00:00');
+
+-- 3. Inserting Data (Routed automatically to the correct partition)
+INSERT INTO telemetry_logs VALUES 
+(1, 101, '2026-06-15 10:30:00', '{"cpu": 45}'),
+(2, 102, '2026-07-02 14:00:00', '{"cpu": 82}');
+
+-- 4. Query demonstrating Partition Pruning
+-- The query planner automatically prunes telemetry_logs_2026_06 from the execution plan
+EXPLAIN ANALYZE
+SELECT * FROM telemetry_logs 
+WHERE recorded_at >= '2026-07-01 00:00:00';
+```
+
+- **`PARTITION BY RANGE (recorded_at)`:** Instructs the database engine to treat this table as a partitioned master table keyed on the timestamp column.
+
+- **`PARTITION OF telemetry_logs FOR VALUES FROM ... TO ...`:** Defines the explicit boundary limits for physical sub-tables.
+
+- **Partition Pruning (`EXPLAIN ANALYZE`):** When filtering by date, the query optimizer inspects partition boundaries and excludes irrelevant tables from the physical scan phase entirely, saving substantial CPU and disk I/O.
+
