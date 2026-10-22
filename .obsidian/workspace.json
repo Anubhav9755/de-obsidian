@@ -20,8 +20,19 @@
               "icon": "lucide-file",
               "title": "Python_Combined_Notes"
             }
+          },
+          {
+            "id": "cb3b14b96ca7b53f",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "New tab"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -201,10 +212,10 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "23fd4ed94bf3020b",
+  "active": "cb3b14b96ca7b53f",
   "lastOpenFiles": [
-    "python/Python Basics.md",
     "Python_Combined_Notes.md",
+    "python/Python Basics.md",
     "python/Python Advanced.md",
     "aws/AWS NOTES.md",
     "sql/SQL_Notes.md",
