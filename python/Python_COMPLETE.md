@@ -1,12 +1,4 @@
 
-# 🐍 Python Combined Notes
-
-Merged from `Python_Basics_1.md` and `Python_Advanced_1.md`. Your text is unchanged. Only section titles were turned into headings so the outline works.
-
-## Contents
-
-Use Obsidian's **Outline** panel to jump between sections.
-
 **Part I — Python Basics**
 
 - Lesson 1: Variables, Data Types, Type Casting & f-strings
@@ -57,7 +49,6 @@ Use Obsidian's **Outline** panel to jump between sections.
 - Practice Application — Stacked Production Pipeline
 
 ---
-
 # PART I — Python Basics
 
 ## Lesson 1: Variables, Data Types, Type Casting & f-strings
@@ -1847,7 +1838,7 @@ python main.py         # prints 99.0   (and NOT 1200.5)
 
 **A package** is just a folder:
 
-```
+```BASH
 project/
     main.py
     pipeline/
@@ -4398,7 +4389,6 @@ cleaners: list: Type hint declaring that the parameter expects a list containing
 - First-Class Trait: Functions can be stored as keys or values inside dictionaries, enabling flexible routing tables (e.g., {"CSV": parse_csv, "JSON": parse_json}).
 
 -----
-
 ## Closures
 
 A closure is a nested function that retains access to variables from its enclosing (outer) lexical scope, even after the outer function has finished executing and its stack frame has been destroyed from memory.
@@ -4479,7 +4469,6 @@ STEP BY STEP EXECUTION:
 - nonlocal vs global: Use nonlocal for variables in enclosing functions; use global only for module-level variables.
 
 ---
-
 ## Plain Decorator (Manual vs. @ Syntax)
 
 A decorator is a design pattern in Python used to dynamically modify, extend, or extend the behavior of a function or method without altering its source code. Architecturally, a decorator is a higher-order function that takes a target function as an input, wraps it inside a closure that adds custom logic, and returns the modified wrapper function.
@@ -4555,7 +4544,6 @@ print(update_database_record(501, {"status": "active"}))
 3. Syntax Equality: @decorator is purely syntactic sugar for func = decorator(func).
 
 ---
-
 ## Metaprogramming Preservation (functools.wraps)
 
 functools.wraps is a built-in convenience decorator applied inside custom decorators to preserve the metadata (such as __name__, __doc__, and type annotations) of the decorated target function.
@@ -4625,7 +4613,6 @@ print(f"Docstring: {calculate_shipping.__doc__}")  # Prints: Calculates shipping
 - Introspection Safety: Prevents introspection failures when using inspect.signature() or generating automated documentation.
 
 ---
-
 ## Building the @timer Decorator & Practice Application
 
 The @timer decorator is a structural engineering pattern used to measure and record the execution time of any wrapped function using high-precision performance timers (time.perf_counter()).
@@ -4721,7 +4708,6 @@ if __name__ == "__main__":
 3. Zero Code Duplication: Wrapping 3 distinct functions with @timer applies identical timing logic across all of them without duplicating a single line of timing code.
 
 ---
-
 ## Decorators with Arguments (Decorator Factories)
 
 A decorator factory (or parameterized decorator) is a function that accepts custom configuration arguments and returns a decorator function. To receive parameters directly on the decorator syntax line (e.g., @retry(times=3, delay=1)), Python requires a 3-tier nested function structure:
@@ -4823,7 +4809,6 @@ if __name__ == "__main__":
 - Trailing Parentheses Requirement: If a decorator factory uses default argument values (e.g., @retry()), the trailing parentheses () are strictly required to execute the outer factory function.
 
 ---
-
 ## Real System Logging (@log_execution)
 
 @log_execution is a decorator pattern that integrates Python’s standard logging library instead of plain print() statements. It automatically records function entry, positional/keyword argument payloads, return outputs, and caught exceptions with high-precision timestamps and log severity levels (INFO, ERROR).
@@ -4923,7 +4908,6 @@ if __name__ == "__main__":
 3. Data Privacy Caution: Be careful when logging function arguments (*args, **kwargs) to avoid writing sensitive data (like passwords or API keys) into log files.
 
 ---
-
 ## Chaining / Stacking Multiple Decorators
 
 Decorator stacking refers to applying two or more decorators to a single target function. Stacking builds a multi-layered execution wrapper where decorators bind from the bottom up (innermost to outermost) at import time, but execute from the top down (outermost to innermost) at runtime.
@@ -5010,7 +4994,6 @@ if __name__ == "__main__":
 - Exception Interception: An outer decorator can catch and handle exceptions raised by an inner decorator or the core target function.
 
 ---
-
 ## Class-Based Decorators
 
 A class-based decorator is a Python class that implements the __call__ dunder method, allowing instances of the class to act as function wrappers while maintaining state using standard instance attributes (self.attribute).
@@ -5095,7 +5078,6 @@ Accessible Methods: Callers can interact directly with methods defined on the de
 Method Decorating Note: Applying plain class-based decorators directly to methods inside another class requires caution, as plain __call__ does not pass self instance bindings automatically without descriptor handling (__get__).
 
 ---
-
 ## Practice Application — Stacked Production Pipeline
 
 Pipeline functions that simulate external API flakiness using random errors, and stack @retry and @log_execution together to handle network failures gracefully while maintaining complete system logging.
