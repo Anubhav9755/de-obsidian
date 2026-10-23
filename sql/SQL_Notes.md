@@ -6886,3 +6886,60 @@ ANALYZE transactions;
 ### 4. Industrial Example
 
 An enterprise SaaS platform handling millions of daily API requests routes all database traffic through a cluster of distributed PgBouncer instances running in transaction mode, decoupling web application scaling from database process limits.
+
+### Configuration Example (`pgbouncer.ini`)
+
+
+```TOML
+[databases]
+production_db = host=127.0.0.1 port=5432 dbname=fintech_prod
+
+[pgbouncer]
+listen_addr = *
+listen_port = 6432
+auth_type = md5
+auth_file = /etc/pgbouncer/userlist.txt
+
+; Pooling Configuration
+pool_mode = transaction
+max_client_conn = 5000
+default_pool_size = 50
+min_pool_size = 10
+reserve_pool_size = 5
+reserve_pool_timeout = 3
+```
+
+#### Configuration Breakdown:
+
+- **`pool_mode = transaction`:** Ensures connections are recycled at the end of every `COMMIT` or `ROLLBACK`, maximizing concurrent client support.
+
+- **`max_client_conn = 5000`:** The maximum number of incoming client connections PgBouncer will accept concurrently.
+
+- **`default_pool_size = 50`:** The number of actual backend connections kept open to the PostgreSQL database for this database definition.
+
+### Advanced Interview Questions
+
+#### Question 1: Why does PostgreSQL's native process-per-connection architecture degrade under extremely high concurrency (e.g., 5,000+ simultaneous clients), and how do event-driven connection proxies bypass this limitation?
+
+- **Solution Approach:**
+    - _Process-per-Connection Limitation:_ Spawning a separate OS process for every connection creates heavy memory pressure (each process allocates private memory for caches and stacks) and causes CPU thrashing due to excessive context switching when thousands of processes compete for CPU time.
+    - _Event-Driven Solution:_ PgBouncer runs on a single-threaded event loop (using `epoll`/`kqueue`), efficiently managing thousands of idle or active client socket descriptors with minimal memory overhead and multiplexing them over a small, constant number of database worker connections.
+
+#### Question 2: What are the critical functional breakages and application pitfalls that occur when deploying PgBouncer in _Transaction Mode_?
+
+- **Solution Approach:**
+    
+    - Because a backend connection is returned to the pool at the end of a transaction, state tied to the _session_ does not persist across transactions.
+    - _Breakages:_
+        - **Prepared Statements:** Session-bound prepared statements (`PREPARE`) will fail or return errors because the next query may execute on a different backend connection where that statement was never compiled.
+        - **Temporary Tables:** Temp tables created in transaction `A` disappear or are inaccessible in transaction `B` if routed to a different backend connection.
+        - **Session Variables (`SET LOCAL`, `SET`):** Configuration settings applied via `SET` do not reliably persist across transactions unless explicitly reset or handled per statement.
+
+#### Question 3: Compare Session pooling, Transaction pooling, and Statement pooling in PgBouncer. Which workloads are best suited for each?
+
+- **Solution Approach:**
+    - _Session Pooling:_ Retains the backend connection for the entire client session lifetime. Safe for all SQL features (temp tables, prepared statements), but offers poor multiplexing efficiency (best for legacy apps with heavy connection lifecycles).
+    - _Transaction Pooling:_ Recycles the connection after every transaction commit/rollback. Highly efficient for stateless web applications and REST APIs, but breaks session-scoped features.
+    - _Statement Pooling:_ Recycles the connection after every single SQL statement. Highly restrictive (breaks multi-statement transactions, stored procedures, and locks), rarely used in modern production environments.
+
+---
