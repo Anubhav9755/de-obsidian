@@ -6778,3 +6778,18 @@ ALTER TABLE transactions SET (
     - Once the cumulative cost exceeds the limit, the background worker pauses execution for the configured delay duration. This throttles its resource consumption, ensuring production user queries retain priority for disk I/O and CPU cycles.
 
 ---
+## Performance Tuning & Diagnostic Architecture — Statistics Collector (`ANALYZE`, `pg_statistic`) & Estimation Errors
+
+The **Statistics Collector** is a core database subsystem that gathers structural metadata about table contents and index distributions, storing histograms, null fractions, and frequency counts in system catalogs (`pg_statistic`, exposed to users via the `pg_stats` view).
+
+- **Cardinality Estimation:** The cost-based query optimizer relies entirely on these statistics to calculate expected row counts (cardinality) for every node in an execution plan.
+
+- **Histograms & MCVs (Most Common Values):** PostgreSQL builds frequency lists for popular values and equisized histograms for continuous data ranges to model non-uniform data distributions.
+
+- **Statistics Target (`default_statistics_target`):** Controls the sample size and number of histogram buckets collected during an `ANALYZE` operation (default is 100).
+
+### Application
+
+- **Preventing Bad Execution Plans:** Ensuring the query planner accurately predicts whether a filter clause will match 5 rows or 5 million rows.
+
+- **Tuning Cost Models:** Adjusting statistical accuracy for high-cardinality or skewed columns where default sampling rates fail to capture data distribution.

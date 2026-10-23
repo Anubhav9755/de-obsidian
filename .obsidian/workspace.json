@@ -13,26 +13,15 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Python_Combined_Notes.md",
+                "file": "sql/SQL_Notes.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Python_Combined_Notes"
-            }
-          },
-          {
-            "id": "cb3b14b96ca7b53f",
-            "type": "leaf",
-            "state": {
-              "type": "empty",
-              "state": {},
-              "icon": "lucide-file",
-              "title": "New tab"
+              "title": "SQL_Notes"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -212,7 +201,7 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "cb3b14b96ca7b53f",
+  "active": "23fd4ed94bf3020b",
   "lastOpenFiles": [
     "Python_Combined_Notes.md",
     "python/Python Basics.md",
