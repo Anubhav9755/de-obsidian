@@ -1,9 +1,3 @@
----
-title: Python Combined Notes — Basics + Advanced
-tags: [python, notes, data-engineering, placements]
-created: 2026-10-22
-sources: [Python_Basics_1.md, Python_Advanced_1.md]
----
 
 # 🐍 Python Combined Notes
 
