@@ -5233,7 +5233,13 @@ Also tell me: how do Macie, Inspector and GuardDuty differ, and which one would 
 
 ### AWS Support Plans
 
-
+- **Shared Responsibility**: AWS runs the cloud, you run what you put in it. A support plan helps when _your_ workload has a problem, but it doesn’t change who is responsible.
+- **AWS account vs Organization**: a support plan is bought **per account**, even when accounts are grouped under Organizations.
+- **Severity and response time:** when you open a **support case**, you choose how urgent it is, and the plan decides how fast AWS commits to _first response_ (not to a fix).
+- **Trusted Advisor:** an AWS tool that checks your account against best practices in cost, performance, security, fault tolerance and service limits. The **full** set of checks depends on your plan.
+- **AWS Health:** a personal view of AWS service events that affect **your** resources (for example a planned maintenance on your instance).
+- **Well-Architected Framework**: AWS’s design checklist. Higher support plans include expert-led reviews against it.
+- **Inspector, Macie, GuardDuty**: security tools. Support plans give you **people and guidance**, not another scanner.
 
 
 
