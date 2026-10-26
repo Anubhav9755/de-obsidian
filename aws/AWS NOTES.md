@@ -5034,9 +5034,10 @@ What Macie does -
 2. Sensitive data discovery: it inspects object contents. It can read common formats like text, CSV, JSON, PDF, Office documents, Parquet and compressed archives.
 3. Findings: it produces two kinds.
 
-Finding type	Meaning	Example
-Policy findings	The bucket’s security settings changed or are risky	Block Public Access disabled, bucket made public, default encryption turned off, bucket shared with an outside account
-Sensitive data findings	Sensitive data found in objects	Credit card numbers, government IDs, credentials, health information
+| Finding type                | Meaning                                                 | Example                                                                                                                |
+| --------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Policy findings**         | The **bucket’s security settings** changed or are risky | Block Public Access disabled, bucket made public, default encryption turned off, bucket shared with an outside account |
+| **Sensitive data findings** | Sensitive data **found in objects**                     | Credit card numbers, government IDs, credentials, health information                                                   |
 
 Findings include the bucket, object, the type and count of data, and a severity. They don’t contain the sensitive values themselves, though you can optionally configure retrieval of a small number of samples to confirm a finding (this needs proper permissions and should be restricted).
 
