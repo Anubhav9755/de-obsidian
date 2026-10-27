@@ -6114,10 +6114,12 @@ Design the solution:
 - **VPC, ALB and NLB** (Lessons 20 and 23): private networks and load balancers, for backends not on the public internet.
 - **CloudWatch** (Lesson 33): logs and metrics, where API access logs and errors are recorded.
 
-### 1. Analogy
+## Analogy
+
 A **hotel front desk**. Guests (clients) don't walk into the kitchen or the storage rooms. They go to the front desk, which checks who they are (authentication), checks they're allowed what they're asking for (authorization), limits how many requests one guest can make (throttling), remembers common answers (caching), and passes the request to the right department (Lambda, a server, another service).
 
-### 2. Definition
+## Definition
+
 **Amazon API Gateway** is a **fully managed service for creating, publishing, securing, monitoring and scaling APIs** that front your backends. You don't run servers, and it scales automatically.
 
 #### API types
@@ -6129,14 +6131,16 @@ A **hotel front desk**. Guests (clients) don't walk into the kitchen or the stor
 
 **Endpoint types (REST):** **Edge-optimized** (requests enter through CloudFront edge locations, good for global clients), **Regional** (served from one Region, good for clients in that Region, and the usual choice behind your own CloudFront), and **Private** (reachable only from inside a VPC through a VPC endpoint).
 
-#### Integrations: what sits behind the API
+## Integrations: what sits behind the API
+
 - **Lambda** (the most common, usually with *proxy integration*, where the whole request is passed to the function).
 - **HTTP endpoints** (any public web service).
 - **AWS services** directly (for example put a message in SQS or write to DynamoDB, with no Lambda needed).
 - **VPC Link:** reach private backends (an NLB or ALB in a VPC) without exposing them publicly.
 - **Mock integrations**, for testing.
 
-#### Security: who can call the API
+## Security: who can call the API
+
 | Method | Use |
 |---|---|
 | **IAM authorization** (SigV4-signed requests) | Calls from other AWS services or AWS users and roles |
@@ -6147,7 +6151,8 @@ A **hotel front desk**. Guests (clients) don't walk into the kitchen or the stor
 | **AWS WAF** (REST) | Block malicious patterns and bots |
 | **Mutual TLS, custom domains with ACM certificates** | Client certificates, your own domain name |
 
-#### Traffic control and operations
+## Traffic control and operations
+
 - **Throttling:** limits on request rate and burst, at account, stage and method level. Callers that exceed it get **HTTP 429**.
 - **Usage plans:** per-key limits and quotas (REST).
 - **Caching:** a stage-level cache (REST) cuts load on the backend and latency.
@@ -6155,15 +6160,18 @@ A **hotel front desk**. Guests (clients) don't walk into the kitchen or the stor
 - **Request validation, transformation, CORS** (so browsers can call from other domains).
 - **Monitoring:** CloudWatch metrics and logs, access logs, and **X-Ray** tracing.
 
-#### Limits worth knowing
+## Limits worth knowing
+
 - **Integration timeout:** about **29 seconds** by default (a classic exam fact, though newer options exist for increasing it on some API types, so check the current quotas). Long jobs need an asynchronous design.
 - **Payload size:** about **10 MB**.
 - **Pricing:** per million requests (plus data transfer, and cache hours for REST caching). HTTP APIs cost noticeably less than REST APIs.
 
-#### REST API vs HTTP API: how to choose
+### REST API vs HTTP API: how to choose
+
 Pick **HTTP API** for simple, cheap proxying to Lambda or HTTP backends with JWT auth. Pick **REST API** when you need **API keys and usage plans, request validation, caching, WAF, private endpoints, or canary releases**.
 
-### 3. The industry problem it solves
+### The industry problem it solves
+
 **A food-delivery app** has a mobile app, a partner portal and an admin site, all calling backend logic written as Lambda functions.
 
 Without API Gateway, every function would need its own public URL and its own code for authentication, throttling, logging and HTTPS. A sudden burst or a bot could overwhelm the backends.
@@ -6172,8 +6180,10 @@ With API Gateway: one HTTPS front door per environment, **Cognito authorizer** c
 
 **Where it's a poor fit:** very high-volume simple traffic where an ALB would cost less, long-running requests (the timeout), large file uploads (use pre-signed S3 URLs instead, Lesson 36), and cases needing full control of the connection layer.
 
-### 4. Code / hands-on
+### Code / hands-on
+
 **A quick HTTP API in front of a Lambda function:**
+
 ```bash
 # 1. Create the HTTP API with a Lambda "quick create" target
 aws apigatewayv2 create-api \
@@ -6194,6 +6204,7 @@ curl https://<api-id>.execute-api.ap-south-1.amazonaws.com/
 ```
 
 **A JWT authorizer using a Cognito user pool:**
+
 ```bash
 aws apigatewayv2 create-authorizer \
   --api-id <api-id> \
@@ -6204,6 +6215,7 @@ aws apigatewayv2 create-authorizer \
 ```
 
 **A minimal Lambda handler that reads claims passed by the authorizer (Python):**
+
 ```python
 def handler(event, context):
     claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
@@ -6216,7 +6228,7 @@ def handler(event, context):
 
 **What this does:** the quick-create makes a default route and stage automatically. The permission in step 2 is the part people forget, and without it callers get a 500 error. After the authorizer is attached to a route, calls without a valid token get **401** before your Lambda runs. The claims structure shown is for HTTP API payload format 2.0, and it's different for REST APIs, so check the event shape with a test log. Command options can change, so confirm with `aws apigatewayv2 help`.
 
-### 5. Interview questions (curveball level) with answers
+### Interview questions (curveball level) with answers
 
 **Q1. Your API calls a Lambda that sometimes takes 45 seconds, and clients get 504 errors. What do you do?**
 **Answer:** The API integration timeout (about 29 seconds by default) is shorter than the work. Don't just try to raise limits. Redesign as **asynchronous**: the API accepts the request, puts a message on **SQS** or starts a **Step Functions** workflow (Extra 4), returns **202 Accepted** with a job ID, and the client polls a status endpoint or gets a notification (WebSocket or SNS). Keep the synchronous path for fast requests only.
@@ -6233,7 +6245,7 @@ def handler(event, context):
 **Q5. A browser app on `app.example.com` calls your API on `api.example.com`, and the browser blocks the calls with a CORS error, even though Postman works. Why?**
 **Answer:** Browsers enforce **CORS**: the API must send the right `Access-Control-Allow-Origin` and related headers, and respond to the browser's **OPTIONS preflight** request. Postman isn't a browser, so it ignores CORS. Enable CORS on the API (an HTTP API has a CORS setting, and a REST API needs the OPTIONS method and headers), make sure error responses (401, 403, 429) also include the CORS headers, and allow only the real origins instead of `*` for authenticated calls.
 
-### 6. Scenario question
+### Scenario question
 **Scenario:** You are the cloud engineer at **RideSure**, a vehicle-insurance startup.
 - The mobile app and a web portal call about 25 Lambda-backed endpoints, with customers logging in through Cognito.
 - Three partner garages call a few endpoints using their own systems. One partner once flooded the API and slowed it for everyone.
@@ -6252,7 +6264,7 @@ Design the solution:
 6. How do you fix the CORS errors and block malicious traffic?
 7. How do you release a new version to 10% first, and monitor it?
 
-### 7. Scenario model answer
+### Scenario model answer
 1. **API type:** the requirements (usage plans for partners, WAF, canary release) point to a **REST API**. If only the customer endpoints existed, an **HTTP API** would be cheaper. A split is also reasonable: HTTP API for the simple customer endpoints, REST API for the partner-facing one.
 2. **Authentication:** customers use the **Cognito user pool authorizer** (or JWT authorizer on HTTP API), with groups or scopes for authorization. Partners get **API keys plus usage plans** for metering, and a real authentication method, such as IAM, a Cognito app client with **client credentials (M2M)** and scopes (Lesson 36), or a Lambda authorizer.
 3. **Flood control:** per-partner **usage plans** (rate, burst, quota), stage and method **throttling**, and a **WAF rate-based rule**.
@@ -6274,10 +6286,12 @@ Design the solution:
 - **Secrets Manager and Parameter Store** (Lesson 35): where secrets and settings are stored.
 - **CloudTrail and CloudWatch** (Lessons 13 and 33): audit records and logs.
 
-### 1. Analogy
+### Analogy
+
 A **facilities-management control room for a large building**. Instead of the manager walking to every floor with a key, the control room can talk to every room (server) remotely: open a door for a technician (a shell session), send the same instruction to every thermostat (run a command on many servers), schedule maintenance (patching), and keep a register of everything installed in each room (inventory). Everything is logged, and the building has no need for a hundred spare keys.
 
-### 2. Definition
+### Definition
+
 **AWS Systems Manager (SSM)** is a collection of tools for **operating and managing your servers and applications at scale**, on EC2, on-premises machines and other clouds ("managed nodes"). It's the standard answer for "how do I manage a fleet without SSH?"
 
 #### How a machine becomes "managed"
@@ -6287,7 +6301,8 @@ A **facilities-management control room for a large building**. Instead of the ma
 4. For on-premises servers, you use **hybrid activations**.
 At scale, **Quick Setup** and **Default Host Management Configuration** apply this to many instances and accounts.
 
-#### The main capabilities
+### The main capabilities
+
 | Capability | What it does |
 |---|---|
 | **Session Manager** | Opens a **shell on an instance through the browser or CLI, with no SSH, no open port 22, no bastion and no key pairs**. Access is controlled by IAM, and sessions can be logged to S3 and CloudWatch Logs. |
@@ -6301,7 +6316,8 @@ At scale, **Quick Setup** and **Default Host Management Configuration** apply th
 | **Fleet Manager** | A console view and remote tools for managed nodes. |
 | **OpsCenter, Explorer, Change Manager** | Operational issue tracking, dashboards, and change-approval workflows. |
 
-#### Session Manager vs SSH and bastion hosts
+### Session Manager vs SSH and bastion hosts
+
 | | SSH / bastion | Session Manager |
 |---|---|---|
 | Inbound port needed | Yes (22) | **No** |
@@ -6309,25 +6325,28 @@ At scale, **Quick Setup** and **Default Host Management Configuration** apply th
 | Audit | Weak unless you build it | **CloudTrail plus session logs** |
 | Private subnets | Need a bastion or VPN | Works through VPC endpoints |
 
-#### Systems Manager vs related services
+### Systems Manager vs related services
+
 - **Parameter Store vs Secrets Manager** (Lesson 35): Parameter Store for configuration and cheap simple secrets, Secrets Manager for credentials that need rotation, replication and audit.
 - **Patch Manager vs Inspector:** Patch Manager **installs fixes**, Inspector **finds vulnerabilities**.
 - **Systems Manager vs CloudFormation:** CloudFormation **creates** infrastructure, and Systems Manager **operates** what's running on it.
 - **Systems Manager vs Config:** Config checks configuration of AWS resources, while Systems Manager configures and inspects what's *inside* machines.
 
-#### Pricing shape
+### Pricing shape
+
 Many features, such as Session Manager, Run Command, Patch Manager, Parameter Store standard parameters and Inventory, have **no extra charge** for managing EC2 instances (you pay for underlying resources such as logs and S3), while some advanced features, hybrid on-prem nodes, and advanced parameters have a charge. Check the pricing page.
 
-### 3. The industry problem it solves
-**A company with 400 Linux and Windows servers across 6 accounts.**
+### The industry problem it solves
 
+**A company with 400 Linux and Windows servers across 6 accounts.**
 Before Systems Manager: engineers SSH in through bastion hosts with shared keys, port 22 is open to "the office IP range", nobody knows exactly which servers have the latest patches, and patching means someone running scripts over a weekend. An audit asks "who logged into the payment server last Tuesday?" and the answer is a guess.
 
 With Systems Manager: no inbound ports are open, access is by IAM and logged, **Patch Manager** patches on schedule and shows compliance, **Run Command** applies a fix to 200 servers with one command, and **Automation** restarts or isolates a server when an alert fires. When Inspector finds a critical flaw (Lesson 37), Patch Manager fixes it.
 
 **Where it's a poor fit:** machines that can't run the agent (some appliances), workloads you don't manage at the OS level (serverless, containers on Fargate), and very complex configuration management needs where tools like Ansible or Chef may already be established.
 
-### 4. Code / hands-on
+### Code / hands-on
+
 ```bash
 # 1. Which instances are managed (agent online, role present)?
 aws ssm describe-instance-information
@@ -6357,7 +6376,7 @@ aws ssm start-automation-execution \
 
 **What this does:** step 1 is the first thing to check when "the instance doesn't appear in Systems Manager", because a missing role, agent, or network path is the usual cause (private subnets need the three VPC endpoints). Step 3 targets by **tag**, which is why a good tagging standard (Lesson 43) pays off. Step 6 shows Automation, where the same call can be triggered by EventBridge for **auto-remediation**. Command options can change, so confirm with `aws ssm help`.
 
-### 5. Interview questions (curveball level) with answers
+### Interview questions (curveball level) with answers
 
 **Q1. An EC2 instance in a private subnet doesn't appear in Systems Manager. List the checks in order.**
 **Answer:** (1) Is the **SSM Agent** installed and running (and the OS supported)? (2) Does the instance have an **IAM role** with the SSM permissions (`AmazonSSMManagedInstanceCore`)? (3) Can it **reach the Systems Manager endpoints**: a NAT gateway or the three **VPC interface endpoints** (`ssm`, `ssmmessages`, `ec2messages`), with the endpoint security group allowing HTTPS from the instance and private DNS enabled? (4) Is the Region correct, and is there an SCP or endpoint policy blocking it? Also check the agent log on the instance. Most cases are a missing role or missing endpoints.
@@ -6374,7 +6393,8 @@ aws ssm start-automation-execution \
 **Q5. A runbook that restarts a web server was run by hand 40 times last month at 3 a.m. How do you stop waking people up?**
 **Answer:** Build an **auto-remediation**: a CloudWatch alarm (or health-check event) triggers **EventBridge**, which starts a **Systems Manager Automation** runbook that restarts the service or instance, verifies health, and posts a notification to SNS or chat. Add safeguards: a limit on how many times it can run per hour, so a deeper failure escalates to a human instead of looping, and log every execution.
 
-### 6. Scenario question
+### Scenario question
+
 **Scenario:** You are the cloud engineer at **NorthLeaf Health**, with 250 EC2 instances (Linux and Windows) in 4 accounts, some in private subnets with no internet.
 - Today engineers use SSH through two bastion hosts, with shared key files, and port 22 is open to the office range.
 - Auditors want to know who accessed production servers and what they did.
@@ -6393,7 +6413,8 @@ Design the solution:
 6. How do you fix the recurring disk-full page?
 7. How does this work with Inspector and Config?
 
-### 7. Scenario model answer
+### Scenario model answer
+
 1. **Replace SSH:** **Session Manager** with IAM-based access (limited by tags and roles), **session logging** to S3 and CloudWatch Logs, CloudTrail for session starts, then close port 22 and decommission the bastions and shared keys.
 2. **Get everything managed:** attach `AmazonSSMManagedInstanceCore` (use **Default Host Management Configuration** or **Quick Setup** across accounts), make sure the **SSM Agent** is in the AMIs, and create the three **VPC interface endpoints** for private subnets. Audit with the managed-nodes list and a Config rule for "managed by Systems Manager".
 3. **Patching:** **Patch Manager** with baselines per OS and environment, **maintenance windows** by tag, staged rollout with concurrency and error limits, snapshots before production patching, and **patch compliance** reports as the audit evidence. Verify the Inspector findings close.
@@ -6416,10 +6437,12 @@ Design the solution:
 - **AWS Organizations and delegated administrator** (Lesson 15): manage many accounts from one security account.
 - **Compliance programs** (Lesson 12): standards such as CIS, PCI DSS and NIST that you must prove you follow.
 
-### 1. Analogy
+### Analogy
+
 A **security operations wall of screens** in a building. Each security system has its own panel: the burglar alarm (GuardDuty), the structural inspector (Inspector), the document-room auditor (Macie), the rule checker (Config). Without a wall, a guard has to walk to every panel. **Security Hub is the central wall:** all alerts in one place, in one format, ranked by importance, plus a scorecard of how well the building follows the safety code.
 
-### 2. Definition
+### Definition
+
 **AWS Security Hub** is a **central place to see, prioritize and act on security findings and security posture across your AWS accounts and Regions**. It does two jobs:
 1. **Aggregates findings** from AWS security services (GuardDuty, Inspector, Macie, Config, IAM Access Analyzer, Firewall Manager and others) and from third-party tools, in one common format.
 2. **Checks your configuration against security standards** (cloud security posture management, CSPM), producing its own findings and a **security score**.
@@ -6452,16 +6475,17 @@ A **security operations wall of screens** in a building. Each security system ha
 #### Pricing shape
 Charged by the **number of security checks** run and the **findings ingested**, per account and Region, with a free trial. Turning on every standard in every Region can add up, so enable the ones you actually use, and check the pricing page.
 
-### 3. The industry problem it solves
-**A fintech with 30 AWS accounts and four security tools.**
+### The industry problem it solves
 
+**A fintech with 30 AWS accounts and four security tools.**
 Before: the security team opens GuardDuty in one account, Inspector in another, and a spreadsheet for CIS compliance. Findings have different formats and severities, nobody knows which account is worst, and an auditor asking "show me your CIS benchmark status" needs a week of work.
 
 With Security Hub: a **delegated administrator** sees all accounts and Regions in one view, a **security score per standard** shows posture, a **critical finding** from Inspector or GuardDuty goes to on-call within minutes through EventBridge, and **automation rules** suppress known noise. The audit evidence is a dashboard and an export.
 
 **Where it's a poor fit:** it doesn't detect threats or scan vulnerabilities by itself (it needs the producing services turned on), it can't fix issues on its own without automation you build, and a flood of low-value findings can drown a small team unless you prioritize.
 
-### 4. Code / hands-on
+### Code / hands-on
+
 ```bash
 # 1. Enable Security Hub with the default standards
 aws securityhub enable-security-hub --enable-default-standards
@@ -6501,8 +6525,7 @@ An EventBridge rule pattern to send new critical findings to SNS:
 
 **What this does:** step 1 turns on the default standards (which need Config to be recording), and the score fills in after the first checks finish. Step 4 records a decision without deleting evidence. The EventBridge pattern follows the structure of the ASFF finding event, so confirm field names against a sample event in your account, because a wrong pattern silently matches nothing. Command options can change, so confirm with `aws securityhub help`.
 
-
-### 5. Interview questions (curveball level) with answers
+### Interview questions (curveball level) with answers
 
 **Q1. Security Hub shows "no data" or very few results for many controls. Why?**
 **Answer:** The standards' checks depend on **AWS Config** recording the relevant resources. If Config isn't enabled in that account and Region (or is recording only some resource types), controls can't evaluate. Check that Config is on everywhere you've enabled Security Hub, that the Region is one you've enabled, and that the standard itself is enabled. Also allow time after enabling for the first evaluation.
@@ -6519,7 +6542,7 @@ An EventBridge rule pattern to send new critical findings to SNS:
 **Q5. A control fails on a resource that is intentionally public (a static website bucket). What should the team do?**
 **Answer:** Don't weaken the control for everyone. Confirm the exception is justified (public website content only, no sensitive data, Macie scan clean), then **suppress the finding** for that resource with a documented reason and owner (or use an automation rule), and add compensating controls such as serving through CloudFront (Lesson 29) with the bucket itself private where possible. Review the exception periodically.
 
-### 6. Scenario question
+### Scenario question
 **Scenario:** You are the cloud security engineer at **SafeHarbor Bank**, with 40 AWS accounts across two Regions under AWS Organizations.
 - GuardDuty, Inspector and Macie are on in some accounts, but findings sit in separate consoles.
 - An auditor requires evidence of the **CIS AWS Foundations Benchmark** and **PCI DSS** status.
@@ -6538,7 +6561,7 @@ Design the solution:
 6. How do you automate the fix for the open port 22?
 7. How do you report the score and trend to management?
 
-### 7. Scenario model answer
+### Scenario model answer
 1. **One view:** a **delegated administrator** (security account) for Security Hub, auto-enable for all member accounts, and **cross-Region aggregation** to one Region. Enable GuardDuty, Inspector and Macie organization-wide so their findings flow in.
 2. **Audit evidence:** enable the **CIS AWS Foundations Benchmark** and **PCI DSS** standards, with Config recording on. Use the per-standard **security score and control status** as evidence, and export findings (for example to S3) with timestamps.
 3. **Paging:** an **EventBridge** rule matching **critical, new** findings filtered by **production account IDs or tags**, sent to **SNS** and on to the paging and chat tools.
