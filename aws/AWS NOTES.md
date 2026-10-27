@@ -5509,4 +5509,18 @@ Support plans are bought per account, so pay for fast, expert help where an outa
 
 ---
 
+## Lesson 40: How AWS Pricing Works
+
+**Pay-as-you-go:** no upfront hardware purchase, and you pay for what you use. This is the CapEx-to-OpEx shift.
+**EC2 pricing models**: On-Demand, Reserved, Spot and Dedicated Hosts. They are all risk-for-discount trades, and you’ll see the principle behind them here.
+**NAT Gateway, load balancers, EBS volumes:** resources that can keep billing even when “nothing is running”.
+
+Think of a mobile phone plan:
+
+- Pay per minute with no commitment: that’s On-Demand.
+- A 12-month plan at a lower monthly rate: that’s a commitment discount (Savings Plans and Reserved Instances).
+- Each extra GB of data is cheaper once you buy a bigger bundle: that’s volume (tiered) pricing.
+- The first 100 free texts each month: that’s the Free Tier.
+- Calls on your own network are free, but roaming abroad is expensive: that’s data transfer. Data coming in is generally free, and data going out costs money.
+
 
