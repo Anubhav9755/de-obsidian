@@ -1,3 +1,4 @@
+
 ## Lesson 1: Variables, Data Types, Type Casting & f-strings
 
 - **Variable**: a name that points to a value in memory. `price = 250` doesn’t put 250 “inside” `price`. It makes `price` point to the value 250.
@@ -1027,7 +1028,7 @@ print(sorted(orders, key=get_amount))
 
 `sorted` calls `get_amount` on each tuple, gets 120.0, 45.5, 300.0, and orders the tuples by those numbers.
 
-## inside concept 2: LAMBDA
+## Inside concept 2: LAMBDA
 
 A **lambda** is a small function written in a single line, with **no name**. Syntax:
 
@@ -1324,7 +1325,7 @@ The comprehension keeps only letters and digits and lowercases them, and `[::-1]
 
 ---
 
-**Lesson 7: Exceptions & File Handling**
+## Lesson 7: Exceptions & File Handling
 
 **Exception:** an error that happens while the program is running. If nothing handles it, the program stops and Python prints a report called a **traceback**. You’ve already met some: `ValueError` (right type, bad value, like `int("abc")`), `TypeError` (wrong type), `KeyError` (missing dict key).
 
@@ -1785,7 +1786,7 @@ python main.py         # prints 99.0   (and NOT 1200.5)
 
 **A package** is just a folder:
 
-```
+```BASH
 project/
     main.py
     pipeline/
@@ -2166,3 +2167,5 @@ print(isinstance(r, Transaction))      # True
 
 `super()` means “the parent class”, so `super().__init__(...)` runs the parent’s setup. Use inheritance only when the relationship is truly **“is a”**. When it’s “has a” (a `Ledger` _has_ transactions), the ledger holds them in an attribute instead. That’s called **composition**.
 
+
+---

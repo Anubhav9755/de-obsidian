@@ -1,3 +1,74 @@
+# AWS NOTES
+
+## SYLLABUS
+
+**Domain 1: Cloud Concepts**
+ 1. What Is Cloud Computing
+ 2. Cloud Deployment Models (public, private, hybrid)
+ 3. Cloud Service Models (IaaS, PaaS, SaaS)
+ 4. Shared Responsibility Model
+ 8. Global Infrastructure (Region, AZ, Edge Location)
+ 9. Well-Architected Framework
+ 10. Cloud Adoption Framework (CAF)
+
+**Domain 2: Security**
+
+ 5. IAM Fundamentals (users, groups, roles, policies, ARN)
+ 11. Encryption basics and KMS
+ 12. Compliance programs
+ 13. Security services (Shield, WAF, GuardDuty, Config, CloudTrail)
+ 14. Trusted Advisor
+ 15. AWS Organizations (OUs, SCPs, consolidated billing)
+ 16. IAM best practices (MFA, root account)
+ Domain 1 + 2 combined notes and the CCP-style scenario practice
+
+**Domain 3: Technology**
+
+ 6. EC2 (and EC2 pricing models)
+ 7. S3
+ 17. Lambda
+ 18. Elastic Beanstalk
+ 19. Auto Scaling
+ 20. Elastic Load Balancing
+ 21. EBS
+ 22. EFS
+ 23. VPC
+ 24. RDS
+ 25. DynamoDB
+ 26. Aurora
+ 27. Redshift
+ 28. Route 53
+ 29. CloudFront
+ Extra: Boto3
+ 30. Direct Connect
+ 31. SQS
+ 32. SNS
+ 33. CloudWatch (and CloudWatch vs CloudTrail)
+ 34. CloudFormation
+ 35. Secrets Manager
+ 36. Cognito
+ 37. Inspector
+ 38. Macie
+ 39. Support Plans 
+
+**Domain 4: Billing, Pricing and Support**
+
+ 40. AWS pricing fundamentals
+ 41. Savings Plans and Reserved Instances in depth
+ 42. Budgets, Cost Explorer, and Cost and Usage Reports
+ 43. Cost allocation tags, billing alerts, and AWS Marketplace
+
+**EXTRAS**
+
+ - API Gateway 
+ - Systems Manager
+ - Security Hub 
+ - Kinesis, Step Functions
+ - ECS, EKS and Fargate
+ - Athena and Glue 
+
+--- 
+
 ### Lesson 1: What Is Cloud Computing (and why does it exist)
 
 #### The analogy first (unconventional bit)
@@ -5231,15 +5302,1839 @@ Also tell me: how do Macie, Inspector and GuardDuty differ, and which one would 
 
 ---
 
-### AWS Support Plans
+## AWS Support Plans
 
-- **Shared Responsibility**: AWS runs the cloud, you run what you put in it. A support plan helps when _your_ workload has a problem, but it doesn’t change who is responsible.
-- **AWS account vs Organization**: a support plan is bought **per account**, even when accounts are grouped under Organizations.
-- **Severity and response time:** when you open a **support case**, you choose how urgent it is, and the plan decides how fast AWS commits to _first response_ (not to a fix).
-- **Trusted Advisor:** an AWS tool that checks your account against best practices in cost, performance, security, fault tolerance and service limits. The **full** set of checks depends on your plan.
-- **AWS Health:** a personal view of AWS service events that affect **your** resources (for example a planned maintenance on your instance).
-- **Well-Architected Framework**: AWS’s design checklist. Higher support plans include expert-led reviews against it.
-- **Inspector, Macie, GuardDuty**: security tools. Support plans give you **people and guidance**, not another scanner.
+**Shared Responsibility:** AWS runs the cloud, you run what you put in it. A support plan helps when your workload has a problem, but it doesn’t change who is responsible.
+**Trusted Advisor:** an AWS tool that checks your account against best practices in cost, performance, security, fault tolerance and service limits. The full set of checks depends on your plan.
+**AWS Health:** a personal view of AWS service events that affect your resources (for example a planned maintenance on your instance).
+
+A vehicle breakdown service with membership levels.
+
+Basic: you can read the manual and call the customer desk about your bill, but if the engine fails you’re on your own.
+Business Support+: a 24/7 breakdown line with trained mechanics who respond fast when your car stops on the highway.
+Enterprise: a dedicated service manager who knows your car, does regular health check-ups, and picks up quickly.
+Unified Operations: a pit crew embedded in your team, who respond in minutes and help you prepare before race day.
+
+Nobody includes free repairs for damage you caused, which is why the plan buys help, not a guarantee.
+
+**Definition**
+
+AWS Support is the set of paid and free plans that decide how much access to AWS experts, tools and response speed you get. AWS currently offers four plans: Basic, Business Support+, Enterprise Support, and Unified Operations. 
+
+**The current plans**
+	Basic	Business Support+	Enterprise Support	Unified Operations
+Cost	Free for everyone	From $29/month	From $5,000/month	From $50,000/month
+Meant for	Learning, experiments	The minimum AWS recommends for production workloads	Business-critical workloads that need expert guidance	Mission-critical, continuous operational partnership
+Critical-case response	No technical support	Target of 30 minutes	Target of 15 minutes	Target of 5 minutes 
+
+- Basic (free, every account): 24/7 customer service and documentation, whitepapers, the re:Post community, core Trusted Advisor checks, and AWS Health alerts. The customer service access is for billing and account questions, not technical troubleshooting.
+
+- Business Support+: 24/7 technical support through cases (chat, phone, email), the full Trusted Advisor checks, and AI-assisted help. The Support API is available.
+
+- Enterprise Support: everything above, plus consultative guidance: architecture reviews, Well-Architected Reviews, proactive security assessments, and strategic business reviews. It also includes AWS Security Incident Response at no extra charge. Designated specialists (historically a Technical Account Manager, TAM) work with you. Check the current page for exact wording.
+
+- Unified Operations: everything above, plus Incident Management Engineers and the fastest, 5-minute response time, for workloads where minutes of downtime are very costly. 
+
+**How the billing works**
+- All plans are billed monthly with no long-term contracts, with a 30-day minimum (90 days for Unified Operations). 
+- Enterprise and Unified Operations are billed on the combined monthly charges of all the account IDs you enroll. Pricing is tiered, so the more you spend, the lower the marginal percentage. 
+- Business Support+ is charged per account, at the greater of $29 or a percentage of that account’s monthly charges. 
+- You choose which accounts to enroll. A paid plan on the production account doesn’t automatically cover your dev accounts.
+
+The legacy plans:
+Existing subscribers of Developer, classic Business and Enterprise On-Ramp keep their current support until January 1, 2027. Know them, because older study material and exams still use them: 
+amazon
+
+Legacy plan	Idea
+Developer	Business-hours email access to associates, for testing and early development
+Business	24/7 phone, chat and email, with a 1-hour target for production-down
+Enterprise On-Ramp	Pool of Technical Account Managers, for production and business-critical workloads
+Enterprise	Designated TAM, 15-minute target for business-critical down
+Support plan vs the tools around it
+Item	What it is
+Support plan	Access to people, response targets, guidance
+Trusted Advisor	Automated best-practice checks (full set needs a paid plan)
+AWS Health	Alerts about events affecting your resources
+Technical Account Manager	A named person for your account (Enterprise level)
+AWS Managed Services / Professional Services / Partners	AWS or partners who do work for you. A support plan is not the same as hiring someone to operate your environment.
+Compliance (BAA, HIPAA, etc.)	A support plan doesn’t make you compliant.
+
+**The industry problem it solves**  
+
+Example: an online ticketing company during a big cricket-match sale.
+At 8:01 PM, bookings start failing for a part of the system that depends on an AWS service behaving oddly. Every minute loses revenue.
+
+- On Basic, they have no technical case access. Engineers search forums while the sale collapses.
+- On Business Support+, they open a “production system down” case, and AWS engineers respond within the target window, with chat or phone help.
+- On Enterprise, their designated specialists had already reviewed the architecture before the sale, spotting a bottleneck and a limit that would have been hit, and are in the call within minutes.
+- On Unified Operations, AWS incident engineers were prepared for the event and respond within five minutes.
+
+Where it’s a poor fit: a student sandbox or hobby project (Basic and the community are enough), accounts that hold nothing important (dev and test), and a company expecting support to do the engineering for them. Support helps you find and fix issues, and it doesn’t operate your system or guarantee a resolution time.
+
+**Hands-on**
+
+These are mostly console and read-only exercises, because the Support API needs a paid plan.
+
+```bash
+# The Support API needs a Business Support+ (or higher) plan and lives in us-east-1
+aws support describe-severity-levels --region us-east-1
+
+# List Trusted Advisor checks (full set needs a paid plan)
+aws support describe-trusted-advisor-checks --language en --region us-east-1
+
+# Create a test case (only on a paid plan, and please close it afterwards)
+aws support create-case \
+  --subject "Test: question about service limits" \
+  --service-code "general-guidance" \
+  --category-code "general-guidance" \
+  --severity-code "low" \
+  --communication-body "Practice case, no action needed." \
+  --language en --region us-east-1
+
+# Check events affecting your account (AWS Health API also needs a paid plan)
+aws health describe-events --region us-east-1
+```
+
+A short Python version for listing Trusted Advisor checks by category:
+
+```python
+import boto3
+from collections import Counter
+
+client = boto3.client("support", region_name="us-east-1")
+checks = client.describe_trusted_advisor_checks(language="en")["checks"]
+print(Counter(c["category"] for c in checks))
+```
 
 
+The Support and Health APIs only work for accounts on a paid plan, and they’re reached through the us-east-1 endpoint. On Basic you’ll see an access error, and that error is itself a good lesson about what the plan controls.
+Service and category codes vary, so use describe-services first to see the valid values for your account, instead of guessing.
+Trusted Advisor is also being offered through a newer API and console experience, so check the current documentation if a command differs.
+Exact CLI options can change, so confirm with aws support help.
+
+**Interview questions**
+
+Q1. A startup runs production on a single AWS account and a few dev accounts. The CTO wants “the best support plan on everything”. How do you advise?
+
+Answer: Plans are bought per account, so match the plan to the account’s risk. Put the production account on a paid plan (Business Support+ as the baseline for production, and Enterprise only if downtime is very costly or they need architecture guidance). Keep dev and sandbox accounts on Basic, because an outage there costs little. Enterprise is billed on the combined spend of the accounts you enrol, so enrolling cheap accounts adds cost without value. Review the choice when the workload or the bill changes, since plans have a 30-day minimum and can be changed.
+
+Q2. During an outage, the team opened a “production system down” case on a Developer-level plan and waited hours. What went wrong, and what should they have had?
+
+Answer: The legacy Developer plan had business-hours email access with slower response targets, and it wasn’t designed for production-down situations. Production workloads need a plan with 24/7 access and fast response targets: Business Support+ (or legacy Business) at minimum, with Enterprise or Unified Operations for business-critical workloads. Also, remember that response targets are for the first reply, not a fix, so keep your own runbooks and monitoring (CloudWatch) rather than relying on support to rescue you.
+
+Q3. A manager says “we pay for Enterprise Support, so AWS is responsible if our app goes down.” Correct?
+
+Answer: No. Under the Shared Responsibility Model (Lesson 4), AWS is responsible for the cloud infrastructure, while the customer is responsible for the architecture, configuration and operation of what runs in it. A support plan buys faster access to experts, proactive guidance and reviews, not liability or a guaranteed fix. The way to reduce outage risk is good architecture (Multi-AZ, Auto Scaling, backups), which Enterprise-level Well-Architected reviews can help with.
+
+Q4. Which support plan makes a company HIPAA compliant?
+
+Answer: None. Compliance comes from how you use AWS: signing the Business Associate Addendum (BAA) where required, using eligible services, encrypting data, controlling access, and logging and auditing (the topics from Lessons 35 to 38). A support plan can give you expert help and security guidance, and Enterprise-level plans give proactive security assessments, but it isn’t a compliance certificate.
+
+Q5. The finance team asks why Trusted Advisor shows only a handful of checks, while a colleague at another company sees many. Why, and is it worth paying for?
+
+Answer: The full set of Trusted Advisor checks (including many cost, security and service-limit checks) needs a paid support plan, while Basic shows only the core checks. It’s worth it when the account holds production workloads, because cost-optimization findings can often pay for the plan, and the security and service-limit checks prevent incidents. For a small sandbox it isn’t. Also point out that Trusted Advisor reports, and someone still has to act on the recommendations.
+
+**Scenario question**
+
+Scenario: You are the cloud engineer at QuickCart, an Indian grocery-delivery startup, using AWS Organizations with 1 production account, 1 staging account and 5 developer sandbox accounts.
+
+- Production serves about 300,000 orders a day, with its busiest period during festival sales. A one-hour outage in the evening costs the company roughly ₹40 lakh in lost orders.
+- The production monthly AWS bill is about $60,000, staging is $3,000, and each sandbox averages $300.
+- During the last festival, an unexplained database latency problem took 3 hours to resolve, because the team had no one to ask at AWS.
+- The CTO wants “the best plan for everything” to be safe, while the CFO wants support costs kept minimal.
+- The team also wants help reviewing the architecture before the next big sale, and a named person at AWS who knows the setup.
+- A junior engineer says “if we buy support, AWS takes the blame for outages and we don’t need backups as much.”
+- Finance has also noticed that the Trusted Advisor view in the sandbox accounts is limited.
+- The investors have asked whether the company is “HIPAA and compliance ready because it has Enterprise Support”.
+
+Design the support decision. For each point, name the features and explain your reasoning:
+
+1. Which plan for the production account, and why?
+2. Which plan for staging and the five sandboxes, and why?
+3. How do you answer the CTO and the CFO together?
+4. How do you get architecture help before the next sale, and which plan makes it possible?
+5. How would you correct the junior engineer’s idea about blame and backups?
+6. How do you respond to the investors’ compliance question?
+7. How would billing work if production and staging were both enrolled in Enterprise?
+8. What should the team do regardless of plan, to reduce the risk of another 3-hour incident?
+
+Also tell me: when would you upgrade from Business Support+ to Enterprise, and when to Unified Operations?
+
+Support plans are bought per account, so pay for fast, expert help where an outage is expensive (production) and stay on free Basic where it isn’t (sandboxes). A plan buys people and guidance. It doesn’t buy compliance, a guaranteed fix, or a transfer of blame.
+
+1. Plan for the production account
+- Enterprise Support, in my view. The reasons:
+  - An evening outage costs about ₹40 lakh an hour, and the festival incident took 3 hours with nobody to ask. Enterprise has the 15-minute target for business-critical cases (Business Support+ is 30 minutes).
+  - The team also wants architecture and Well-Architected reviews before the sale and a named person who knows the setup. Those come with Enterprise-level guidance, not Business Support+.
+- Cost sanity check: production is about $60,000 a month. Enterprise starts at $5,000 a month and uses tiered pricing, so the cost is a small percentage of that spend. Compare it with one bad hour at ₹40 lakh.
+- If the CFO won’t approve it, Business Support+ on production is the minimum acceptable choice, because it’s the baseline for production workloads. Say plainly what you give up: slower response and no proactive reviews.
+
+2. Plan for staging and the five sandboxes
+- Staging: Basic, or Business Support+ only if you want technical cases there during pre-sale load tests. An outage in staging loses no orders.
+- Five sandboxes (about $300 a month each): Basic. A paid plan has a floor of $29 per account for Business Support+, and a sandbox outage isn’t urgent.
+- Since plans are per account, you choose exactly which accounts to enrol, and the cheap ones simply stay out.
+
+3. Answering the CTO and the CFO together
+- The CTO’s “best plan on everything” is wasteful, because six of the seven accounts carry no revenue.
+- The CFO’s “minimum cost everywhere” is risky, because production lost revenue and time last festival.
+- The compromise: a paid plan on the one account where downtime hurts, Basic elsewhere. Show the numbers: support cost on production against the cost of an hour of downtime. Review it after each major event, because plans have a 30-day minimum and can be changed.
+
+4. Architecture help before the next sale
+- Enterprise Support includes Well-Architected Reviews, architecture guidance and proactive assessments, with the designated specialists (the TAM role) getting to know your setup.
+- Start the review early. Ask them to look at the database latency problem and at the capacity and service limits for the festival peak, using Trusted Advisor (the full set of checks needs a paid plan) and the Well-Architected Tool (Lesson 9) as the agenda.
+
+5. Correcting the junior engineer
+- Shared Responsibility (Lesson 4): AWS secures and runs the cloud, and QuickCart is responsible for its architecture, configuration and data. A support plan doesn’t move that line.
+- Support responds to cases and gives guidance. It doesn’t accept blame, guarantee a fix time, or restore your data.
+- Backups still matter (RDS and Aurora backups, DynamoDB point-in-time recovery, S3 versioning, Multi-AZ). If anything, a fast support response only helps you if your own recovery design already exists.
+
+6. The investors’ compliance question
+- No plan makes you compliant. Compliance comes from your own controls: encryption, least-privilege access, logging and audit (Lessons 35 to 38), data protection practices, and where required a signed Business Associate Addendum (BAA) for HIPAA-type data.
+- The honest answer to investors: “Enterprise Support gives us expert help and security guidance, and compliance is separately handled through these specific controls and audits.” (HIPAA is mainly a US healthcare regulation, so for a grocery-delivery company the relevant rules might be India’s data protection law and PCI DSS for card handling. Name the one that actually applies.)
+
+7. Billing if production and staging were both in Enterprise
+- Enterprise is billed on the combined monthly charges of all the accounts you enrol. So adding staging ($3,000) puts it into the aggregate, and the plan’s tiered percentage applies to the total of about $63,000.
+- Marginal cost: staging adds a percentage of its own spend to the bill, and gives you little benefit, so enrol only the accounts that need it.
+- Plans bill monthly with a 30-day minimum, and the enrolment decision is per account ID.
+
+8. What to do regardless of plan, to avoid another 3-hour incident
+- Observability: CloudWatch metrics, alarms and dashboards for database latency and connection counts, and log analysis (Lesson 33). Add alarms that notify on-call before customers notice.
+- Architecture: Multi-AZ databases, read replicas, caching, Auto Scaling, and load testing before the sale (Lessons 19, 24 and 26).
+- Process: a written runbook, practice incident drills, and agree in advance who opens the AWS case and at what severity. Open it early, because response targets count from the moment you open it.
+- Know your limits: check service quotas in advance, since a hit limit looks like an AWS problem during a sale.
+  
+**When to upgrade**
+- Business Support+ → Enterprise: when downtime is costly enough that you need faster response, architecture reviews, proactive guidance, and a named contact who knows your environment. A typical trigger is revenue-critical workloads or a large, growing bill.
+- Enterprise → Unified Operations: when the workload is mission-critical and minutes matter: very large scale, hard availability targets, and a need for 5-minute response, incident management engineers, and AWS involvement in preparing for big events. At a $50,000 a month minimum with a 90-day commitment, it’s justified only when downtime costs far more than that. QuickCart could grow into it, but today it would be over-buying.
+
+---
+
+## Lesson 40: How AWS Pricing Works
+
+*Domain 4 starts here. Your notes already have EC2 pricing models (Lesson 6), consolidated billing (Lesson 15) and support plans (Lesson 39). This lesson gives the general rules behind all of them.*
+
+### Quick recap (so nothing here is new)
+- **Pay-as-you-go** (Lesson 1): no upfront hardware purchase, and you pay for what you use. This is the CapEx-to-OpEx shift.
+- **EC2 pricing models** (Lesson 6): On-Demand, Reserved, Spot and Dedicated Hosts. They are all risk-for-discount trades.
+- **Region** (Lesson 8): the same service can cost different amounts in different Regions.
+- **Storage classes and lifecycle policies** (Lesson 7): cheaper S3 tiers for data you rarely read.
+- **Consolidated billing** (Lesson 15): one bill for many accounts, and combined usage reaches volume discounts sooner.
+- **NAT Gateway, load balancers, EBS volumes** (Lessons 20, 21, 23): resources that keep billing even when "nothing is running".
+
+### 1. Analogy
+A **mobile phone plan**.
+- Pay per minute with no commitment: **On-Demand**.
+- A 12-month plan at a lower monthly rate: a **commitment discount** (Savings Plans and Reserved Instances).
+- Each extra GB is cheaper once you buy a bigger bundle: **volume (tiered) pricing**.
+- The first 100 free texts every month: the **Free Tier**.
+- Calls on your own network are free, but roaming abroad is expensive: **data transfer**. Data coming in is generally free, and data going out costs money.
+
+### 2. Definition
+AWS pricing rests on **three principles**:
+1. **Pay as you go:** no minimums or upfront fees for most services.
+2. **Save when you commit:** promise steady usage for 1 or 3 years and get a lower rate.
+3. **Pay less as you use more:** volume pricing, where the per-unit price drops as usage grows.
+
+#### What you are billed for
+| Dimension | Examples |
+|---|---|
+| **Compute** (time or requests) | EC2 per second or hour, Lambda per request and per millisecond |
+| **Storage** (GB per month) | S3, EBS, EFS |
+| **Data transfer out** | Data leaving AWS for the internet, or crossing Regions or AZs |
+| **Requests and operations** | S3 GET and PUT, DynamoDB read and write units, API Gateway calls |
+
+#### The data transfer rule to memorize
+- Data **into** AWS from the internet: generally **free**.
+- Data **out** to the internet: **charged**, with tiered pricing.
+- Data between **Regions**: charged. Between **AZs** in a Region: a small charge. Within the **same AZ** over private IPs: generally free.
+
+#### The AWS Free Tier (changed in 2025)
+**New accounts (created on or after July 15, 2025):**
+- You choose a **free account plan** or a **paid account plan** at sign-up. You get **$100 in credits** straight away and can earn **up to $100 more** by completing activities (about $20 each).
+- The **free plan** ends after **6 months or when the credits run out**, whichever comes first. You can't be charged on it, but only some services are available. You can upgrade to the **paid plan** at any time to reach all services.
+- **30+ services are "always free"** within monthly limits, on both plans.
+- Free Tier credits expire **12 months** after account creation. Joining an **AWS Organization** while upgrading makes the credits expire immediately, so keep a learning account standalone while you use credits.
+
+**Older accounts (before July 15, 2025):** they stay on the legacy program: always free, 12 months free for new accounts, and short trials that start when you first use a service.
+
+Free Tier rules change often, so check the current Free Tier page before relying on any number.
+
+#### The cost-reduction toolbox (previewed)
+- **Right-size** instances to what you actually need.
+- **Savings Plans and Reserved Instances** for steady usage (Lesson 41).
+- **Spot** for interruptible work.
+- **Storage tiering** with lifecycle policies.
+- **Turn things off** (dev at night and weekends).
+- **Serverless**, so you pay only when code runs.
+
+### 3. The industry problem it solves
+**A startup running a photo-sharing app.** Before the cloud, they would buy servers for the biggest peak (a festival weekend) and watch them sit idle the rest of the year, paying upfront.
+
+With AWS, compute scales with traffic, old photos move to cheaper storage tiers, steady baseline traffic is covered by a commitment, spikes run On-Demand, and nightly jobs run on Spot.
+
+**Where pricing surprises hurt:** data transfer out (video served straight from EC2 instead of CloudFront), forgotten resources (an idle NAT Gateway, unattached EBS volumes, old snapshots), chatter across AZs, and "it was free to start, so nobody watched it".
+
+### 4. Code / hands-on
+Estimate before you build with the **AWS Pricing Calculator** (free web tool, no account needed). Look at real spend in the **Billing console**, or with the CLI (enable Cost Explorer first, and note each API call costs a small fee):
+
+```bash
+# Month-to-date cost, grouped by service (End is exclusive)
+aws ce get-cost-and-usage \
+  --time-period Start=2026-10-01,End=2026-10-28 \
+  --granularity MONTHLY \
+  --metrics UnblendedCost \
+  --group-by Type=DIMENSION,Key=SERVICE
+```
+
+`UnblendedCost` is the plain per-usage price. If a command errors, confirm options with `aws ce get-cost-and-usage help`.
+
+### 5. Interview questions (curveball level) with answers
+
+**Q1. A team moved a video-streaming app to AWS. Compute and storage match the estimate, but the bill is 3x higher. Where do you look first?**
+**Answer:** Data transfer out. Video is bandwidth-heavy, and data leaving AWS to the internet is charged per GB. In Cost Explorer, group by **usage type** and look for `DataTransfer-Out` lines. The usual fix is serving through **CloudFront** (Lesson 29), which caches at the edge and has cheaper egress than serving from EC2 or S3 directly. Also check cross-AZ and cross-Region transfer from internal services, and **NAT Gateway** data processing charges, which are billed per GB.
+
+**Q2. Your manager says "Reserved Instances always save money, so reserve everything." What's wrong with that?**
+**Answer:** A commitment saves money only if you use what you committed to. It's paid whether or not it runs, so reserving things that will be turned off, resized or replaced wastes money. Reserve only the **steady baseline** (what runs 24/7 for a year or more), cover the variable part with On-Demand, and use Spot for interruptible jobs. A commitment is a risk trade: you give up flexibility for a discount.
+
+**Q3. An intern ran a test for one afternoon, and weeks later the account was billed for a service they thought they'd deleted. What typically causes this?**
+**Answer:** Resources that keep billing after the "main" resource is gone: **unattached EBS volumes and old snapshots**, **Elastic IPs** not attached to a running instance, **NAT Gateways** (billed per hour even with no traffic), load balancers, and data left in S3. Also resources in a Region the intern doesn't normally look at. Prevent it with Budgets alerts (Lesson 42), tagging every resource with an owner and an expiry (Lesson 43), and cleaning up through **CloudFormation** (Lesson 34), where deleting the stack deletes everything it created.
+
+**Q4. Two Regions offer the same service at different prices. A teammate wants the cheaper one. Is price the only factor?**
+**Answer:** No, and it isn't the first factor. The usual order is **compliance and data residency**, then **latency** to users, then **service availability** (not every service exists in every Region), and only then **price**. A cheaper Region far from your users adds latency, and moving data between Regions adds transfer charges that can erase the savings.
+
+**Q5. A student on a new account chose the free plan, built a project, then linked the account into their company's AWS Organization, and the remaining credits vanished. Why?**
+**Answer:** Free Tier credits are meant for new, standalone accounts. By the program's rules, an account that joins an **Organization** (or sets up a Control Tower landing zone) while upgrading to the paid plan has its credits expire immediately and stops earning more. Keep a learning account standalone while you use credits, and check the **Credits** page before making account-structure changes.
+
+### 6. Scenario question
+**Scenario:** You are the cloud engineer at **ReelNest**, a short-video platform in India. Last month the AWS bill was ₹18 lakh, and the CFO wants it reduced without hurting users.
+- Most of the spend: about 40 EC2 web servers running 24/7 all year, a batch video-transcoding fleet that runs 6 hours every night, 800 TB of videos in S3 (most older than 90 days and rarely watched), and a large "Data Transfer" line.
+- Videos are served directly from the web servers and S3 to users across India and Southeast Asia.
+- The dev team's test environments run 24/7, even on weekends.
+- Nobody knows which team causes which part of the bill.
+- Last quarter, a developer's forgotten experiment ran for 5 weeks before anyone noticed.
+
+Design the cost plan:
+1. How do you reduce the cost of the 40 always-on web servers versus the nightly transcoding fleet?
+2. How do you reduce the cost of the 800 TB of S3 data?
+3. How do you attack the large data transfer line?
+4. How do you cut the dev environment cost?
+5. How do you find out which team causes what part of the bill?
+6. How do you make sure a forgotten experiment is caught within a day, not five weeks?
+7. Which cost reductions would you refuse to make, and why?
+
+### 7. Scenario model answer
+1. **Web servers vs transcoding.** The 40 servers are a **steady baseline**, so cover them with a **Savings Plan or Reserved Instances** (Lesson 41), after **right-sizing** them. The transcoding fleet is **interruptible and tolerant of retries**, so run it on **Spot** (with checkpointing, and jobs split into small chunks) and keep a small On-Demand fallback. Don't reserve the transcoding fleet, because it only runs 6 hours a night.
+2. **800 TB of S3.** Use **lifecycle policies** (Lesson 7): move videos not watched for 30 to 90 days to Standard-IA or Intelligent-Tiering, and very old content to Glacier tiers if retrieval delays are acceptable. Use **S3 Storage Lens** or access analytics to find which prefixes are cold, and delete failed uploads and old transcoding temp files.
+3. **Data transfer.** Serve videos through **CloudFront** (Lesson 29) so most traffic is cached at edge locations in India and Southeast Asia, with the origin protected by **Origin Access Control**. Check cross-AZ traffic between services, and replace NAT Gateway traffic to AWS services with **VPC endpoints** where possible.
+4. **Dev environments.** Stop them outside working hours (scheduled stop and start, for example with Systems Manager Automation or an EventBridge schedule), use smaller instance sizes, use Spot where possible, and build them from **CloudFormation** templates so they can be torn down and recreated cleanly.
+5. **Who spends what.** Define a **tagging standard** (team, project, environment, owner), activate the tags as **cost allocation tags**, group Cost Explorer by tag, and use **separate accounts** per team or environment with consolidated billing (Lessons 42 and 43).
+6. **Catching the forgotten experiment.** **AWS Budgets** with forecasted and actual alerts, plus **Cost Anomaly Detection**, sending to SNS and chat, so an unusual daily spike is flagged within a day. Add an expiry tag and a cleanup job.
+7. **Cost cuts to refuse.** Removing **Multi-AZ** or backups on production databases, shrinking the web fleet below peak capacity (customers see errors during festivals), moving frequently watched videos to slow storage classes (retrieval fees and latency can cost more than you save), and buying 3-year commitments for workloads that might move or change. A cost cut that causes an outage costs more than it saves.
+
+---
+
+## Lesson 41: Savings Plans and Reserved Instances
+
+### Quick recap (so nothing here is new)
+- **On-Demand** (Lesson 6): pay the full list price per second or hour, with no commitment.
+- **Commitment discount** (Lesson 40): promise steady usage for 1 or 3 years and get a lower rate. If you don't use what you promised, you still pay.
+- **Instance family and size** (Lesson 6): `m5.large` is family `m5` (general purpose, 5th generation) and size `large`.
+- **Region and AZ** (Lesson 8): a Region contains several AZs. A commitment can be tied to a Region or to one AZ.
+- **Consolidated billing** (Lesson 15): the management account pays for all member accounts, and usage is combined.
+- **Spot** (Lesson 6): spare capacity at a big discount, but AWS can take it back.
+- **Fargate and Lambda**: serverless compute, where you don't pick instances (they appear again in the container lesson).
+
+### 1. Analogy
+A **gym membership**.
+- Pay per visit (On-Demand): flexible, expensive if you go every day.
+- An annual membership (Savings Plan): you promise to spend a fixed amount per month at the gym, and any equipment is covered. Cheaper per visit, but you pay even if you stop going.
+- A membership for one specific branch and one specific machine (Reserved Instance): even cheaper, but less flexible.
+
+### 2. Definition
+Both are ways to get a **discount in exchange for a 1-year or 3-year commitment**. They differ in *what* you commit to.
+
+#### Savings Plans: commit to dollars per hour
+You promise to spend, for example, **$10 per hour** of compute for one or three years. Usage up to that amount is billed at the discounted rate. Usage above it is billed On-Demand.
+
+| Type | Flexibility | Typical maximum saving* |
+|---|---|---|
+| **Compute Savings Plans** | Any EC2 family, size, Region, OS and tenancy, plus **Fargate** and **Lambda** | Up to about 66% |
+| **EC2 Instance Savings Plans** | One instance **family in one Region** (for example `m5` in Mumbai). Size, OS and tenancy can change. | Up to about 72% |
+| **SageMaker Savings Plans** | SageMaker usage | Up to about 64% |
+
+*Maximum percentages are headline numbers and vary by instance, term and payment option. Newer plan types (for example for databases) have also been introduced, so check the Savings Plans page for the current list.
+
+#### Reserved Instances (RIs): commit to a specific configuration
+You reserve a specific instance type, Region, OS and tenancy for 1 or 3 years.
+
+| Type | Idea |
+|---|---|
+| **Standard RI** | Highest discount (up to about 72%). You can change the AZ, size within the family, and network type, but not the family. It **can be sold** on the Reserved Instance Marketplace. |
+| **Convertible RI** | Lower discount (up to about 66%). You can **exchange** it for a different family, OS or tenancy. It **can't be sold** on the marketplace. |
+
+**Scope:** a **Regional RI** discounts matching usage anywhere in the Region and gives size flexibility within the family, but doesn't reserve capacity. A **Zonal RI** is tied to one AZ and **reserves capacity** there.
+
+**RIs also exist for other services:** RDS, ElastiCache, Redshift and OpenSearch use **reserved nodes or instances**. This is a key reason RIs still matter, because classic Savings Plans don't cover those.
+
+#### Payment options (both)
+- **All Upfront:** biggest discount, you pay the whole term at the start.
+- **Partial Upfront:** part upfront, the rest monthly.
+- **No Upfront:** nothing upfront, pay monthly, smallest discount.
+
+#### Savings Plans vs RIs
+| | Savings Plans | Reserved Instances |
+|---|---|---|
+| You commit to | $ per hour | A specific instance configuration |
+| Flexibility | High (Compute type is the most flexible) | Lower |
+| Covers Fargate and Lambda | Yes (Compute) | No |
+| Covers RDS, Redshift, ElastiCache | Not the classic plans | Yes |
+| Reserves capacity | **No** | Only **Zonal** RIs |
+| Can be sold | No | Standard RIs on the Marketplace |
+
+**Important:** Savings Plans and RIs don't reserve capacity (except Zonal RIs). If you need a guarantee that capacity exists in an AZ, you need **On-Demand Capacity Reservations**, which are a different feature (you pay for the capacity, and can combine it with a commitment discount).
+
+#### How discounts are applied
+- In a **consolidated billing** family, discounts are **shared across member accounts** by default, so one account's unused commitment can be used by another account's matching usage. You can turn sharing off.
+- AWS applies the commitment to the usage that gives the **highest saving** first.
+- **Coverage** is the share of your usage covered by commitments. **Utilization** is the share of your commitment actually used. You want high of both.
+
+### 3. The industry problem it solves
+**A SaaS company runs about 100 EC2 instances at all times**, plus extra instances during the day.
+
+- Without commitments, they pay the full On-Demand price for the 100 baseline instances all year.
+- With a **Compute Savings Plan** sized to their steady baseline, those instances cost much less, and the company can still change instance families and move workloads to Fargate or Lambda later without losing the discount.
+- Their **RDS** databases, which Savings Plans don't cover, get **Reserved DB instances**.
+- Daytime peaks stay On-Demand, and batch jobs run on Spot.
+
+**Where it goes wrong:** buying a commitment sized for peak usage (you pay for an unused commitment every hour), committing 3 years on a workload that's about to be replaced or moved, or forgetting that discounts only apply when you actually run matching usage.
+
+### 4. Code / hands-on
+```bash
+# 1. What does AWS recommend? (Cost Explorer needs to be enabled)
+aws ce get-savings-plans-purchase-recommendation \
+  --savings-plans-type COMPUTE_SP \
+  --term-in-years ONE_YEAR \
+  --payment-option NO_UPFRONT \
+  --lookback-period-in-days THIRTY_DAYS
+
+# 2. How much of my usage is covered, and how well is my commitment used?
+aws ce get-savings-plans-coverage \
+  --time-period Start=2026-10-01,End=2026-10-28
+
+aws ce get-savings-plans-utilization \
+  --time-period Start=2026-10-01,End=2026-10-28
+
+# 3. List the Savings Plans you own
+aws savingsplans describe-savings-plans
+
+# 4. List your Reserved Instances (EC2)
+aws ec2 describe-reserved-instances
+```
+
+**What this does:** step 1 reads your recent usage and suggests a commitment (based on a lookback period, so a quiet month produces a too-small suggestion and a peak month produces a too-big one). Steps 2 and 3 are the **health checks**: coverage shows what you still pay On-Demand for, and utilization shows wasted commitment. Always sanity-check recommendations against known plans (a migration, a product shutdown) before buying. Options can change, so confirm with `aws ce help`.
+
+### 5. Interview questions (curveball level) with answers
+
+**Q1. Your finance team wants maximum savings, and your engineers say they might move from EC2 to containers next year. Which commitment do you recommend?**
+**Answer:** A **Compute Savings Plan**. It applies across EC2 families, sizes and Regions, and also to **Fargate and Lambda**, so a move to containers doesn't strand the discount. An EC2 Instance Savings Plan or a Standard RI gives a higher discount but ties you to a family or configuration. Size the commitment to the **safe steady baseline**, not the forecast, and consider 1 year instead of 3 while the architecture is changing.
+
+**Q2. You bought Savings Plans last month and utilization shows 70%. What happened and what do you do?**
+**Answer:** You committed to more hourly spend than your eligible usage consumes, so 30% of the commitment is wasted each hour. Common causes: the commitment was sized from a peak month, workloads were moved to services the plan doesn't cover, or instances were shut down. Check whether usage will return, move workloads onto covered services, avoid buying more, and size the next purchase from the **minimum steady usage** rather than the average. Some plans can be returned only within a short window after purchase, so check the rules before assuming it's reversible.
+
+**Q3. A team reserved capacity with a Savings Plan and was then shocked when instances failed to launch during a regional capacity crunch. Why?**
+**Answer:** Savings Plans and Regional RIs are **billing discounts, not capacity guarantees**. Only **Zonal RIs** or **On-Demand Capacity Reservations** reserve capacity in an AZ. For workloads that must launch during an event, combine a **Capacity Reservation** (guaranteed capacity) with a Savings Plan (the discount applied to it).
+
+**Q4. Why would a company still buy Reserved Instances when Savings Plans are more flexible?**
+**Answer:** RIs cover services that classic Savings Plans don't: **RDS, ElastiCache, Redshift and OpenSearch** reserved nodes. Zonal RIs also reserve capacity. Standard RIs can be sold on the Reserved Instance Marketplace if the need disappears, while Savings Plans can't be sold. So the usual answer is a **mix**: Savings Plans for compute, RIs for databases.
+
+**Q5. In an Organization, one team's Savings Plan is nearly fully used, but another team in a different account runs matching instances at full price. How can both benefit?**
+**Answer:** With **consolidated billing**, commitments are **shared across the accounts** in the Organization by default, so unused commitment in one account can discount matching usage in another. If sharing was turned off, or the accounts aren't in the same Organization, the benefit stops at the account boundary. Check the sharing preference in the management account's billing settings. Also remember that the purchaser pays the whole commitment, so internal chargeback needs a clear rule.
+
+### 6. Scenario question
+**Scenario:** You are the cloud engineer at **FinNest**, a lending platform with one AWS Organization and eight accounts.
+- 60 EC2 instances (`m5` and `c5` families) run 24/7 in production, and about 20 more run only on weekday mornings.
+- A fleet of Lambda functions and a new Fargate service are growing quickly.
+- Two RDS MySQL production databases and one Redshift cluster run all year.
+- A nightly risk-scoring job runs for 5 hours, can be restarted, and uses large instances.
+- The CTO plans to move part of the EC2 fleet to Graviton (ARM) instances in six months.
+- An audit requires guaranteed capacity for the payments service in one AZ during month-end.
+- Finance wants a plan that shows savings without locking the company in.
+
+Design the commitment plan:
+1. What do you buy for the 60 always-on EC2 instances, and what term?
+2. How do you treat the weekday-morning instances and the nightly risk job?
+3. How do you cover Lambda and Fargate?
+4. How do you cover RDS and Redshift?
+5. How do you guarantee capacity for the payments service at month-end?
+6. How do you handle the planned Graviton move?
+7. How do you measure whether the plan is working, and how do you avoid over-committing?
+
+### 7. Scenario model answer
+1. **60 always-on instances:** a **Compute Savings Plan** sized to the **steady minimum** of the hourly spend, 1-year, No Upfront or Partial Upfront at first. The Graviton move argues for the flexible plan type. Use Cost Explorer recommendations as a starting point, then adjust for known changes.
+2. **Morning instances and the nightly job:** don't commit for hours they aren't running. The morning fleet stays On-Demand (or is covered by any spare Savings Plan commitment). The **risk job runs on Spot** (it's restartable), possibly mixed with instance types to improve availability.
+3. **Lambda and Fargate:** a **Compute Savings Plan** covers them, so the same commitment follows growth. Add to the plan only after the usage is steady.
+4. **RDS and Redshift:** **Reserved instances / reserved nodes** (1-year, since the classic Savings Plans don't cover them), sized to the always-on clusters. Check whether newer database commitment options fit before buying.
+5. **Guaranteed capacity:** an **On-Demand Capacity Reservation** (or a Zonal RI) for the payments service in the required AZ, kept to the size actually needed. The reservation gives the capacity guarantee, and the Savings Plan or RI gives the discount.
+6. **Graviton move:** because a Compute Savings Plan is **family-agnostic**, it keeps discounting after the move. An EC2 Instance Savings Plan or Standard RI on `m5` would strand the commitment. Keep terms at 1 year until the migration finishes.
+7. **Measuring and avoiding over-commitment:** track **coverage and utilization** monthly (Cost Explorer reports and a **Budgets** alert on utilization, Lesson 42). Buy in **steps** (for example 60 to 70% of the steady baseline first, then add), and keep layering as the baseline grows. Never size a commitment to peaks.
+
+---
+
+## Lesson 42: Budgets, Cost Explorer, and Cost and Usage Reports
+
+### Quick recap (so nothing here is new)
+- **Pay-as-you-go** (Lesson 40): your bill moves with usage, so you need to watch it.
+- **Savings Plans coverage and utilization** (Lesson 41): measures of how well commitments are used.
+- **SNS** (Lesson 32): sends notifications to email, chat tools and other services.
+- **CloudWatch alarms and EventBridge** (Lessons 32 and 33): monitoring and event routing, which can trigger actions.
+- **S3 and Athena**: S3 stores files, and Athena (taught later in the extras) lets you run SQL directly on files in S3.
+- **IAM policies and SCPs** (Lessons 5 and 15): rules that allow or deny actions. A budget can attach one automatically.
+- **Consolidated billing** (Lesson 15): the management account sees the cost of every member account.
+
+### 1. Analogy
+A **household finance setup**.
+- **Budgets** are like a spending limit with text alerts: "warn me at 80% of the monthly grocery money."
+- **Cost Explorer** is the bank app's charts: where the money went, by category and month, plus a forecast.
+- **Cost and Usage Report (CUR)** is the full line-by-line bank statement exported to a spreadsheet, so an accountant (or a SQL query) can answer any question.
+- **Cost Anomaly Detection** is the fraud alert: "this charge is unusual for you."
+
+### 2. Definition
+These are the main tools in the **Billing and Cost Management** console. They answer different questions, and the exam loves asking which to use when.
+
+#### AWS Budgets: "warn me, or act, before I overspend"
+- You set a **budget** and **alert thresholds**, and Budgets notifies you through email, **SNS** (and from there chat tools).
+- Budget types: **Cost**, **Usage**, **Savings Plans** and **Reservation** (utilization and coverage).
+- Alerts can be based on **actual** spend or **forecasted** spend, so you can be warned that you *will* exceed the budget before it happens.
+- **Budget actions** can respond automatically: apply an **IAM policy or an SCP**, or stop certain **EC2 or RDS** instances, when a threshold is crossed. Actions can need approval first.
+- Budgets can be scoped by filters (service, account, tag, Region).
+- Pricing: some budgets are free and action-enabled budgets have an allowance beyond which they are charged. Check the pricing page.
+
+#### AWS Cost Explorer: "show me where the money went"
+- A visual tool to explore costs and usage by **service, account, Region, tag, usage type** and more, daily or monthly.
+- Shows **history** (roughly the last year or more, check the current period) and a **forecast** of future cost.
+- Gives **rightsizing recommendations** and **Savings Plans and RI recommendations** (Lesson 41), plus coverage and utilization reports.
+- It has an **API**, which charges a small fee per request, so avoid polling it in loops.
+- It needs to be **enabled** the first time, and data appears after a while.
+
+#### AWS Cost and Usage Reports (CUR): "give me every line item"
+- The **most detailed** data AWS provides: every charge, by resource, hour or day, with tags and pricing details.
+- **Delivered to an S3 bucket** (CSV or Parquet), and you analyse it with **Athena**, **QuickSight**, **Redshift** or your own tools.
+- You can include **resource IDs** for resource-level analysis.
+- AWS is moving this into **Data Exports** (a newer, more flexible export feature that includes a CUR 2.0 format and a FOCUS-standard format). The idea is the same: scheduled detailed exports to S3.
+
+#### AWS Cost Anomaly Detection: "tell me about unusual spend"
+- Machine learning learns your normal spending pattern, and flags **unexpected spikes** by service, account, tag or cost category, then alerts via email or SNS.
+- It's useful for the "forgotten experiment" problem, because a fixed budget threshold might not trigger until late in the month.
+
+#### Other pieces in the same console
+- **Bills:** the monthly invoice detail, by service and account.
+- **Free Tier page and Credits:** usage against free allowances, and credit balances.
+- **Cost Categories:** your own grouping rules (for example "all accounts of the Payments team") to group costs.
+
+#### Which tool for which question
+| Question | Tool |
+|---|---|
+| "Alert me before we overspend", or "act automatically" | **Budgets** (and budget actions) |
+| "Why did cost go up last month? Which service or account?" | **Cost Explorer** |
+| "I need every line item for a detailed analysis, joined with other data" | **CUR / Data Exports** (with Athena) |
+| "Notify me of unusual spikes" | **Cost Anomaly Detection** |
+| "What would this architecture cost?" | **Pricing Calculator** |
+
+### 3. The industry problem it solves
+**A company with 20 AWS accounts and no cost visibility.** At month-end, the CFO asks why the bill jumped 40%. Nobody can answer for days, a developer's experiment ran for weeks, and finance can't charge costs back to teams.
+
+With these tools: **Budgets** per team email the owner at 80% of the budget, with a forecast alert before it overshoots. **Cost Anomaly Detection** flags the spike on day two. **Cost Explorer** shows which service and account caused it in minutes. **CUR** feeds a weekly dashboard of cost by team and resource.
+
+**Where they fall short:** they report and alert, but they don't fix waste on their own. Budget actions can stop resources, but a bad action can interrupt a production workload, so use them carefully. Cost data also has a delay of several hours, so it isn't real-time.
+
+### 4. Code / hands-on
+**A monthly cost budget with an 80% actual and a 100% forecast alert:**
+
+`budget.json`
+```json
+{
+  "BudgetName": "monthly-cost",
+  "BudgetLimit": { "Amount": "100", "Unit": "USD" },
+  "TimeUnit": "MONTHLY",
+  "BudgetType": "COST"
+}
+```
+
+`notifications.json`
+```json
+[
+  {
+    "Notification": {
+      "NotificationType": "ACTUAL",
+      "ComparisonOperator": "GREATER_THAN",
+      "Threshold": 80,
+      "ThresholdType": "PERCENTAGE"
+    },
+    "Subscribers": [{ "SubscriptionType": "EMAIL", "Address": "you@example.com" }]
+  },
+  {
+    "Notification": {
+      "NotificationType": "FORECASTED",
+      "ComparisonOperator": "GREATER_THAN",
+      "Threshold": 100,
+      "ThresholdType": "PERCENTAGE"
+    },
+    "Subscribers": [{ "SubscriptionType": "EMAIL", "Address": "you@example.com" }]
+  }
+]
+```
+
+```bash
+aws budgets create-budget \
+  --account-id 123456789012 \
+  --budget file://budget.json \
+  --notifications-with-subscribers file://notifications.json
+
+# See what you created
+aws budgets describe-budgets --account-id 123456789012
+```
+
+**A cost query by account (Cost Explorer API):**
+```bash
+aws ce get-cost-and-usage \
+  --time-period Start=2026-10-01,End=2026-10-28 \
+  --granularity DAILY \
+  --metrics UnblendedCost \
+  --group-by Type=DIMENSION,Key=LINKED_ACCOUNT
+```
+
+**Querying a CUR in Athena (after setting it up in the console, with the table created by the CUR setup):**
+```sql
+SELECT line_item_product_code,
+       SUM(line_item_unblended_cost) AS cost
+FROM   cur_database.cur_table
+WHERE  year = '2026' AND month = '10'
+GROUP BY line_item_product_code
+ORDER BY cost DESC
+LIMIT 10;
+```
+
+**What this does:** the budget emails you when real spend passes 80%, and when **forecast** spend passes 100%, which is the early warning. Replace the account ID and email. The CUR query uses the standard column names (`line_item_product_code`, `line_item_unblended_cost`), but your database and table names come from your own CUR setup. Command options can change, so confirm with `aws budgets help`.
+
+### 5. Interview questions (curveball level) with answers
+
+**Q1. Your budget of $1,000 a month alerted at 100%, but the team says "we only found out at the end of the month". How do you improve it?**
+**Answer:** Alert on **forecasted** spend as well as actual spend, and add earlier thresholds (for example 50%, 80%, 100% actual and 100% forecast). Add **Cost Anomaly Detection**, because a spike mid-month may not cross a fixed threshold until too late. Send alerts to a shared channel through **SNS**, not just one person's inbox, and consider **budget actions** for non-production accounts.
+
+**Q2. A budget action was set to stop all EC2 instances at 100% spend, and it took down production during a sale. What went wrong?**
+**Answer:** The action was applied to the wrong scope. Budget actions are powerful, so apply them to **non-production accounts or tagged non-critical resources**, not to production. For production, use alerts and human approval instead, or an action that only blocks **new** spending (such as an IAM or SCP policy denying launching more instances). Also test actions first, and require approval for risky ones.
+
+**Q3. Finance wants a report of cost by team, by day, by resource, joined with a table of team owners from their database. Which tool?**
+**Answer:** **Cost and Usage Reports / Data Exports** delivered to S3, queried with **Athena** (or loaded into a warehouse or QuickSight). Cost Explorer can't join with your own data and doesn't give line-item detail at resource level. CUR includes tags and resource IDs, so you can join to the owner table. Cost allocation tags (Lesson 43) must be activated to appear in it.
+
+**Q4. A manager asks: "Why did the cost go up on the 14th, and was it a real problem?" What is your investigation path?**
+**Answer:** In **Cost Explorer**, set daily granularity and group by **service**, then by **usage type**, then by **linked account**, and filter to the 14th. Identify the service and account, then switch to **resource-level data** (CUR, or Cost Explorer's resource-level option if enabled) to find the resource, and check CloudTrail (Lesson 13) for who created it. Check **Cost Anomaly Detection** for the alert and root-cause hints. Then decide whether it's growth, a mistake, or an attack.
+
+**Q5. Cost data in the console seems a day behind. A developer asks for "real-time" cost control. What do you tell them?**
+**Answer:** Billing data is **not real-time** and normally lags by hours, so budgets and anomaly alerts react with a delay. For faster control, **prevent** overspend instead of detecting it: service quotas, SCPs that block expensive instance types or Regions, IAM guardrails, tag-based expiry cleanup, and CloudWatch alarms on **usage metrics** (such as instance count or data transfer) that update much faster than billing.
+
+### 6. Scenario question
+**Scenario:** You are the cloud engineer at **BrightLearn**, an ed-tech company with 12 AWS accounts (one per team and environment) in one Organization.
+- Finance receives one bill and can't tell which team caused last quarter's 35% increase.
+- A student-project sandbox account left GPU instances running for 18 days.
+- The CFO wants an alert before any team exceeds its monthly allowance, and wants the sandbox accounts to **stop spending automatically** when they hit the limit, but production must never be stopped automatically.
+- The data team wants daily cost by team and by resource joined with their own table of team owners.
+- Executives want a simple monthly chart and a forecast for the next quarter.
+- A separate worry: a cost spike on a Saturday night would currently go unnoticed until Monday.
+
+Design the solution:
+1. How do you give each team an early warning before they overspend?
+2. How do you make sandbox accounts stop spending automatically, without touching production?
+3. How do you catch the Saturday-night spike?
+4. How do you deliver the data team's daily, resource-level, joinable cost data?
+5. How do you provide the executives' chart and forecast?
+6. How do you find out why costs rose 35% last quarter?
+7. What can't these tools do, and what other controls would you add?
+
+### 7. Scenario model answer
+1. **Early warning:** a **Budget per team or account** (filtered by account or tag), with **actual** alerts at 50% and 80% and a **forecasted** alert at 100%, sent to an **SNS** topic wired to the team's chat and email.
+2. **Sandbox auto-stop:** **Budget actions** on the **sandbox accounts only**: at 100% apply an **IAM policy or SCP** that denies launching new expensive resources (and optionally stop tagged EC2 or RDS instances). Production accounts get **alerts only**, or an action that needs human approval.
+3. **Saturday-night spike:** **Cost Anomaly Detection** monitors with alerts to the on-call chat channel, so unusual daily spend is flagged without waiting for a threshold. Pair it with CloudWatch alarms on **usage metrics** (for example number of running GPU instances), which respond faster than billing data.
+4. **Data team:** enable a **Cost and Usage Report / Data Export** to S3 with resource IDs and tags, and query it with **Athena**, joining the team-owner table. Make sure the team tag is an **activated cost allocation tag** (Lesson 43).
+5. **Executives:** a **Cost Explorer** saved report (monthly, grouped by team or account), using its forecast feature, or a **QuickSight** dashboard built on the CUR.
+6. **Root cause of the 35% rise:** in **Cost Explorer**, compare the quarters, group by service, account and usage type, then drill to resource level through the CUR. Check for new workloads, data transfer growth, or commitments that expired.
+7. **Limits and extra controls:** these tools report with a delay and don't remove waste themselves. Add **tagging standards with expiry tags**, **SCP guardrails** (block GPU instance types or Regions in sandboxes), **service quotas**, scheduled cleanup of sandbox resources, and a regular cost review with team owners.
+
+---
+
+## Lesson 43: Cost Allocation Tags, Billing Alerts, and AWS Marketplace
+
+### Quick recap (so nothing here is new)
+- **Tags:** key-value labels you attach to AWS resources, such as `team=payments`. They were used for tag-based access control in Lesson 35.
+- **Cost Explorer and CUR** (Lesson 42): the tools that show costs. Tags are what let them show costs *by team or project*.
+- **Budgets and Anomaly Detection** (Lesson 42): the modern way to alert on cost.
+- **CloudWatch alarms and SNS** (Lessons 32 and 33): metrics, alarms and notifications. The older billing alert is built from these.
+- **AWS Organizations, SCPs and tag policies** (Lesson 15): rules applied across accounts.
+- **AWS Config** (Lesson 13): checks resources against rules, such as "must have a tag".
+- **AMI** (Lesson 6): a machine image you launch EC2 instances from.
+
+### 1. Analogy
+**Labels on moving boxes.** If you move house and nobody labels the boxes, you can't tell which room each box belongs to or who should pay for the packing. If every box says "kitchen" or "bedroom", you can total the cost per room. Tags are those labels. A **cost allocation tag** is a label that the accounting department has agreed to read.
+
+**AWS Marketplace** is a **shopping mall inside AWS**: third-party software you can buy and launch, with the charge appearing on your normal AWS bill.
+
+### 2. Definition
+
+#### Tags and cost allocation tags
+- A **tag** is a key-value pair on a resource (`env=prod`, `team=payments`, `owner=anubhav`).
+- **Two kinds of cost allocation tags:**
+  - **User-defined tags:** the ones you create.
+  - **AWS-generated tags:** created by AWS, with the `aws:` prefix (for example `aws:createdBy`).
+- **Activation is required.** A tag appears in **Cost Explorer, budgets and CUR** only after you **activate it as a cost allocation tag** in the Billing console (from the management account in an Organization). Activating takes some time, and by default it applies **going forward**. There's a backfill option for earlier months, so check the current rules.
+- **Not everything is taggable**, and some costs (data transfer, support fees, shared services) can't be neatly assigned to a team through tags.
+- **Untagged resources** show up as a "no tag" group. Reducing that group is the whole game.
+
+#### Enforcing tags
+- **Tag policies** (AWS Organizations): define the allowed keys and values (for example `env` must be `dev`, `test` or `prod`) and report non-compliance.
+- **AWS Config rules** (such as required-tags): flag resources missing tags.
+- **SCPs or IAM conditions:** deny creating resources **without** required tags (supported for many, but not all, services).
+- **Infrastructure as code** (CloudFormation, Lesson 34): apply tags automatically at creation.
+- **Cost Categories:** rules that group costs your way, for example "everything in these three accounts, or with these tags, is the Payments team".
+
+#### Billing alerts: the old way and the new way
+- **Older billing alert:** a **CloudWatch alarm** on the `EstimatedCharges` metric in the **AWS/Billing** namespace. It only exists in **us-east-1**, and requires turning on **"Receive Billing Alerts"** in the billing preferences. It's a simple threshold on the **month-to-date total**.
+- **Modern way:** **AWS Budgets** (actual and forecasted thresholds, per account or tag, with actions) and **Cost Anomaly Detection** (Lesson 42). These are more flexible, so new setups should start there.
+- **Other preferences:** invoice emails, and **Free Tier usage alerts**, which warn when you approach free limits.
+
+#### AWS Marketplace
+- A **digital catalog** of third-party software, data and services: security tools, databases, machine images (AMIs), containers, SaaS products and machine learning models.
+- **You buy through AWS:** charges appear on your **AWS bill**, so it fits **consolidated billing**, and procurement stays within one invoice.
+- **Pricing models:** hourly or monthly usage, annual subscriptions, SaaS contracts, free trials, and **private offers** (custom prices negotiated with the seller).
+- **Governance:** administrators can use a **private marketplace** to limit which products teams are allowed to buy, so people can't subscribe to anything they like.
+- **Sellers:** vendors (and consultants) list products and are paid through AWS. This is a business channel for companies as well as a buying channel for you.
+- **Cost notes:** you pay the software fee **plus** the underlying AWS infrastructure charge. Savings Plans and RIs discount the AWS infrastructure part, but generally **not** the third-party software fee.
+
+### 3. The industry problem it solves
+**A company with 15 teams and one shared bill.** The CFO says the AWS bill is ₹60 lakh and asks who's responsible. Without tags, the answer is a shrug. With a tagging standard (`team`, `project`, `env`) activated as cost allocation tags, Cost Explorer and CUR show cost per team, finance can charge each team's budget, and a Budget per team warns the owner before overspend.
+
+On the software side, security wants a third-party firewall appliance. Instead of a separate contract, vendor onboarding and invoice, they subscribe in Marketplace, launch it from an AMI, and the cost lands on the AWS bill, within an existing commitment relationship.
+
+**Where it goes wrong:** tags created inconsistently (`Team`, `team`, `TEAM` are three different keys), tags never activated (so reports stay empty), teams creating resources by hand without tags, and Marketplace subscriptions bought by anyone without governance.
+
+### 4. Code / hands-on
+```bash
+# 1. Tag a resource (example: an EC2 instance)
+aws ec2 create-tags \
+  --resources i-0123456789abcdef0 \
+  --tags Key=team,Value=payments Key=env,Value=prod
+
+# 2. Activate the tag as a cost allocation tag (management account)
+aws ce update-cost-allocation-tags-status \
+  --cost-allocation-tags-status TagKey=team,Status=Active
+
+# 3. List cost allocation tags and their status
+aws ce list-cost-allocation-tags
+
+# 4. Cost grouped by the team tag (works after activation and some delay)
+aws ce get-cost-and-usage \
+  --time-period Start=2026-10-01,End=2026-10-28 \
+  --granularity MONTHLY \
+  --metrics UnblendedCost \
+  --group-by Type=TAG,Key=team
+```
+
+**The older billing alarm (us-east-1, after enabling "Receive Billing Alerts"):**
+```bash
+aws cloudwatch put-metric-alarm \
+  --alarm-name billing-over-500 \
+  --namespace AWS/Billing \
+  --metric-name EstimatedCharges \
+  --dimensions Name=Currency,Value=USD \
+  --statistic Maximum \
+  --period 21600 \
+  --evaluation-periods 1 \
+  --threshold 500 \
+  --comparison-operator GreaterThanThreshold \
+  --alarm-actions arn:aws:sns:us-east-1:123456789012:billing-alerts \
+  --region us-east-1
+```
+
+**What this does:** step 2 is the step people forget, because tags don't appear in cost reports until activated. Step 4 shows a "no tag" group for everything untagged, which is your cleanup list. The alarm fires when the month-to-date estimated charge passes $500, but it can't forecast, so a Budget with a forecast alert is generally better. Command options can change, so confirm with `aws ce help`.
+
+### 5. Interview questions (curveball level) with answers
+
+**Q1. You've tagged all resources with `team`, but Cost Explorer still shows no breakdown by team. Why?**
+**Answer:** The tag was never **activated as a cost allocation tag** in the Billing console (from the management account for an Organization). Tags don't appear in billing data until activated, and activation takes time and generally applies going forward. Also check capitalization (`Team` is not `team`), that the resources are taggable, and that the costs aren't ones that tags can't capture (some shared or data transfer costs).
+
+**Q2. A third of your spend is "untagged". How do you reduce it, and keep it from coming back?**
+**Answer:** First **find** them: Cost Explorer grouped by tag shows the untagged cost, and **Tag Editor** and **AWS Config** list untagged resources. Then **fix** them: tag them manually or via script, and ask owners. **Prevent** new ones: **tag policies** in Organizations, an **SCP or IAM condition** that denies creating resources without required tags where the service supports it, **CloudFormation** templates that apply tags automatically, and Config rules that flag non-compliance. Add reporting on untagged spend per team so there's pressure to fix it.
+
+**Q3. Finance wants the Payments team's costs, but Payments resources live in five accounts and use different tag values. What do you do?**
+**Answer:** Use **Cost Categories** to define a "Payments" group by rules over accounts and tags, so five accounts and several tag spellings roll up to one name. Longer term, standardize tag values with **tag policies**. Cost Categories can then be used in Cost Explorer, Budgets and CUR.
+
+**Q4. A team subscribed to a $2,000-a-month Marketplace firewall appliance using a corporate card on their own account, bypassing procurement. How should this be governed?**
+**Answer:** Use a **private marketplace** (managed from the Organization's management account) to allow only approved products, and combine it with **IAM or SCP permissions** limiting who can subscribe. Route purchases through the consolidated bill so it's visible in Cost Explorer. Review that the software fee is separate from the AWS infrastructure cost, and check whether the vendor offers a **private offer** that's cheaper at your volume.
+
+**Q5. Your CTO wants "billing alerts". The existing setup is a CloudWatch alarm on `EstimatedCharges`, and a surprise still happened mid-month. What are the weaknesses?**
+**Answer:** The alarm only looks at the **month-to-date total** against a fixed number, so it can't **forecast** (it warns only after crossing the line), can't filter by team, service or tag, can't take actions, and it's only in us-east-1. **Budgets** (with forecast alerts and filters) and **Cost Anomaly Detection** (unusual spikes) fix those gaps. Keep the old alarm only as a last-resort safety net.
+
+### 6. Scenario question
+**Scenario:** You are the cloud engineer at **UrbanCart**, an e-commerce company with 10 teams and 14 AWS accounts in one Organization.
+- Last quarter's bill was ₹90 lakh. Finance can't say how much belongs to each team, and 35% of spend appears as "untagged".
+- Teams spell tags differently (`Team`, `team`, `owner-team`), and some tag values are free text.
+- Payments resources are spread across five accounts, and finance wants them reported as one group.
+- The security team bought a third-party WAF appliance through a Marketplace subscription using a personal subscription, and nobody in finance noticed until the invoice.
+- The CTO wants early warnings per team, but the only alert today is a single CloudWatch billing alarm.
+- New resources keep being created without tags by engineers using the console.
+- Finance also asks whether their Savings Plans (Lesson 41) will reduce the Marketplace software fee.
+
+Design the solution:
+1. How do you fix the tagging standard so it works for cost reports?
+2. How do you make cost reports show cost by team?
+3. How do you shrink the untagged 35% and stop it growing?
+4. How do you report Payments as one group across five accounts?
+5. How do you govern Marketplace purchases?
+6. How do you replace the single billing alarm with something useful?
+7. Answer finance's Savings Plan question.
+
+### 7. Scenario model answer
+1. **Tagging standard:** a short written standard with required keys (`team`, `project`, `env`, `owner`), fixed capitalization, and allowed values defined as a **tag policy** in Organizations, so `Team` vs `team` and free-text values stop.
+2. **Reports by team:** **activate** `team` (and `project`, `env`) as **cost allocation tags** from the management account, then use Cost Explorer, Budgets and CUR grouped by tag. Accept the activation delay, and backfill if the option is available.
+3. **Untagged spend:** find offenders with Cost Explorer's untagged group, **Tag Editor** and **Config** required-tags rules. Tag existing resources through a script. Prevent new ones with **CloudFormation or IaC tagging**, an **SCP or IAM condition** requiring tags on creation where supported, and a weekly untagged-spend report per team.
+4. **Payments across five accounts:** a **Cost Category** whose rule matches the five accounts and/or the Payments tag values, so reports show "Payments" as one line.
+5. **Marketplace governance:** **private marketplace** with approved products only, restricted subscribe permissions through IAM or SCPs, purchases through the consolidated bill, and a review of the vendor's **private offer** pricing.
+6. **Better alerts:** **Budgets per team** (filtered by tag or account) with actual and **forecasted** thresholds to an SNS topic, plus **Cost Anomaly Detection**. Keep the old alarm only as a backup.
+7. **Savings Plans and Marketplace:** Savings Plans discount **AWS compute usage**, and generally don't reduce the third-party **software fee**. They would reduce the cost of the EC2 instances the appliance runs on, but not the vendor's charge.
+
+---
+
+## Extra 1: Amazon API Gateway
+
+### Quick recap (so nothing here is new)
+- **API:** a set of URLs (endpoints) that programs call, for example `GET /orders/42`. REST is the common style, using HTTP verbs like GET and POST.
+- **Lambda** (Lesson 17): runs your code on demand with no servers. It's often the "backend" behind an API.
+- **Cognito and JWT tokens** (Lesson 36): login and signed tokens, which API Gateway can check before calling your code.
+- **IAM** (Lesson 5): permission rules. An API can require callers to sign requests with IAM credentials.
+- **CloudFront** (Lesson 29), **WAF** (Lesson 13), **ACM certificates**: edge caching, a web firewall, and HTTPS certificates.
+- **VPC, ALB and NLB** (Lessons 20 and 23): private networks and load balancers, for backends not on the public internet.
+- **CloudWatch** (Lesson 33): logs and metrics, where API access logs and errors are recorded.
+
+### 1. Analogy
+A **hotel front desk**. Guests (clients) don't walk into the kitchen or the storage rooms. They go to the front desk, which checks who they are (authentication), checks they're allowed what they're asking for (authorization), limits how many requests one guest can make (throttling), remembers common answers (caching), and passes the request to the right department (Lambda, a server, another service).
+
+### 2. Definition
+**Amazon API Gateway** is a **fully managed service for creating, publishing, securing, monitoring and scaling APIs** that front your backends. You don't run servers, and it scales automatically.
+
+#### API types
+| Type | Idea | Notes |
+|---|---|---|
+| **REST API** | The full-featured option | API keys and usage plans, request validation and mapping templates, caching, WAF support, canary deployments, private endpoints |
+| **HTTP API** | Simpler, cheaper, lower latency | JWT authorizers, Lambda and HTTP proxy integrations, fewer features, no usage plans |
+| **WebSocket API** | Two-way, persistent connections | Chat, live dashboards, notifications pushed to clients |
+
+**Endpoint types (REST):** **Edge-optimized** (requests enter through CloudFront edge locations, good for global clients), **Regional** (served from one Region, good for clients in that Region, and the usual choice behind your own CloudFront), and **Private** (reachable only from inside a VPC through a VPC endpoint).
+
+#### Integrations: what sits behind the API
+- **Lambda** (the most common, usually with *proxy integration*, where the whole request is passed to the function).
+- **HTTP endpoints** (any public web service).
+- **AWS services** directly (for example put a message in SQS or write to DynamoDB, with no Lambda needed).
+- **VPC Link:** reach private backends (an NLB or ALB in a VPC) without exposing them publicly.
+- **Mock integrations**, for testing.
+
+#### Security: who can call the API
+| Method | Use |
+|---|---|
+| **IAM authorization** (SigV4-signed requests) | Calls from other AWS services or AWS users and roles |
+| **Cognito user pool authorizer** (REST) or **JWT authorizer** (HTTP API) | Customer login with tokens (Lesson 36) |
+| **Lambda authorizer** (custom) | Your own logic, for example a legacy token or a partner scheme |
+| **API keys and usage plans** (REST) | **Metering and quotas** for partners. API keys identify callers for throttling and billing, but they are **not a security mechanism** on their own. |
+| **Resource policies** | Allow or deny by source IP, VPC, or account |
+| **AWS WAF** (REST) | Block malicious patterns and bots |
+| **Mutual TLS, custom domains with ACM certificates** | Client certificates, your own domain name |
+
+#### Traffic control and operations
+- **Throttling:** limits on request rate and burst, at account, stage and method level. Callers that exceed it get **HTTP 429**.
+- **Usage plans:** per-key limits and quotas (REST).
+- **Caching:** a stage-level cache (REST) cuts load on the backend and latency.
+- **Stages and deployments:** `dev`, `test`, `prod` versions of the same API, with **stage variables** and **canary releases** (REST) to send a small share of traffic to a new version.
+- **Request validation, transformation, CORS** (so browsers can call from other domains).
+- **Monitoring:** CloudWatch metrics and logs, access logs, and **X-Ray** tracing.
+
+#### Limits worth knowing
+- **Integration timeout:** about **29 seconds** by default (a classic exam fact, though newer options exist for increasing it on some API types, so check the current quotas). Long jobs need an asynchronous design.
+- **Payload size:** about **10 MB**.
+- **Pricing:** per million requests (plus data transfer, and cache hours for REST caching). HTTP APIs cost noticeably less than REST APIs.
+
+#### REST API vs HTTP API: how to choose
+Pick **HTTP API** for simple, cheap proxying to Lambda or HTTP backends with JWT auth. Pick **REST API** when you need **API keys and usage plans, request validation, caching, WAF, private endpoints, or canary releases**.
+
+### 3. The industry problem it solves
+**A food-delivery app** has a mobile app, a partner portal and an admin site, all calling backend logic written as Lambda functions.
+
+Without API Gateway, every function would need its own public URL and its own code for authentication, throttling, logging and HTTPS. A sudden burst or a bot could overwhelm the backends.
+
+With API Gateway: one HTTPS front door per environment, **Cognito authorizer** checks the customer's token, **usage plans** give partners a quota, **throttling** protects the backend from bursts, **WAF** blocks bad traffic, and CloudWatch logs show every request. The team ships `v2` to 5% of traffic with a canary before switching everyone.
+
+**Where it's a poor fit:** very high-volume simple traffic where an ALB would cost less, long-running requests (the timeout), large file uploads (use pre-signed S3 URLs instead, Lesson 36), and cases needing full control of the connection layer.
+
+### 4. Code / hands-on
+**A quick HTTP API in front of a Lambda function:**
+```bash
+# 1. Create the HTTP API with a Lambda "quick create" target
+aws apigatewayv2 create-api \
+  --name hello-api \
+  --protocol-type HTTP \
+  --target arn:aws:lambda:ap-south-1:123456789012:function:hello
+
+# 2. Allow API Gateway to invoke the function
+aws lambda add-permission \
+  --function-name hello \
+  --statement-id apigw-invoke \
+  --action lambda:InvokeFunction \
+  --principal apigateway.amazonaws.com \
+  --source-arn "arn:aws:execute-api:ap-south-1:123456789012:<api-id>/*"
+
+# 3. Call it
+curl https://<api-id>.execute-api.ap-south-1.amazonaws.com/
+```
+
+**A JWT authorizer using a Cognito user pool:**
+```bash
+aws apigatewayv2 create-authorizer \
+  --api-id <api-id> \
+  --authorizer-type JWT \
+  --name cognito-jwt \
+  --identity-source '$request.header.Authorization' \
+  --jwt-configuration Audience=<app-client-id>,Issuer=https://cognito-idp.ap-south-1.amazonaws.com/<pool-id>
+```
+
+**A minimal Lambda handler that reads claims passed by the authorizer (Python):**
+```python
+def handler(event, context):
+    claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
+    return {
+        "statusCode": 200,
+        "headers": {"Content-Type": "application/json"},
+        "body": '{"hello": "%s"}' % claims.get("email", "guest"),
+    }
+```
+
+**What this does:** the quick-create makes a default route and stage automatically. The permission in step 2 is the part people forget, and without it callers get a 500 error. After the authorizer is attached to a route, calls without a valid token get **401** before your Lambda runs. The claims structure shown is for HTTP API payload format 2.0, and it's different for REST APIs, so check the event shape with a test log. Command options can change, so confirm with `aws apigatewayv2 help`.
+
+### 5. Interview questions (curveball level) with answers
+
+**Q1. Your API calls a Lambda that sometimes takes 45 seconds, and clients get 504 errors. What do you do?**
+**Answer:** The API integration timeout (about 29 seconds by default) is shorter than the work. Don't just try to raise limits. Redesign as **asynchronous**: the API accepts the request, puts a message on **SQS** or starts a **Step Functions** workflow (Extra 4), returns **202 Accepted** with a job ID, and the client polls a status endpoint or gets a notification (WebSocket or SNS). Keep the synchronous path for fast requests only.
+
+**Q2. A partner is sending thousands of requests per second and degrading service for other customers. How do you protect the platform and still serve the partner?**
+**Answer:** Use **usage plans and API keys** (REST API) to give each partner its own **rate limit, burst limit and quota**, and set **stage and method throttling** to protect the backend. Callers beyond the limit receive 429. Remember API keys identify and meter callers but don't authenticate them, so keep a real authorizer too. For attacks rather than a legitimate heavy client, add **WAF** rate-based rules.
+
+**Q3. A developer says "we secured the API with an API key". Is that enough?**
+**Answer:** No. API keys are for **identification, metering and throttling**, not security. They're easy to leak (they sit in client code or logs), have no user identity, and can't express permissions. Real authentication needs **IAM, Cognito or JWT, or a Lambda authorizer**, with authorization checks (groups or scopes) at the API or in the backend, plus HTTPS and WAF where needed.
+
+**Q4. The backend is a set of EC2 instances in a private subnet with no public access. How can API Gateway expose it safely?**
+**Answer:** Use a **VPC Link** to a **Network Load Balancer** (or an ALB for HTTP APIs) in the VPC. API Gateway calls the private load balancer through the link, so the instances never get public IPs. Add authentication at the API, and keep the backend security group allowing traffic only from the load balancer.
+
+**Q5. A browser app on `app.example.com` calls your API on `api.example.com`, and the browser blocks the calls with a CORS error, even though Postman works. Why?**
+**Answer:** Browsers enforce **CORS**: the API must send the right `Access-Control-Allow-Origin` and related headers, and respond to the browser's **OPTIONS preflight** request. Postman isn't a browser, so it ignores CORS. Enable CORS on the API (an HTTP API has a CORS setting, and a REST API needs the OPTIONS method and headers), make sure error responses (401, 403, 429) also include the CORS headers, and allow only the real origins instead of `*` for authenticated calls.
+
+### 6. Scenario question
+**Scenario:** You are the cloud engineer at **RideSure**, a vehicle-insurance startup.
+- The mobile app and a web portal call about 25 Lambda-backed endpoints, with customers logging in through Cognito.
+- Three partner garages call a few endpoints using their own systems. One partner once flooded the API and slowed it for everyone.
+- A report endpoint sometimes runs for 50 seconds and returns errors.
+- Some endpoints must reach a legacy service on EC2 that has no public IP.
+- Marketing's landing-page form posts to the API from a browser and fails with CORS errors.
+- Security wants malicious traffic blocked, and finance wants the cheapest option where possible.
+- The team wants to release a new version to 10% of users first.
+
+Design the solution:
+1. HTTP API or REST API, and why?
+2. How do customers and partners authenticate?
+3. How do you stop one partner from flooding it?
+4. How do you fix the long report endpoint?
+5. How do you reach the legacy EC2 service?
+6. How do you fix the CORS errors and block malicious traffic?
+7. How do you release a new version to 10% first, and monitor it?
+
+### 7. Scenario model answer
+1. **API type:** the requirements (usage plans for partners, WAF, canary release) point to a **REST API**. If only the customer endpoints existed, an **HTTP API** would be cheaper. A split is also reasonable: HTTP API for the simple customer endpoints, REST API for the partner-facing one.
+2. **Authentication:** customers use the **Cognito user pool authorizer** (or JWT authorizer on HTTP API), with groups or scopes for authorization. Partners get **API keys plus usage plans** for metering, and a real authentication method, such as IAM, a Cognito app client with **client credentials (M2M)** and scopes (Lesson 36), or a Lambda authorizer.
+3. **Flood control:** per-partner **usage plans** (rate, burst, quota), stage and method **throttling**, and a **WAF rate-based rule**.
+4. **Long report:** make it **asynchronous**: the API starts a job (SQS or Step Functions), returns 202 with a job ID, and the report is delivered to S3 with a pre-signed link or a notification.
+5. **Legacy EC2 service:** **VPC Link** to an internal NLB or ALB in front of the instances, and security groups that allow only the load balancer.
+6. **CORS and malicious traffic:** configure **CORS** properly, including on error responses, with the real origins only. Attach **WAF** (managed rules, rate limiting) to the REST API.
+7. **Gradual release:** a **canary deployment** on the stage (10% of traffic to the new deployment), watching **CloudWatch** `5XXError`, `4XXError` and latency, with alarms and a quick **rollback** by promoting or removing the canary. Use IaC (Lesson 34) so releases are repeatable.
+
+---
+
+## Extra 2: AWS Systems Manager
+
+### Quick recap (so nothing here is new)
+- **EC2 instances** (Lesson 6): virtual servers whose operating system *you* manage and patch (Shared Responsibility, Lesson 4).
+- **SSH and bastion hosts:** the traditional way to log into a Linux server, by opening port 22 and managing keys.
+- **IAM roles and instance profiles** (Lesson 5): a role attached to an instance so it can call AWS without stored keys.
+- **VPC endpoints and private subnets** (Lesson 23): a way for private instances to reach AWS services without internet access.
+- **Inspector** (Lesson 37): finds vulnerable packages and relies on the SSM Agent. It *finds*, and Systems Manager Patch Manager *fixes*.
+- **Secrets Manager and Parameter Store** (Lesson 35): where secrets and settings are stored.
+- **CloudTrail and CloudWatch** (Lessons 13 and 33): audit records and logs.
+
+### 1. Analogy
+A **facilities-management control room for a large building**. Instead of the manager walking to every floor with a key, the control room can talk to every room (server) remotely: open a door for a technician (a shell session), send the same instruction to every thermostat (run a command on many servers), schedule maintenance (patching), and keep a register of everything installed in each room (inventory). Everything is logged, and the building has no need for a hundred spare keys.
+
+### 2. Definition
+**AWS Systems Manager (SSM)** is a collection of tools for **operating and managing your servers and applications at scale**, on EC2, on-premises machines and other clouds ("managed nodes"). It's the standard answer for "how do I manage a fleet without SSH?"
+
+#### How a machine becomes "managed"
+1. The **SSM Agent** runs on the machine (preinstalled on many Amazon Linux and Windows AMIs).
+2. The machine has an **IAM role** (instance profile) allowing it to talk to Systems Manager, usually the managed policy `AmazonSSMManagedInstanceCore`.
+3. The machine can **reach the Systems Manager endpoints**, through the internet or NAT, or through **VPC interface endpoints** (`ssm`, `ssmmessages`, `ec2messages`) in a private subnet.
+4. For on-premises servers, you use **hybrid activations**.
+At scale, **Quick Setup** and **Default Host Management Configuration** apply this to many instances and accounts.
+
+#### The main capabilities
+| Capability | What it does |
+|---|---|
+| **Session Manager** | Opens a **shell on an instance through the browser or CLI, with no SSH, no open port 22, no bastion and no key pairs**. Access is controlled by IAM, and sessions can be logged to S3 and CloudWatch Logs. |
+| **Run Command** | Runs a command or script on **many instances at once** (by tag or ID), with output captured and no login. |
+| **Patch Manager** | Defines **patch baselines** (which patches are approved), scans instances, installs patches during **maintenance windows**, and reports **patch compliance**. |
+| **Maintenance Windows** | Schedules disruptive tasks (patching, scripts) in a safe time window. |
+| **State Manager** | Keeps instances in a **desired state** (for example "this agent installed, this setting applied"), reapplying on a schedule. |
+| **Automation** | Runs **runbooks** (multi-step workflows), such as restart an instance, create an AMI, or remediate a finding. Many are provided by AWS, and EventBridge can trigger them. |
+| **Parameter Store** | Stores **configuration values and secrets** (String, StringList, SecureString with KMS), hierarchical by path, standard parameters free (Lesson 35). |
+| **Inventory** | Collects the list of installed software, files and settings from managed nodes. |
+| **Fleet Manager** | A console view and remote tools for managed nodes. |
+| **OpsCenter, Explorer, Change Manager** | Operational issue tracking, dashboards, and change-approval workflows. |
+
+#### Session Manager vs SSH and bastion hosts
+| | SSH / bastion | Session Manager |
+|---|---|---|
+| Inbound port needed | Yes (22) | **No** |
+| Credentials | SSH keys to distribute and rotate | **IAM** |
+| Audit | Weak unless you build it | **CloudTrail plus session logs** |
+| Private subnets | Need a bastion or VPN | Works through VPC endpoints |
+
+#### Systems Manager vs related services
+- **Parameter Store vs Secrets Manager** (Lesson 35): Parameter Store for configuration and cheap simple secrets, Secrets Manager for credentials that need rotation, replication and audit.
+- **Patch Manager vs Inspector:** Patch Manager **installs fixes**, Inspector **finds vulnerabilities**.
+- **Systems Manager vs CloudFormation:** CloudFormation **creates** infrastructure, and Systems Manager **operates** what's running on it.
+- **Systems Manager vs Config:** Config checks configuration of AWS resources, while Systems Manager configures and inspects what's *inside* machines.
+
+#### Pricing shape
+Many features, such as Session Manager, Run Command, Patch Manager, Parameter Store standard parameters and Inventory, have **no extra charge** for managing EC2 instances (you pay for underlying resources such as logs and S3), while some advanced features, hybrid on-prem nodes, and advanced parameters have a charge. Check the pricing page.
+
+### 3. The industry problem it solves
+**A company with 400 Linux and Windows servers across 6 accounts.**
+
+Before Systems Manager: engineers SSH in through bastion hosts with shared keys, port 22 is open to "the office IP range", nobody knows exactly which servers have the latest patches, and patching means someone running scripts over a weekend. An audit asks "who logged into the payment server last Tuesday?" and the answer is a guess.
+
+With Systems Manager: no inbound ports are open, access is by IAM and logged, **Patch Manager** patches on schedule and shows compliance, **Run Command** applies a fix to 200 servers with one command, and **Automation** restarts or isolates a server when an alert fires. When Inspector finds a critical flaw (Lesson 37), Patch Manager fixes it.
+
+**Where it's a poor fit:** machines that can't run the agent (some appliances), workloads you don't manage at the OS level (serverless, containers on Fargate), and very complex configuration management needs where tools like Ansible or Chef may already be established.
+
+### 4. Code / hands-on
+```bash
+# 1. Which instances are managed (agent online, role present)?
+aws ssm describe-instance-information
+
+# 2. Open a shell with no SSH (needs the Session Manager plugin for the CLI)
+aws ssm start-session --target i-0123456789abcdef0
+
+# 3. Run a command on all dev instances by tag
+aws ssm send-command \
+  --document-name "AWS-RunShellScript" \
+  --targets "Key=tag:env,Values=dev" \
+  --parameters 'commands=["uptime","df -h"]'
+
+# 4. Store and read parameters by path (Lesson 35's cheap settings)
+aws ssm put-parameter --name /shop/prod/timeout --type String --value 30
+aws ssm get-parameters-by-path --path /shop/prod/ --recursive
+
+# 5. Look at patch baselines and compliance
+aws ssm describe-patch-baselines
+aws ssm describe-instance-patch-states --instance-ids i-0123456789abcdef0
+
+# 6. Run an AWS-provided runbook (Automation)
+aws ssm start-automation-execution \
+  --document-name "AWS-RestartEC2Instance" \
+  --parameters "InstanceId=i-0123456789abcdef0"
+```
+
+**What this does:** step 1 is the first thing to check when "the instance doesn't appear in Systems Manager", because a missing role, agent, or network path is the usual cause (private subnets need the three VPC endpoints). Step 3 targets by **tag**, which is why a good tagging standard (Lesson 43) pays off. Step 6 shows Automation, where the same call can be triggered by EventBridge for **auto-remediation**. Command options can change, so confirm with `aws ssm help`.
+
+### 5. Interview questions (curveball level) with answers
+
+**Q1. An EC2 instance in a private subnet doesn't appear in Systems Manager. List the checks in order.**
+**Answer:** (1) Is the **SSM Agent** installed and running (and the OS supported)? (2) Does the instance have an **IAM role** with the SSM permissions (`AmazonSSMManagedInstanceCore`)? (3) Can it **reach the Systems Manager endpoints**: a NAT gateway or the three **VPC interface endpoints** (`ssm`, `ssmmessages`, `ec2messages`), with the endpoint security group allowing HTTPS from the instance and private DNS enabled? (4) Is the Region correct, and is there an SCP or endpoint policy blocking it? Also check the agent log on the instance. Most cases are a missing role or missing endpoints.
+
+**Q2. The security team wants to remove all SSH access and the bastion hosts, but still needs to audit who ran what on production servers. How?**
+**Answer:** Use **Session Manager**. Close port 22, remove the bastions and key pairs, grant access through **IAM policies** (restrict by tags or instance), and enable **session logging** to S3 and CloudWatch Logs for command records. **CloudTrail** records who started each session. For one-off changes, use **Run Command** with a recorded document. This gives better auditing than SSH ever did.
+
+**Q3. Inspector reports a critical OS vulnerability on 150 instances, and the fix is a package update. How do you roll it out safely?**
+**Answer:** Use **Patch Manager** with an appropriate **patch baseline**, and a **maintenance window** scoped by tags. Roll out in **stages** (dev, then staging, then a small production group, then the rest), check **patch compliance** after each stage, and use rate controls (a maximum number of concurrent targets and an error threshold that stops the rollout). Take **snapshots or AMIs** first where rollback matters, and keep a plan for instances that can't be patched. Then confirm in Inspector that the findings closed.
+
+**Q4. Where should the app's database password and its timeout setting live: Parameter Store or Secrets Manager?**
+**Answer:** The **timeout** (non-sensitive configuration) goes in **Parameter Store**, a standard parameter, which is free. The **database password** needs rotation, audit and perhaps replication, so it goes in **Secrets Manager** (Lesson 35). Parameter Store `SecureString` can hold small secrets cheaply, but it has no built-in rotation, so choose by whether the value needs managed rotation.
+
+**Q5. A runbook that restarts a web server was run by hand 40 times last month at 3 a.m. How do you stop waking people up?**
+**Answer:** Build an **auto-remediation**: a CloudWatch alarm (or health-check event) triggers **EventBridge**, which starts a **Systems Manager Automation** runbook that restarts the service or instance, verifies health, and posts a notification to SNS or chat. Add safeguards: a limit on how many times it can run per hour, so a deeper failure escalates to a human instead of looping, and log every execution.
+
+### 6. Scenario question
+**Scenario:** You are the cloud engineer at **NorthLeaf Health**, with 250 EC2 instances (Linux and Windows) in 4 accounts, some in private subnets with no internet.
+- Today engineers use SSH through two bastion hosts, with shared key files, and port 22 is open to the office range.
+- Auditors want to know who accessed production servers and what they did.
+- Inspector flagged critical vulnerabilities, and patching is done by hand once a quarter.
+- Ten legacy servers in the company's own data center also need the same management.
+- Application configuration values and a few secrets are hard-coded in scripts on the servers.
+- A recurring disk-full problem on a log server causes pages at night.
+- Some private-subnet instances don't show up as managed.
+
+Design the solution:
+1. How do you remove SSH and bastions and still satisfy the audit?
+2. How do you get every instance, including private-subnet ones, under management?
+3. How do you patch safely and prove compliance?
+4. How do you bring the data-center servers in?
+5. Where do configuration values and secrets go?
+6. How do you fix the recurring disk-full page?
+7. How does this work with Inspector and Config?
+
+### 7. Scenario model answer
+1. **Replace SSH:** **Session Manager** with IAM-based access (limited by tags and roles), **session logging** to S3 and CloudWatch Logs, CloudTrail for session starts, then close port 22 and decommission the bastions and shared keys.
+2. **Get everything managed:** attach `AmazonSSMManagedInstanceCore` (use **Default Host Management Configuration** or **Quick Setup** across accounts), make sure the **SSM Agent** is in the AMIs, and create the three **VPC interface endpoints** for private subnets. Audit with the managed-nodes list and a Config rule for "managed by Systems Manager".
+3. **Patching:** **Patch Manager** with baselines per OS and environment, **maintenance windows** by tag, staged rollout with concurrency and error limits, snapshots before production patching, and **patch compliance** reports as the audit evidence. Verify the Inspector findings close.
+4. **Data-center servers:** **hybrid activations** to register them as managed nodes, using the same Session Manager, Patch Manager and Inventory.
+5. **Config and secrets:** non-sensitive values in **Parameter Store** (by path), and credentials in **Secrets Manager** with rotation (Lesson 35), read at runtime with an IAM role. Remove hard-coded values from scripts.
+6. **Disk-full page:** a CloudWatch alarm (using the agent's disk metric) triggers **EventBridge → Automation** to clean old logs or expand the volume, with a limit and a notification, plus a longer-term fix (log rotation and shipping logs to CloudWatch Logs or S3).
+7. **Working together:** **Inspector** finds vulnerabilities, **Patch Manager** fixes them, **Config** checks configuration compliance, **Security Hub** (Extra 3) collects the findings, and **EventBridge** connects alerts to **Automation**.
+
+---
+
+## Extra 3: AWS Security Hub
+
+### Quick recap (so nothing here is new)
+- **GuardDuty** (Lesson 13): detects threats and suspicious behavior as it happens.
+- **Inspector** (Lesson 37): finds software vulnerabilities and exposed network paths.
+- **Macie** (Lesson 38): finds sensitive data in S3 and risky bucket settings.
+- **AWS Config** (Lesson 13): records resource configuration and checks it against rules.
+- **IAM Access Analyzer** (Lesson 16 area): finds resources shared outside your account or organization.
+- **EventBridge and SNS** (Lesson 32): route events to alerts and automation.
+- **AWS Organizations and delegated administrator** (Lesson 15): manage many accounts from one security account.
+- **Compliance programs** (Lesson 12): standards such as CIS, PCI DSS and NIST that you must prove you follow.
+
+### 1. Analogy
+A **security operations wall of screens** in a building. Each security system has its own panel: the burglar alarm (GuardDuty), the structural inspector (Inspector), the document-room auditor (Macie), the rule checker (Config). Without a wall, a guard has to walk to every panel. **Security Hub is the central wall:** all alerts in one place, in one format, ranked by importance, plus a scorecard of how well the building follows the safety code.
+
+### 2. Definition
+**AWS Security Hub** is a **central place to see, prioritize and act on security findings and security posture across your AWS accounts and Regions**. It does two jobs:
+1. **Aggregates findings** from AWS security services (GuardDuty, Inspector, Macie, Config, IAM Access Analyzer, Firewall Manager and others) and from third-party tools, in one common format.
+2. **Checks your configuration against security standards** (cloud security posture management, CSPM), producing its own findings and a **security score**.
+
+(AWS has been evolving Security Hub, adding cross-service correlation and risk prioritization, a newer finding schema called OCSF alongside the older ASFF, and in newer documentation the posture-checking part is called **Security Hub CSPM**. The ideas below are stable, but check the current documentation for naming and plans.)
+
+#### The main pieces
+| Piece | Meaning |
+|---|---|
+| **Findings** | A normalized record of a security issue: severity, resource, account, Region, status. The older common format is the **AWS Security Finding Format (ASFF)**. |
+| **Security standards and controls** | Sets of automated checks. Common standards: **AWS Foundational Security Best Practices**, **CIS AWS Foundations Benchmark**, **PCI DSS**, and **NIST SP 800-53**. Each control passes or fails per resource (for example "S3 buckets should block public access"). |
+| **Security score** | A summary percentage of how many controls pass. |
+| **Integrations** | Findings from AWS services and partners flow in automatically after you enable the integration. |
+| **Delegated administrator and aggregation** | In Organizations, one account sees all member accounts, and **cross-Region aggregation** shows all Regions in one place. |
+| **Automation rules** | Automatically change findings as they arrive (for example suppress a known-accepted finding, or raise the severity for production accounts). |
+| **EventBridge integration and custom actions** | Send findings to chat, ticketing, a SIEM, or a Lambda or Automation runbook for remediation. |
+| **Insights** | Saved queries that group findings (for example "resources with the most failed controls"). |
+
+**Prerequisite:** the standards' controls rely on **AWS Config** recording resources, so turn on Config in each account and Region you want checked, or many controls show no data.
+
+#### Security Hub vs the services feeding it
+| Service | Role |
+|---|---|
+| **GuardDuty, Inspector, Macie, Config, Access Analyzer** | **Producers:** they detect specific kinds of issues |
+| **Security Hub** | **Aggregator and posture checker:** one dashboard, one format, standards scoring |
+| **Detective** | **Investigation:** helps you dig into the cause of a finding with relationship graphs and history |
+| **CloudTrail** | **Audit log** of API calls, an input for others |
+| **A SIEM** (Splunk, etc.) | Long-term correlation and search across all your sources, which Security Hub can feed |
+
+#### Pricing shape
+Charged by the **number of security checks** run and the **findings ingested**, per account and Region, with a free trial. Turning on every standard in every Region can add up, so enable the ones you actually use, and check the pricing page.
+
+### 3. The industry problem it solves
+**A fintech with 30 AWS accounts and four security tools.**
+
+Before: the security team opens GuardDuty in one account, Inspector in another, and a spreadsheet for CIS compliance. Findings have different formats and severities, nobody knows which account is worst, and an auditor asking "show me your CIS benchmark status" needs a week of work.
+
+With Security Hub: a **delegated administrator** sees all accounts and Regions in one view, a **security score per standard** shows posture, a **critical finding** from Inspector or GuardDuty goes to on-call within minutes through EventBridge, and **automation rules** suppress known noise. The audit evidence is a dashboard and an export.
+
+**Where it's a poor fit:** it doesn't detect threats or scan vulnerabilities by itself (it needs the producing services turned on), it can't fix issues on its own without automation you build, and a flood of low-value findings can drown a small team unless you prioritize.
+
+### 4. Code / hands-on
+```bash
+# 1. Enable Security Hub with the default standards
+aws securityhub enable-security-hub --enable-default-standards
+
+# 2. See which standards are available and which you have enabled
+aws securityhub describe-standards
+aws securityhub get-enabled-standards
+
+# 3. List active critical findings
+aws securityhub get-findings \
+  --filters '{"SeverityLabel":[{"Value":"CRITICAL","Comparison":"EQUALS"}],
+              "RecordState":[{"Value":"ACTIVE","Comparison":"EQUALS"}]}'
+
+# 4. Mark a finding as suppressed (accepted risk), with a note
+aws securityhub batch-update-findings \
+  --finding-identifiers Id=<finding-id>,ProductArn=<product-arn> \
+  --workflow Status=SUPPRESSED \
+  --note Text="Accepted: sandbox account",UpdatedBy="security-team"
+
+# 5. In the management account: nominate a delegated administrator
+aws securityhub enable-organization-admin-account --admin-account-id 111122223333
+```
+
+An EventBridge rule pattern to send new critical findings to SNS:
+```json
+{
+  "source": ["aws.securityhub"],
+  "detail-type": ["Security Hub Findings - Imported"],
+  "detail": {
+    "findings": {
+      "Severity": { "Label": ["CRITICAL"] },
+      "Workflow": { "Status": ["NEW"] }
+    }
+  }
+}
+```
+
+**What this does:** step 1 turns on the default standards (which need Config to be recording), and the score fills in after the first checks finish. Step 4 records a decision without deleting evidence. The EventBridge pattern follows the structure of the ASFF finding event, so confirm field names against a sample event in your account, because a wrong pattern silently matches nothing. Command options can change, so confirm with `aws securityhub help`.
+
+
+### 5. Interview questions (curveball level) with answers
+
+**Q1. Security Hub shows "no data" or very few results for many controls. Why?**
+**Answer:** The standards' checks depend on **AWS Config** recording the relevant resources. If Config isn't enabled in that account and Region (or is recording only some resource types), controls can't evaluate. Check that Config is on everywhere you've enabled Security Hub, that the Region is one you've enabled, and that the standard itself is enabled. Also allow time after enabling for the first evaluation.
+
+**Q2. You have 12 accounts and 4 Regions. How do you give the security team one view without logging into 48 places?**
+**Answer:** Use **AWS Organizations** with a **delegated administrator** account for Security Hub, auto-enable it for member accounts (including new ones), and turn on **cross-Region aggregation** so the administrator sees findings from all Regions in one aggregation Region. Do the same for the producing services (GuardDuty, Inspector, Macie) so their findings flow in.
+
+**Q3. Security Hub reports 8,000 findings and the team is overwhelmed. How do you make it manageable?**
+**Answer:** Prioritize by **severity, resource criticality and exposure**, and fix by **root cause** (one misconfigured template or AMI may cause hundreds). Use **automation rules** to suppress accepted risks (sandbox accounts) and raise severity for production, **insights** to focus on the worst resources, and disable controls that don't apply to you (with a documented reason). Set targets such as "no critical findings older than 7 days", and send only critical and high findings to on-call.
+
+**Q4. Is Security Hub a replacement for GuardDuty and Inspector?**
+**Answer:** No. Those services **detect**, and Security Hub **aggregates and checks posture**. If GuardDuty is off, Security Hub won't show threat detections. Security Hub's own checks cover configuration against standards, not threat behavior or software vulnerabilities. Use all of them together, with Security Hub as the central view.
+
+**Q5. A control fails on a resource that is intentionally public (a static website bucket). What should the team do?**
+**Answer:** Don't weaken the control for everyone. Confirm the exception is justified (public website content only, no sensitive data, Macie scan clean), then **suppress the finding** for that resource with a documented reason and owner (or use an automation rule), and add compensating controls such as serving through CloudFront (Lesson 29) with the bucket itself private where possible. Review the exception periodically.
+
+### 6. Scenario question
+**Scenario:** You are the cloud security engineer at **SafeHarbor Bank**, with 40 AWS accounts across two Regions under AWS Organizations.
+- GuardDuty, Inspector and Macie are on in some accounts, but findings sit in separate consoles.
+- An auditor requires evidence of the **CIS AWS Foundations Benchmark** and **PCI DSS** status.
+- On-call must be paged within minutes for critical findings in production accounts only.
+- The team is flooded by findings from 15 sandbox accounts.
+- A control fails because Config isn't recording in 6 accounts.
+- Management wants a single score and a weekly trend.
+- Some findings should be fixed automatically (for example a security group open to the world on port 22 in dev).
+
+Design the solution:
+1. How do you get one view across all accounts and both Regions?
+2. How do you provide the CIS and PCI evidence?
+3. How do you page on-call for production criticals only?
+4. How do you reduce the sandbox noise without hiding real problems?
+5. How do you fix the Config gap?
+6. How do you automate the fix for the open port 22?
+7. How do you report the score and trend to management?
+
+### 7. Scenario model answer
+1. **One view:** a **delegated administrator** (security account) for Security Hub, auto-enable for all member accounts, and **cross-Region aggregation** to one Region. Enable GuardDuty, Inspector and Macie organization-wide so their findings flow in.
+2. **Audit evidence:** enable the **CIS AWS Foundations Benchmark** and **PCI DSS** standards, with Config recording on. Use the per-standard **security score and control status** as evidence, and export findings (for example to S3) with timestamps.
+3. **Paging:** an **EventBridge** rule matching **critical, new** findings filtered by **production account IDs or tags**, sent to **SNS** and on to the paging and chat tools.
+4. **Sandbox noise:** **automation rules** that lower the severity or suppress findings from the sandbox accounts (with a documented policy and a reviewed list), while keeping critical categories such as exposed credentials visible. Don't disable the standards for those accounts completely.
+5. **Config gap:** deploy a Config recorder to all accounts and Regions with **CloudFormation StackSets** or the delegated administrator's organization-wide setup, and add a check so a missing recorder raises an alert.
+6. **Automated fix:** a **custom action or EventBridge rule** on that specific control, triggering a **Systems Manager Automation** runbook or Lambda that removes the open rule in **dev accounts only**, and notifies the owner. In production, alert and require approval.
+7. **Management reporting:** the **security score per standard and per account**, an **insight** for the top failing controls, and a weekly export or dashboard (for example Athena and QuickSight on exported findings) to show trend.
+
+---
+
+## Extra 4: Kinesis and Step Functions
+
+*Two services in one extra: Kinesis moves and processes streams of data, and Step Functions coordinates multi-step workflows.*
+
+### Quick recap (so nothing here is new)
+- **SQS** (Lesson 31): a queue that holds messages until a worker takes and deletes them. Messages are consumed once, and there's no replay.
+- **SNS** (Lesson 32): pushes one message to many subscribers. It doesn't store messages for later reading.
+- **Lambda** (Lesson 17): code that runs on events, with a time limit of 15 minutes.
+- **S3, Redshift and DynamoDB** (Lessons 7, 27 and 25): common destinations for data.
+- **A stream:** an endless flow of small records (clicks, sensor readings, log lines) arriving continuously, which you want to process as it arrives.
+- **A shard or partition:** a slice of a stream. Records with the same key go to the same slice, which preserves their order.
+- **Workflow / state machine:** a defined set of steps with decisions, retries and error paths.
+- **IAM roles** (Lesson 5): the permissions each step uses.
+- **API Gateway** (Extra 1): where long-running jobs should be started asynchronously instead of waiting.
+
+---
+
+## Part A: Amazon Kinesis
+
+### 1. Analogy
+A **river with a dam of observers** versus a **post office queue**. SQS is a post-office counter: each letter goes to one clerk and is removed. **Kinesis Data Streams is a river** flowing past several observation stations: many consumers can watch the same water independently, in order, and you can rewind and watch yesterday's stretch again (within the retention period).
+
+### 2. Definition
+**Amazon Kinesis** is a family of services for **collecting, processing and delivering real-time streaming data**.
+
+| Service | What it does |
+|---|---|
+| **Kinesis Data Streams** | A durable stream you read yourself. **Producers** write records, **consumers** read them, ordered per partition key, with **replay**. You manage capacity (shards), or use on-demand mode. |
+| **Amazon Data Firehose** (formerly Kinesis Data Firehose) | A **fully managed delivery pipe**: it buffers streaming data and **loads it into S3, Redshift, OpenSearch, Splunk or HTTP endpoints**, optionally transforming it with Lambda and converting formats (for example to Parquet). No consumers to write and no replay. |
+| **Managed Service for Apache Flink** (formerly Kinesis Data Analytics) | Runs **real-time analytics and stream processing** (windows, aggregations) with Apache Flink. |
+| **Kinesis Video Streams** | Streams and stores **video and audio** from devices for processing. |
+
+#### Data Streams essentials
+- **Shard:** the unit of capacity. Roughly **1 MB/s or 1,000 records/s write** and **2 MB/s read** per shard (check current limits). More shards means more throughput.
+- **Capacity modes:** **provisioned** (you choose shards) or **on-demand** (AWS scales for you).
+- **Partition key:** decides which shard a record goes to. Records with the same key stay in order within that shard. A **hot key** (one key getting most traffic) overloads one shard.
+- **Retention:** **24 hours by default**, extendable up to **365 days**, so consumers can **replay**.
+- **Consumers:** Lambda (with an event source mapping), applications using the **Kinesis Client Library (KCL)**, or Flink. **Enhanced fan-out** gives each consumer its own dedicated read throughput.
+- **Producers:** the AWS SDK, the **Kinesis Producer Library (KPL)**, the Kinesis agent, or many AWS services.
+
+#### Kinesis vs SQS vs SNS
+| | **SQS** | **SNS** | **Kinesis Data Streams** |
+|---|---|---|---|
+| Model | Queue, one consumer takes each message | Push to many subscribers | Ordered stream, many independent readers |
+| Replay | No | No | **Yes**, within retention |
+| Ordering | FIFO queue option | Limited | **Per partition key / shard** |
+| Typical use | Decoupling work | Fan-out alerts | Real-time analytics, event logs, clickstreams |
+
+### 3. The industry problem Kinesis solves
+**A streaming platform** collects 50,000 playback events per second (play, pause, buffering) from millions of devices. The product team wants a live dashboard, the data team wants all events in S3 for analysis, and the fraud team wants to detect suspicious patterns within seconds.
+
+A queue would give each event to only one consumer. With **Kinesis Data Streams**, all three consume the same events independently: a **Flink** application computes per-minute aggregates, **Firehose** delivers raw events to S3 (as Parquet), and a **Lambda** consumer flags suspicious patterns. If the dashboard code had a bug, they rewind and reprocess the last 24 hours.
+
+**Where it's a poor fit:** simple background jobs (use SQS), low-volume events where managing shards is overkill (use SQS, SNS or EventBridge), and strict global ordering across all records (ordering is per shard).
+
+### 4. Code / hands-on (Kinesis)
+```bash
+# 1. Create a one-shard stream
+aws kinesis create-stream --stream-name clicks --shard-count 1
+
+# 2. Put a record (the partition key decides the shard)
+aws kinesis put-record \
+  --stream-name clicks \
+  --partition-key user-42 \
+  --cli-binary-format raw-in-base64-out \
+  --data '{"user":"user-42","page":"/home"}'
+
+# 3. Read it back (iterator from the start of the shard)
+SHARD_ID=$(aws kinesis list-shards --stream-name clicks \
+  --query 'Shards[0].ShardId' --output text)
+
+ITERATOR=$(aws kinesis get-shard-iterator \
+  --stream-name clicks --shard-id "$SHARD_ID" \
+  --shard-iterator-type TRIM_HORIZON \
+  --query 'ShardIterator' --output text)
+
+aws kinesis get-records --shard-iterator "$ITERATOR"
+```
+
+**What this does:** `get-records` returns base64-encoded data, which you decode to read it. `TRIM_HORIZON` starts from the oldest available record (this is the **replay** ability), while `LATEST` reads only new ones. In real systems you'd use a Lambda event source mapping or KCL rather than reading shards by hand. Command options can change, so confirm with `aws kinesis help`.
+
+---
+
+## Part B: AWS Step Functions
+
+### 1. Analogy
+A **restaurant order ticket moving through the kitchen**: take order, check stock, if the item is out ask the customer to choose again, cook, plate, deliver, and if cooking fails retry twice then call the manager. **Step Functions is the head chef coordinating each step**, remembering where every order is, retrying failures, and keeping a record of what happened.
+
+### 2. Definition
+**AWS Step Functions** is a **serverless workflow orchestrator**. You define a **state machine** (in JSON, using Amazon States Language, or with a visual designer) made of steps that call **Lambda functions and over 200 AWS services**, with built-in **branching, parallelism, waiting, retries and error handling**, and a visual view of every execution.
+
+#### State types
+| State | Purpose |
+|---|---|
+| **Task** | Do work: call Lambda, start an ECS task, write to DynamoDB, publish to SNS, start a Glue job, and more |
+| **Choice** | Branch on a condition (`if amount > 1000 then manual approval`) |
+| **Parallel** | Run branches at the same time and wait for all |
+| **Map / Distributed Map** | Run the same steps for each item in a list (including very large datasets in S3) |
+| **Wait** | Pause for a time or until a date |
+| **Pass, Succeed, Fail** | Pass data along, or end the workflow successfully or with an error |
+
+#### Reliability features
+- **Retry** (with backoff) and **Catch** (route errors to a recovery path) on any task.
+- **Callback pattern (`.waitForTaskToken`):** pause until an external system or a human responds, for approvals.
+- Every execution has a **full history** of inputs, outputs and failures.
+
+#### Standard vs Express workflows
+| | **Standard** | **Express** |
+|---|---|---|
+| Duration | Up to **1 year** | Up to **5 minutes** |
+| Execution semantics | **Exactly-once** for each step | **At-least-once** |
+| Volume | Moderate | **Very high** (hundreds of thousands per second) |
+| Billing | Per **state transition** | Per **request and duration** |
+| Best for | Order processing, approvals, long jobs | High-volume short workflows, streaming data processing |
+
+#### Step Functions vs other tools
+- **vs chaining Lambdas:** one Lambda calling the next hides failures and loses state when something breaks. Step Functions keeps state, retries and a visual history, and each Lambda stays small.
+- **vs SQS:** SQS decouples a producer from workers. Step Functions **coordinates multiple steps with decisions**.
+- **vs Managed Airflow (MWAA):** Airflow suits scheduled data-pipeline DAGs and teams that know Python and Airflow. Step Functions suits event-driven, serverless application workflows.
+
+### 3. The industry problem Step Functions solves
+**An online store's order flow:** charge the card, reserve stock, create a shipping label, send a confirmation. If the card is declined, stop. If the shipping API fails, retry three times then alert. If stock reservation succeeds but shipping fails permanently, **release the stock** (a compensating step).
+
+Hand-written code scatters this logic across functions, queues and retries, and a failure at step 3 leaves the order in an unknown state. With Step Functions, the flow is one **visible state machine**, every order's progress and failure is recorded, retries and compensations are declared instead of coded, and support can see exactly where order 8841 stopped.
+
+**Where it's a poor fit:** a single simple Lambda, very high-volume sub-second processing with Standard workflows (cost per transition, so consider Express), and logic that is really a data pipeline better modeled in an Airflow-style scheduler.
+
+### 4. Code / hands-on (Step Functions)
+A small state machine (`order.asl.json`) with a retry and a failure path:
+```json
+{
+  "Comment": "Order flow",
+  "StartAt": "ChargeCard",
+  "States": {
+    "ChargeCard": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:ap-south-1:123456789012:function:charge-card",
+      "Retry": [{ "ErrorEquals": ["States.TaskFailed"], "IntervalSeconds": 2, "MaxAttempts": 3, "BackoffRate": 2.0 }],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "OrderFailed" }],
+      "Next": "ShipOrder"
+    },
+    "ShipOrder": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:ap-south-1:123456789012:function:ship-order",
+      "End": true
+    },
+    "OrderFailed": {
+      "Type": "Fail",
+      "Error": "OrderError",
+      "Cause": "Payment could not be completed"
+    }
+  }
+}
+```
+
+```bash
+# 1. Create the state machine (the role must allow invoking those Lambdas)
+aws stepfunctions create-state-machine \
+  --name order-flow \
+  --definition file://order.asl.json \
+  --role-arn arn:aws:iam::123456789012:role/StepFunctionsOrderRole
+
+# 2. Start an execution
+aws stepfunctions start-execution \
+  --state-machine-arn arn:aws:states:ap-south-1:123456789012:stateMachine:order-flow \
+  --input '{"orderId":"8841","amount":499}'
+
+# 3. Check the result and the history
+aws stepfunctions describe-execution --execution-arn <execution-arn>
+aws stepfunctions get-execution-history --execution-arn <execution-arn>
+```
+
+**What this does:** `Retry` tries `ChargeCard` three times with growing delays, then `Catch` sends any remaining error to `OrderFailed` instead of leaving the order stuck. The execution history is the audit trail. Role setup is the usual trip-up: the state machine's role needs permission to invoke each Lambda. Command options can change, so confirm with `aws stepfunctions help`.
+
+**Step Functions**
+5. In the console, build a state machine with the **visual designer**: a Pass state, a Choice (amount over 1000), and two Lambda tasks.
+6. Run it with different inputs and watch the **visual execution graph** highlight the path.
+7. Make one Lambda fail on purpose, add a **Retry** and a **Catch**, and observe the history.
+8. Delete the state machine, Lambdas and roles.
+
+### 5. Interview questions (curveball level) with answers
+
+**Q1. A team uses SQS for clickstream events, but the analytics team says they also need the same events, and last week's data had a bug that needs reprocessing. What should change?**
+**Answer:** SQS delivers each message to one consumer and deletes it, with no replay. Move to **Kinesis Data Streams**: multiple independent consumers read the same ordered events, and with **retention** (extendable up to 365 days) the buggy window can be **replayed**. Use **Firehose** to land raw events in S3 as well, so there's a permanent copy. Keep SQS for work queues where each job should be handled once.
+
+**Q2. A Kinesis stream with 10 shards is throttling, but monitoring shows one shard at 100% and nine nearly idle. What's wrong?**
+**Answer:** A **hot partition key**: most records share the same key (for example a single large customer or a null key), so they all land on one shard. Choose a **higher-cardinality partition key** (or add a random suffix when ordering isn't required for that key), then rebalance by resharding. Adding shards without fixing the key won't help.
+
+**Q3. A Lambda reading a Kinesis stream keeps failing on one bad record, and the shard stops advancing while the backlog grows. Why, and how do you fix it?**
+**Answer:** Kinesis preserves order per shard, so Lambda retries the **same batch** until it succeeds or the records expire, which blocks everything behind it (a "poison pill"). Fix with event source mapping settings: **bisect batch on error**, limit **maximum retry attempts** and **record age**, and send failures to an **on-failure destination** (SQS or SNS, a dead-letter approach like Lesson 31). Make the function **idempotent**, because records can be delivered more than once.
+
+**Q4. The order workflow is currently Lambda A calling Lambda B calling Lambda C. When C fails, orders are left half-processed and nobody knows which. What do you recommend?**
+**Answer:** Replace the chain with a **Step Functions Standard workflow**. Each step is a Task with **Retry and Catch**, failures route to **compensating steps** (release stock, refund), and every execution keeps a **visible history**, so support can see where order 8841 stopped. Each Lambda becomes small and independent, and the orchestration logic moves out of the code into the state machine.
+
+**Q5. A workflow processes 50,000 short events per second, each with 6 steps, and the Step Functions bill is huge. What do you change?**
+**Answer:** Standard workflows are billed **per state transition**, which gets expensive at this volume. Use an **Express workflow**, billed per request and duration and designed for high-volume, short (up to 5 minutes) workloads, accepting **at-least-once** semantics, so steps must be **idempotent**. Also consider combining tiny steps into fewer states, or handling the simple path inside one Lambda.
+
+### 6. Scenario question
+**Scenario:** You are the cloud engineer at **PlayNova**, a mobile-gaming company.
+- Game clients send about 80,000 events per second (logins, purchases, level-ups).
+- The live-ops team needs a dashboard updating within seconds. The data team wants every raw event in S3 as Parquet. The anti-cheat team needs to scan events for suspicious patterns and reprocess the last day when they update their rules.
+- Purchases trigger a workflow: validate the receipt with the app store, credit the item, update the player's inventory, send a confirmation, and if the app-store call fails, retry and then alert support. Large purchases (over ₹5,000) need a manual fraud review that can take up to two days.
+- A recent bug caused one customer's events to overload a single shard.
+- A lone poison event kept a Lambda consumer stuck for hours.
+
+Design the solution:
+1. Which service ingests the event stream, and why not SQS?
+2. How do the three teams consume the stream?
+3. How do you fix the hot shard and the poison event?
+4. How do you build the purchase workflow, including the two-day manual review?
+5. Standard or Express, and for which parts?
+6. How do you handle failures in the purchase workflow?
+
+### 7. Scenario model answer
+1. **Ingestion:** **Kinesis Data Streams** (on-demand or sized provisioned shards), because several teams need the same events, order per player matters, and replay is required. SQS gives each message to one consumer and has no replay.
+2. **Consumers:** **Managed Service for Apache Flink** (or a Lambda) for per-second aggregates feeding the live dashboard, **Firehose** to S3 with Parquet conversion for the data team, and a separate consumer (Lambda or Flink) for anti-cheat, using **enhanced fan-out** so consumers don't compete for read throughput. Extend **retention** so the anti-cheat team can replay the last day.
+3. **Hot shard and poison event:** use a **high-cardinality partition key** (player ID plus a suffix where order isn't needed) and reshard. For the poison event, set **bisect on error, a maximum retry count and record age**, an **on-failure destination** (SQS), and make consumers **idempotent**.
+4. **Purchase workflow:** a **Step Functions Standard** state machine: validate receipt (Task with Retry and Catch), **Choice** on amount, for large purchases a task using **`.waitForTaskToken`** that pauses until the fraud reviewer approves or rejects (it can wait up to the Standard maximum), then credit the item, update the inventory, and send the confirmation.
+5. **Standard vs Express:** **Standard** for the purchase workflow, because it's long-running (days) and needs exactly-once. **Express** (if used) for high-volume short event-processing flows, with idempotent steps.
+6. **Failure handling:** Retry with backoff on the app-store call, then **Catch** into a path that alerts support through SNS and records the failure, plus **compensating steps** (reverse a credited item if a later step fails), and CloudWatch alarms on failed executions.
+
+---
+
+## Extra 5: ECS, EKS and Fargate (Containers on AWS)
+
+### Quick recap (so nothing here is new)
+- **Container:** a lightweight package holding an application and everything it needs (code, libraries, settings), so it runs the same everywhere. It shares the host's operating system kernel, which makes it lighter than a virtual machine.
+- **Image:** the read-only template a container is started from. A running container is an instance of an image.
+- **Docker:** the most common tool for building images and running containers.
+- **Registry and ECR** (Lesson 37): a registry stores images. **Amazon ECR** is AWS's private registry, and Inspector scans images in it.
+- **Orchestration:** software that starts containers, keeps the right number running, replaces failed ones, and spreads them across machines.
+- **EC2** (Lesson 6) and **Lambda** (Lesson 17): two other ways to run code. Containers sit between them.
+- **ALB** (Lesson 20), **Auto Scaling** (Lesson 19), **VPC and security groups** (Lesson 23), **IAM roles** (Lesson 5), **CloudWatch** (Lesson 33): the supporting services containers use.
+
+### 1. Analogy
+**Shipping containers at a port.** A standard container holds any cargo and fits any ship, truck or crane (a Docker image runs on any host). The **port authority** decides which containers go on which ship, replaces a damaged one, and adds more ships when cargo piles up (the orchestrator: **ECS or Kubernetes/EKS**). **Fargate** is like hiring a shipping company that supplies the ships and crews, so you only hand over containers and say how much space you need.
+
+### 2. Definition
+Running containers on AWS involves two separate choices:
+1. **The orchestrator (control plane):** ECS or EKS.
+2. **The compute (where the containers actually run):** EC2 instances you manage, or **Fargate**, where AWS manages the servers.
+
+#### Amazon ECS (Elastic Container Service)
+AWS's own, simpler container orchestrator.
+- **Cluster:** a logical group where tasks run.
+- **Task definition:** a blueprint (JSON) describing containers: image, CPU and memory, ports, environment variables, secrets, logging, and roles.
+- **Task:** a running instance of a task definition (one or more containers).
+- **Service:** keeps a **desired number of tasks** running, replaces failed ones, integrates with an **ALB**, and can use **auto scaling**.
+- **Two IAM roles to remember:** the **task execution role** (lets ECS pull the image from ECR, write logs, and fetch secrets *to start* the task) and the **task role** (the permissions your **application code** uses at runtime, for example to read an S3 bucket).
+- **Networking:** with **awsvpc** mode each task gets its own network interface and security group.
+- **Secrets:** inject from **Secrets Manager** or **Parameter Store** (Lesson 35 and Systems Manager).
+
+#### Amazon EKS (Elastic Kubernetes Service)
+A **managed Kubernetes** control plane. Kubernetes is the open-source standard for orchestrating containers (**pods**, **deployments**, **services**, `kubectl`).
+- AWS runs and scales the **control plane** for you (for a per-cluster hourly fee). You choose compute: **managed node groups** (EC2), **Fargate**, or autoscalers such as **Karpenter**.
+- Choose EKS for **Kubernetes skills, portability across clouds and on-premises, and the large Kubernetes ecosystem** (Helm charts, operators).
+- It has a steeper learning curve and more moving parts than ECS.
+
+#### AWS Fargate
+**Serverless compute for containers** (works with both ECS and EKS).
+- You define **CPU and memory per task or pod**, and AWS provisions the underlying infrastructure. **No EC2 instances to patch, size or scale.**
+- You pay **per vCPU and GB of memory per second** while tasks run.
+- Trade-offs: slightly higher cost per unit than well-packed EC2 at steady high utilization, less control over the host (no custom kernel or privileged host access), and some special hardware (certain GPU needs) is better on EC2.
+
+#### Related options
+- **Amazon ECR:** the image registry, with scanning and lifecycle policies.
+- **AWS App Runner:** the simplest option, deploying a web app or API from an image or source code with almost no configuration.
+- **ECS Anywhere / EKS Anywhere:** run on your own hardware.
+- **Lambda container images:** run a container image as a Lambda function (for short, event-driven code).
+
+#### Choosing
+| Need | Choice |
+|---|---|
+| Simplest path to run containers on AWS | **ECS on Fargate** |
+| Team already knows Kubernetes, or needs portability and ecosystem | **EKS** (on managed nodes or Fargate) |
+| Steady, high utilization where cost matters, or special hardware (GPUs) | **ECS or EKS on EC2** |
+| A basic web app with minimal operations effort | **App Runner** |
+| Short event-driven functions | **Lambda** |
+
+#### Containers vs EC2 vs Lambda
+| | EC2 | Containers (Fargate) | Lambda |
+|---|---|---|---|
+| You manage | OS, scaling, patching | Container image only | Code only |
+| Runs for | Long, continuous | Long or short | Up to 15 minutes |
+| Startup | Minutes | Seconds to a minute | Milliseconds to seconds |
+| Fit | Full control, legacy apps | Microservices, APIs, workers | Event-driven glue and APIs |
+
+### 3. The industry problem it solves
+**A company with 30 microservices** (orders, payments, search) written in different languages. Running each on its own EC2 instances means different setups, wasted capacity (each instance mostly idle), slow deployments, and "works on my machine" problems.
+
+With containers, each service is packaged as an image with its dependencies, **ECS services on Fargate** run the right number of copies behind an ALB, a new version rolls out gradually with automatic rollback, failed containers are replaced automatically, and **auto scaling** adds tasks at peak. Nobody patches servers. Costs line up with CPU and memory actually requested.
+
+**Where it's a poor fit:** a tiny function better served by Lambda, workloads needing full OS control, and a small team adopting EKS only because Kubernetes is fashionable (the operational overhead is real).
+
+### 4. Code / hands-on
+```bash
+# 1. A cluster (for Fargate this is just a logical group)
+aws ecs create-cluster --cluster-name demo
+
+# 2. Register a Fargate task definition (file: taskdef.json, shown below)
+aws ecs register-task-definition --cli-input-json file://taskdef.json
+
+# 3. Create a service that keeps 2 tasks running, in private subnets
+aws ecs create-service \
+  --cluster demo \
+  --service-name web \
+  --task-definition web \
+  --desired-count 2 \
+  --launch-type FARGATE \
+  --network-configuration "awsvpcConfiguration={subnets=[subnet-aaa,subnet-bbb],securityGroups=[sg-123],assignPublicIp=DISABLED}"
+
+# 4. Check what is running
+aws ecs list-tasks --cluster demo
+aws ecs describe-services --cluster demo --services web
+```
+
+`taskdef.json`
+```json
+{
+  "family": "web",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::123456789012:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::123456789012:role/webTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "web",
+      "image": "123456789012.dkr.ecr.ap-south-1.amazonaws.com/web:1.0",
+      "portMappings": [{ "containerPort": 80 }],
+      "essential": true,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/web",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "web"
+        }
+      }
+    }
+  ]
+}
+```
+
+**What this does:** the **execution role** lets ECS pull the image from ECR and write logs, while the **task role** is what your code uses at runtime (confusing the two is a classic mistake). Putting tasks in **private subnets** with no public IP means traffic reaches them only through the ALB. The log group must exist before tasks start. Pushing the image uses `docker build` and `docker push` to ECR after `aws ecr get-login-password`. For EKS, the common starting point is the `eksctl` tool (`eksctl create cluster`), which creates the cluster and nodes. Command options can change, so confirm with `aws ecs help`.
+
+### 5. Interview questions (curveball level) with answers
+
+**Q1. A team is starting a new microservices platform with five engineers and no Kubernetes experience. They ask whether to use ECS or EKS. What do you advise?**
+**Answer:** **ECS on Fargate.** It has far fewer concepts, integrates directly with ALB, IAM, CloudWatch and Secrets Manager, and removes server management. EKS is worth the complexity when the team already knows Kubernetes, needs portability across clouds or on-premises, or depends on the Kubernetes ecosystem. The cost of EKS (cluster fee, operational overhead, upgrades) is easy to underestimate.
+
+**Q2. A container task fails to start with "cannot pull image" and "access denied" for logs. The app itself has the right S3 permissions. What is wrong?**
+**Answer:** The **task execution role** is missing permissions (pulling from ECR, writing to CloudWatch Logs, reading secrets). The app's S3 permission lives on the **task role**, which is a different role used only after the container is running. Fix the execution role (the managed `AmazonECSTaskExecutionRolePolicy` plus any secret access), and also check network access: private subnets need **NAT or VPC endpoints** for ECR, S3 (image layers) and CloudWatch Logs.
+
+**Q3. Fargate costs 30% more than expected for a steady workload running 24/7 at high utilization. What are the options?**
+**Answer:** Fargate charges for the requested CPU and memory per second, so **oversized task sizes** waste money: right-size from CloudWatch utilization data. For steady, high-utilization workloads, **EC2-backed capacity** packed densely can be cheaper, and commitments help both: **Compute Savings Plans** cover Fargate and EC2 (Lesson 41), and **Fargate Spot** can run interruption-tolerant tasks at a discount. Keep Fargate where operational simplicity matters more than the last few percent of cost.
+
+**Q4. A new version of a service is deployed, tasks keep starting and being killed, and the old version already stopped. How do you prevent this next time?**
+**Answer:** Use **rolling or blue/green deployments** with **health checks** (ALB target group health checks and container health checks) and a **deployment circuit breaker with automatic rollback**, so the service keeps the old tasks serving until the new ones are healthy, and rolls back if the new ones keep failing. Set a minimum healthy percent that keeps capacity during the rollout, and test the image before deployment (including a vulnerability scan).
+
+**Q5. Secrets (a database password) are currently baked into the container image. Why is that a problem, and what's the fix?**
+**Answer:** Anyone with image access (ECR pull permission, a leaked image, a laptop) can read the secret, and rotating it means rebuilding and redeploying every image. Store it in **Secrets Manager** (Lesson 35) and **inject it at runtime** using the task definition's `secrets` setting (the **execution role** fetches it), or have the app read it with the **task role**. Use rotation, remove the secret from the image history, and rotate the old, exposed password.
+
+### 6. Scenario question
+**Scenario:** You are the cloud engineer at **GreenCart**, a grocery-delivery company moving from one large monolith on EC2 to containers.
+- There are 12 services. Eight are web APIs behind a load balancer, three are background workers, and one is a nightly reporting job.
+- The team has three engineers, none of whom know Kubernetes.
+- Traffic is steady during the day with a sharp spike at 7 p.m.
+- A security review requires images to be scanned, secrets to stay out of images, and services to be unreachable except through the load balancer.
+- The reporting job needs a lot of memory for 40 minutes a night.
+- Finance wants costs kept down after the migration.
+- A bad deployment last month caused an outage.
+
+Design the solution:
+1. ECS or EKS, and on which compute?
+2. How do you run the web APIs, workers and the nightly job?
+3. How do you handle the 7 p.m. spike?
+4. How do you meet the security requirements?
+5. How do you make deployments safe?
+6. How do you keep costs down?
+7. When would you revisit the EKS decision?
+
+### 7. Scenario model answer
+1. **Orchestrator and compute:** **ECS on Fargate**, because the team is small and has no Kubernetes experience, and nothing here needs Kubernetes-specific features.
+2. **Workloads:** each API is an **ECS service** behind an **ALB** (path or host-based routing to separate target groups). Workers are ECS services without a load balancer, scaling on **SQS queue depth** (Lesson 31). The nightly report is a **scheduled ECS task** (EventBridge schedule, or Step Functions) with the larger memory size, which runs for 40 minutes and then stops, so you pay only for that time.
+3. **The 7 p.m. spike:** **service auto scaling**, using target tracking on CPU or ALB request count per target, plus a **scheduled scaling** action to add capacity shortly before 7 p.m. so tasks are ready.
+4. **Security:** **ECR scanning with Inspector** and a pipeline gate on critical findings, **Secrets Manager injection** through the task definition (execution role) instead of baking secrets into images, tasks in **private subnets** with security groups allowing traffic only from the ALB, separate **task roles** with least privilege, and WAF on the ALB.
+5. **Safe deployments:** rolling or **blue/green** deployments, **health checks**, the **deployment circuit breaker with automatic rollback**, and a gradual rollout with CloudWatch alarms watching error rates.
+6. **Cost:** right-size task CPU and memory from real usage, a **Compute Savings Plan** for the steady baseline (covers Fargate), **Fargate Spot** for interruption-tolerant workers, scale in off-peak hours, and ECR lifecycle policies to remove old images.
+7. **Revisiting EKS:** if the team grows Kubernetes skills, needs portability to other clouds or on-premises, or adopts tools that assume Kubernetes, then EKS becomes reasonable. Migrating later is easier if services are already containerized and 12-factor in design.
+
+---
+
+## Extra 6: Amazon Athena and AWS Glue
+
+*These two are the core of the "data lake on S3" pattern, so they connect directly to your data engineering goal. Glue prepares and catalogs data, and Athena queries it with SQL.*
+
+### Quick recap (so nothing here is new)
+- **S3** (Lesson 7): cheap, durable object storage. A "data lake" is simply lots of raw files in S3.
+- **File formats:** **CSV** and **JSON** are text formats that are easy to read but bulky. **Parquet** and **ORC** are **columnar** binary formats: data is stored column by column, compressed, so a query reading 2 columns out of 50 reads far less data.
+- **Partitioning:** organizing files into folders by a column (for example `year=2026/month=10/`), so a query for one month reads only that folder.
+- **Schema:** the names and types of the columns. **Schema-on-read** means the files stay raw and the schema is applied when you query.
+- **Redshift** (Lesson 27): a data warehouse with its own storage, built for heavy repeated analytics. **Redshift Spectrum** can also query S3.
+- **Cost and Usage Reports** (Lesson 42): delivered as files to S3, and the standard example of data queried with Athena.
+- **IAM and KMS** (Lessons 5 and 11): who can read the data and the keys that encrypt it.
+- **ETL:** Extract, Transform, Load. Pulling data from sources, cleaning and reshaping it, and loading it somewhere useful.
+- **Step Functions and EventBridge** (Extra 4, Lesson 32): ways to trigger and orchestrate jobs.
+
+### 1. Analogy
+A **huge library with no catalog**. Thousands of boxes of papers (files in S3) sit in a warehouse. **Glue** is the **librarian team**: it walks the shelves, writes catalog cards (the Data Catalog: what each box contains, its columns and location), and also cleans and reorganizes the papers into neat folders (ETL jobs). **Athena** is the **reading room**: you ask a question in SQL, a clerk fetches only the relevant papers using the catalog, and you pay by how much paper was read, with no staff to hire in advance.
+
+### 2. Definition
+
+#### Amazon Athena
+A **serverless, interactive query service that runs standard SQL directly on data in S3**. There is no cluster to manage, and you **pay per data scanned** (a per-TB price, with a minimum per query), so the main way to save money is to **scan less**.
+- Built on open-source distributed SQL engines (Trino/Presto based), plus Apache Spark options for notebooks.
+- Supports CSV, JSON, **Parquet, ORC**, Avro, logs, and open table formats such as **Apache Iceberg**.
+- **Table definitions** live in the **Glue Data Catalog** (or you can create tables with `CREATE EXTERNAL TABLE`).
+- **Query results** are written to an S3 location you choose.
+- **Workgroups** separate teams, enforce **per-query data limits**, set cost controls, and track usage.
+- **Federated queries** can reach other sources (RDS, DynamoDB, and more) through connectors.
+- **Typical uses:** ad hoc analysis, log analysis (CloudTrail, ALB, VPC Flow Logs, CUR), and quick data exploration before building a pipeline.
+
+**How to make Athena cheaper and faster (high exam and interview value):**
+1. Use **columnar formats** (Parquet or ORC) instead of CSV or JSON.
+2. **Compress** the files.
+3. **Partition** by columns you filter on (usually date), and use **partition projection** for many partitions.
+4. Avoid `SELECT *`, and select only needed columns.
+5. Avoid thousands of tiny files: aim for larger files (roughly tens to hundreds of MB).
+6. Use **CTAS** (`CREATE TABLE AS SELECT`) to convert raw data into partitioned Parquet once.
+
+#### AWS Glue
+A **serverless data integration service**. Its main parts:
+| Part | What it does |
+|---|---|
+| **Glue Data Catalog** | A central **metadata store** of databases and tables (schemas, locations, formats, partitions). Used by Athena, Redshift Spectrum, EMR and Glue jobs. |
+| **Crawlers** | Scan a data source (such as an S3 path), **infer the schema**, and create or update table definitions in the Data Catalog, including new partitions. |
+| **ETL jobs** | Serverless jobs, usually **Apache Spark** (PySpark or Scala), also Python shell and Ray, that read, transform and write data. You pay per **DPU-hour** (data processing unit), billed by the second. |
+| **Glue Studio** | A visual editor for building jobs. |
+| **Job bookmarks** | Track what was already processed so reruns handle only new data. |
+| **Triggers and workflows** | Schedule or chain crawlers and jobs. |
+| **Glue Data Quality** | Rules that check data (null checks, ranges, uniqueness). |
+| **Schema Registry, DataBrew** | Schema management for streaming, and a visual data-preparation tool. |
+
+**Lake Formation** adds fine-grained, centralized permissions (down to columns and rows) on top of the Data Catalog, which matters for governance (and ties to Macie in Lesson 38).
+
+#### How they fit together
+```
+Raw files in S3  ->  Glue Crawler (catalog)  ->  Glue ETL job (clean, convert to Parquet, partition)
+                                         |                     |
+                                         +----> Glue Data Catalog <---- Athena (SQL), Redshift Spectrum, QuickSight
+```
+
+#### Athena vs Redshift vs Glue (the usual confusion)
+| | **Athena** | **Redshift** | **Glue** |
+|---|---|---|---|
+| What it is | Query engine on S3 | Data warehouse (own storage and compute) | Catalog plus ETL |
+| Best for | Ad hoc, occasional queries, logs | Heavy, repeated, complex BI with many users | Preparing and cataloging data |
+| Cost model | Per TB scanned | Per node-hour or serverless RPU | Per DPU-hour, crawler time |
+| Setup | None | Cluster or serverless setup | Jobs and crawlers |
+
+### 3. The industry problem it solves
+**An e-commerce company** stores years of order exports, clickstream files and application logs in S3 as CSV and JSON, about 40 TB. Analysts want answers ("which products sold best in Kanpur last month?") but nobody can query raw files, and standing up a warehouse for occasional questions is expensive.
+
+With **Glue**, a crawler catalogs the raw data, and a nightly **ETL job** converts it to **partitioned Parquet** (cleaned, deduplicated). With **Athena**, analysts run SQL directly on S3 and pay only for what each query scans. A date-partitioned Parquet table makes a month's query scan a few GB instead of 40 TB. The same catalog also feeds **QuickSight** dashboards and **Redshift Spectrum**.
+
+**Where it's a poor fit:** high-concurrency dashboards needing millisecond responses (use Redshift or a serving layer), queries that scan huge unpartitioned CSV repeatedly (the bill grows quickly), frequent row-level updates (better in a database or an open table format such as Iceberg), and heavy complex pipelines where a team needs full Spark cluster control (EMR).
+
+### 4. Code / hands-on
+**A Glue database and crawler over raw data:**
+```bash
+# 1. A database in the Glue Data Catalog
+aws glue create-database --database-input Name=lakedb
+
+# 2. A crawler that scans an S3 path (the role needs S3 read and Glue permissions)
+aws glue create-crawler \
+  --name raw-orders-crawler \
+  --role arn:aws:iam::123456789012:role/GlueCrawlerRole \
+  --database-name lakedb \
+  --targets '{"S3Targets":[{"Path":"s3://my-lake/raw/orders/"}]}'
+
+aws glue start-crawler --name raw-orders-crawler
+
+# 3. See the table it created
+aws glue get-tables --database-name lakedb
+```
+
+**Querying with Athena (SQL), then converting to Parquet with CTAS:**
+```sql
+-- Explore the raw table
+SELECT * FROM lakedb.orders LIMIT 10;
+
+-- Convert once to partitioned Parquet (far cheaper for later queries)
+CREATE TABLE lakedb.orders_parquet
+WITH (
+  format = 'PARQUET',
+  external_location = 's3://my-lake/curated/orders/',
+  partitioned_by = ARRAY['order_date']
+) AS
+SELECT order_id, customer_id, city, amount, order_date
+FROM lakedb.orders;
+
+-- A query that only reads one day's partition and 2 columns
+SELECT city, SUM(amount) AS revenue
+FROM lakedb.orders_parquet
+WHERE order_date = DATE '2026-10-20'
+GROUP BY city;
+```
+
+**Running it from the CLI:**
+```bash
+aws athena start-query-execution \
+  --query-string "SELECT city, SUM(amount) FROM lakedb.orders_parquet WHERE order_date = DATE '2026-10-20' GROUP BY city" \
+  --query-execution-context Database=lakedb \
+  --result-configuration OutputLocation=s3://my-lake/athena-results/
+
+aws athena get-query-execution --query-execution-id <id>
+aws athena get-query-results --query-execution-id <id>
+```
+
+**A small Glue ETL job (PySpark) that converts CSV to partitioned Parquet:**
+```python
+import sys
+from awsglue.utils import getResolvedOptions
+from awsglue.context import GlueContext
+from pyspark.context import SparkContext
+
+args = getResolvedOptions(sys.argv, ["JOB_NAME"])
+glue = GlueContext(SparkContext())
+
+df = glue.spark_session.read.option("header", "true") \
+        .csv("s3://my-lake/raw/orders/")
+
+df = df.dropDuplicates(["order_id"]).filter("amount > 0")
+
+df.write.mode("overwrite").partitionBy("order_date") \
+  .parquet("s3://my-lake/curated/orders/")
+```
+
+**What this does:** the crawler writes the table definition, so you don't type column names by hand. The CTAS step is the big saver: it pays the conversion cost once, so every later query is cheaper. The Athena **results location** must exist and be writable, and the data and result buckets should be encrypted. Column names (`order_date`) must match your data, and for CTAS the partition column must be last in the `SELECT`. Command and option names can change, so confirm with `aws glue help` and `aws athena help`.
+
+### 5. Interview questions (curveball level) with answers
+
+**Q1. An analyst's Athena query on a 5 TB CSV table costs a lot and takes minutes. How do you reduce both?**
+**Answer:** Athena charges per **data scanned**, so reduce what it scans. Convert the data once to **compressed Parquet** (columnar, so only needed columns are read), **partition** by the columns people filter on (usually date), use `SELECT` with specific columns instead of `*`, and compact thousands of tiny files into larger ones. Use a **CTAS** query or a **Glue ETL job** for the conversion, and set **workgroup data limits** to prevent accidental huge scans. Often a 5 TB scan becomes a few GB.
+
+**Q2. New daily folders arrive in S3 (`dt=2026-10-21/`) but Athena doesn't show the new data. Why?**
+**Answer:** Partitioned tables only know about partitions registered in the **Glue Data Catalog**. Fixes: run the **crawler** on a schedule (or after each load), run `MSCK REPAIR TABLE` or `ALTER TABLE ADD PARTITION`, or use **partition projection** so Athena calculates the partitions from the pattern with no registration step (best for many time-based partitions). Also check the folder naming matches the table's partition key.
+
+**Q3. The team asks: "Athena, Redshift or Glue for our reporting?" They need a nightly cleaned dataset and 200 business users running dashboards all day.**
+**Answer:** They're different layers. **Glue** does the nightly cleaning (ETL) and keeps the catalog. For **200 users hitting dashboards all day**, **Redshift** (provisioned or serverless) usually fits better, because it's designed for high-concurrency, repeated queries with predictable performance, while Athena's per-scan billing could become expensive for repeated dashboard queries. Keep **Athena** for ad hoc exploration and log analysis on the same S3 data, and consider Redshift Spectrum to query the lake from Redshift.
+
+**Q4. A Glue crawler changes a column type from `int` to `string` after a bad file arrives, and downstream queries break. How do you prevent this?**
+**Answer:** Crawlers infer schemas from whatever they find, so one bad file can change the table. Prevent by: setting the crawler's **schema change policy** to log changes rather than update them, defining tables explicitly (and using the crawler only for partitions), validating data **before** it lands in the curated zone using **Glue Data Quality** rules, and keeping a **raw zone** separate from a **curated zone** so bad data never reaches the tables people query.
+
+**Q5. A Glue job processes the entire 2 TB dataset every night, but only about 5 GB is new each day. What do you change?**
+**Answer:** Make it **incremental**. Use **job bookmarks** to process only new data, or filter by the new partition (for example yesterday's date), and write results to partitioned outputs. Consider an open table format such as **Iceberg** for upserts and efficient incremental processing. Right-size the DPU count and use the flexible worker options to lower cost, and monitor job metrics in CloudWatch.
+
+### 6. Scenario question
+**Scenario:** You are the data engineer at **BharatBites**, a food-delivery company.
+- 30 TB of order, delivery and app-event data sit in S3 as raw CSV and JSON, arriving hourly into folders by date.
+- Analysts run ad hoc SQL on them, and last month an `SELECT *` over the whole raw table cost far more than expected.
+- The business wants a trusted, deduplicated "orders" dataset refreshed nightly, queryable by city and date.
+- Some columns contain customer phone numbers and addresses, and only the finance team may see the full columns.
+- New daily folders aren't showing up in queries until someone manually fixes the table.
+- Forty regional managers will open dashboards every morning (the same few queries, all within 15 minutes).
+- A malformed file recently changed a column type and broke reports.
+
+Design the solution:
+1. How do you structure the lake (zones) and catalog the data?
+2. How do you make Athena queries cheaper and stop accidental huge scans?
+3. How do you build the nightly trusted dataset, incrementally?
+4. How do new daily folders appear automatically?
+5. How do you restrict the sensitive columns?
+6. How do you serve the morning dashboards?
+7. How do you stop a bad file from breaking reports?
+
+### 7. Scenario model answer
+1. **Lake structure:** separate **raw**, **curated** and (optionally) **analytics** zones in S3. Catalog all with the **Glue Data Catalog** (crawlers for the raw zone, explicit table definitions for curated).
+2. **Cheaper Athena:** convert to **partitioned, compressed Parquet** (partition by order date, maybe city) through CTAS or Glue, teach analysts to select specific columns, compact small files, and use **Athena workgroups** with **per-query scan limits** and cost tracking, plus Budgets (Lesson 42) alerts.
+3. **Nightly trusted dataset:** a **Glue ETL job** (scheduled by a Glue trigger, EventBridge or Step Functions) that deduplicates on `order_id`, applies validation, and writes partitioned Parquet to the curated zone, using **job bookmarks** or a date filter to process only new data.
+4. **Automatic new folders:** **partition projection** on the date partition (no registration needed), or a crawler or `ADD PARTITION` step run after each load.
+5. **Sensitive columns:** use **Lake Formation** column-level permissions so only finance can read phone and address columns, or write a masked version into the shared curated table. Encrypt with KMS, and scan S3 with **Macie** (Lesson 38) to confirm where personal data sits.
+6. **Dashboards:** because forty managers run the same queries in a short window, load the curated data into **Redshift** (or use Redshift Spectrum), or pre-aggregate into small summary tables (a CTAS or Glue job) that dashboards read cheaply, instead of having each dashboard scan the lake through Athena every time.
+7. **Bad files:** keep **raw and curated** separate, run **Glue Data Quality** rules (type, null and range checks) before data enters curated, set the crawler to **log** schema changes rather than apply them, quarantine failing files to a rejects folder, and alert on failures.
+
+---
 
