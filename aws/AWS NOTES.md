@@ -5288,7 +5288,8 @@ Technical Account Manager	A named person for your account (Enterprise level)
 AWS Managed Services / Professional Services / Partners	AWS or partners who do work for you. A support plan is not the same as hiring someone to operate your environment.
 Compliance (BAA, HIPAA, etc.)	A support plan doesn’t make you compliant.
 
-**The industry problem it solves**
+**The industry problem it solves**  
+
 Example: an online ticketing company during a big cricket-match sale.
 At 8:01 PM, bookings start failing for a part of the system that depends on an AWS service behaving oddly. Every minute loses revenue.
 
