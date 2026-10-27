@@ -5588,15 +5588,6 @@ aws ce get-cost-and-usage \
 
 `UnblendedCost` is the plain per-usage price. If a command errors, confirm options with `aws ce get-cost-and-usage help`.
 
-### 🔨 Your build
-1. In the Pricing Calculator, estimate 1 `t3.micro` EC2 instance running 24/7 in Mumbai (`ap-south-1`), 20 GB of EBS and 50 GB of S3. Note the monthly total.
-2. Change the Region (for example North Virginia) and compare.
-3. Add **500 GB of data transfer out to the internet** and see how much the total moves.
-4. In the Billing console, open the **Free Tier** and **Credits** pages. See which plan your account is on, how many credits remain, and when they expire.
-5. Open **Cost Explorer** and group the current month by service. Which service is the biggest?
-6. Optional: run the `aws ce` command above.
-7. Delete anything you created, and check the next day that nothing is still billing.
-
 ### 5. Interview questions (curveball level) with answers
 
 **Q1. A team moved a video-streaming app to AWS. Compute and storage match the estimate, but the bill is 3x higher. Where do you look first?**
@@ -5741,13 +5732,6 @@ aws ec2 describe-reserved-instances
 ```
 
 **What this does:** step 1 reads your recent usage and suggests a commitment (based on a lookback period, so a quiet month produces a too-small suggestion and a peak month produces a too-big one). Steps 2 and 3 are the **health checks**: coverage shows what you still pay On-Demand for, and utilization shows wasted commitment. Always sanity-check recommendations against known plans (a migration, a product shutdown) before buying. Options can change, so confirm with `aws ce help`.
-
-### 🔨 Your build (read-only, no purchase)
-1. Open **Billing and Cost Management → Savings Plans** and look at the **Recommendations** page. If your account has no usage, note what the page needs.
-2. Open the **Savings Plans purchase** page and use the **Pricing Calculator** to compare Compute Savings Plan, EC2 Instance Savings Plan and On-Demand for `m5.large` in Mumbai. Do this for No Upfront 1 year, All Upfront 1 year and 3 year.
-3. On the **EC2 Reserved Instances** page, see the options for Standard vs Convertible, and find the Marketplace.
-4. Write down for each of these workloads which tool you'd choose: a 24/7 web fleet, a nightly batch job, a production RDS database, a Lambda-heavy API.
-5. **Do not buy anything for practice.** A commitment can't be cancelled.
 
 ### 5. Interview questions (curveball level) with answers
 
@@ -5932,15 +5916,6 @@ LIMIT 10;
 
 **What this does:** the budget emails you when real spend passes 80%, and when **forecast** spend passes 100%, which is the early warning. Replace the account ID and email. The CUR query uses the standard column names (`line_item_product_code`, `line_item_unblended_cost`), but your database and table names come from your own CUR setup. Command options can change, so confirm with `aws budgets help`.
 
-### 🔨 Your build
-1. In the console, open **Billing and Cost Management → Budgets** and create a **zero-spend budget** or a small monthly cost budget (for example $5) with email alerts at 80% actual and 100% forecasted.
-2. Open **Cost Explorer**, enable it if needed, and group the last month by service, then by Region, then by usage type.
-3. Open **Cost Anomaly Detection** and create a monitor for your account's services, with an email alert.
-4. Open **Data Exports** (or the Cost and Usage Reports page), review the options, and note the S3 bucket requirement. Create one only if you're comfortable with the small storage cost.
-5. Optional: create the CLI budget above using your account ID and email, then delete it.
-6. Optional: after a CUR has delivered a first report, create the Athena table and run the query.
-7. Clean up budgets, monitors and any export bucket you don't need.
-
 ### 5. Interview questions (curveball level) with answers
 
 **Q1. Your budget of $1,000 a month alerted at 100%, but the team says "we only found out at the end of the month". How do you improve it?**
@@ -6080,16 +6055,6 @@ aws cloudwatch put-metric-alarm \
 ```
 
 **What this does:** step 2 is the step people forget, because tags don't appear in cost reports until activated. Step 4 shows a "no tag" group for everything untagged, which is your cleanup list. The alarm fires when the month-to-date estimated charge passes $500, but it can't forecast, so a Budget with a forecast alert is generally better. Command options can change, so confirm with `aws ce help`.
-
-### 🔨 Your build
-1. Create a tagging standard on paper: required keys (`team`, `env`, `owner`, `expires`) and allowed values.
-2. Tag a test S3 bucket or EC2 instance with `team=learning` and `env=dev`.
-3. In **Billing and Cost Management → Cost allocation tags**, find your tag and **activate** it. Note the delay before it appears in reports.
-4. After the tag shows in **Cost Explorer**, group by that tag and look for the "no tag" group.
-5. Optional: in an Organization sandbox, create a **tag policy** that restricts `env` to `dev`, `test` and `prod`.
-6. Optional: turn on **Receive Billing Alerts** and create the CloudWatch billing alarm, and compare it with a **Budget** alert.
-7. Browse **AWS Marketplace**: find a free-trial product, look at its pricing options and whether it adds software cost on top of infrastructure cost. **Don't subscribe** unless you intend to pay.
-8. Clean up resources and alarms.
 
 ### 5. Interview questions (curveball level) with answers
 
@@ -6251,16 +6216,6 @@ def handler(event, context):
 
 **What this does:** the quick-create makes a default route and stage automatically. The permission in step 2 is the part people forget, and without it callers get a 500 error. After the authorizer is attached to a route, calls without a valid token get **401** before your Lambda runs. The claims structure shown is for HTTP API payload format 2.0, and it's different for REST APIs, so check the event shape with a test log. Command options can change, so confirm with `aws apigatewayv2 help`.
 
-### 🔨 Your build
-1. Create a small Lambda function that returns "hello" (reuse one from Lesson 17).
-2. In the API Gateway console, create an **HTTP API** with that Lambda as the integration, open the invoke URL, and see the response.
-3. Create a **REST API** with the same Lambda for comparison. Note the extra options (usage plans, API keys, stages, caching, request validation).
-4. Add a **Cognito JWT authorizer** (using your user pool from Lesson 36) to one route. Call it without a token (401) and with a valid access token (200).
-5. Set a very low **throttle** on a stage, send a burst of requests with a loop, and watch for **429** responses.
-6. Look at the **CloudWatch logs and metrics** (`4XXError`, `5XXError`, `Latency`).
-7. Optional: create a **usage plan with an API key** on the REST API and test with and without the key.
-8. Delete the APIs, Lambda functions and log groups.
-
 ### 5. Interview questions (curveball level) with answers
 
 **Q1. Your API calls a Lambda that sometimes takes 45 seconds, and clients get 504 errors. What do you do?**
@@ -6401,17 +6356,6 @@ aws ssm start-automation-execution \
 ```
 
 **What this does:** step 1 is the first thing to check when "the instance doesn't appear in Systems Manager", because a missing role, agent, or network path is the usual cause (private subnets need the three VPC endpoints). Step 3 targets by **tag**, which is why a good tagging standard (Lesson 43) pays off. Step 6 shows Automation, where the same call can be triggered by EventBridge for **auto-remediation**. Command options can change, so confirm with `aws ssm help`.
-
-### 🔨 Your build
-1. Launch a `t3.micro` Amazon Linux instance with **no key pair**, **no inbound rules**, and an instance profile with `AmazonSSMManagedInstanceCore`.
-2. In the **Fleet Manager** or Systems Manager **Managed nodes** page, wait for it to show as online.
-3. Open a **Session Manager** session from the console, and run `whoami`. Notice you didn't open port 22.
-4. Use **Run Command** with `AWS-RunShellScript` to run `uptime` against the instance, and read the output.
-5. Create a **Parameter Store** parameter (`/lab/demo/greeting`) and read it from the CLI.
-6. Open **Patch Manager**, view the default patch baseline, and run a **scan** on your instance. Look at the compliance result.
-7. Optional: launch a second instance in a private subnet and create the three VPC interface endpoints so it appears as managed too.
-8. Optional: turn on **session logging** to S3 or CloudWatch Logs and review a session record.
-9. Terminate the instances and delete endpoints, parameters and log groups.
 
 ### 5. Interview questions (curveball level) with answers
 
@@ -6557,15 +6501,6 @@ An EventBridge rule pattern to send new critical findings to SNS:
 
 **What this does:** step 1 turns on the default standards (which need Config to be recording), and the score fills in after the first checks finish. Step 4 records a decision without deleting evidence. The EventBridge pattern follows the structure of the ASFF finding event, so confirm field names against a sample event in your account, because a wrong pattern silently matches nothing. Command options can change, so confirm with `aws securityhub help`.
 
-### 🔨 Your build
-1. Make sure **AWS Config** is recording in your test account (use the console's setup wizard).
-2. Open **Security Hub** and enable it with the default standards. Wait for the first checks to complete.
-3. Open **Security standards** and look at the failed controls. Pick one (for example S3 Block Public Access, or MFA on the root user), and fix it in a test resource.
-4. Enable the **GuardDuty** and **Inspector** integrations (if you've turned those services on) and look at findings from several sources in one list.
-5. Create an **Insight** grouping findings by resource type.
-6. Create an **automation rule** that suppresses findings from a tagged sandbox resource.
-7. Optional: create the EventBridge rule above, sending to an SNS email topic.
-8. Disable Security Hub, Config recording and any other services you don't want to be billed for.
 
 ### 5. Interview questions (curveball level) with answers
 
@@ -6788,13 +6723,6 @@ aws stepfunctions get-execution-history --execution-arn <execution-arn>
 
 **What this does:** `Retry` tries `ChargeCard` three times with growing delays, then `Catch` sends any remaining error to `OrderFailed` instead of leaving the order stuck. The execution history is the audit trail. Role setup is the usual trip-up: the state machine's role needs permission to invoke each Lambda. Command options can change, so confirm with `aws stepfunctions help`.
 
-### 🔨 Your build
-**Kinesis**
-1. Create a stream with 1 shard (or on-demand mode) and put 10 records using different partition keys.
-2. Read them with `get-records`, decode the base64 data, and note the order within the shard.
-3. Create a **Firehose delivery stream** from the console with a test S3 bucket as the destination, send a few records, and wait for the buffer interval to see a file appear.
-4. Delete the stream and the Firehose (shards bill by the hour).
-
 **Step Functions**
 5. In the console, build a state machine with the **visual designer**: a Pass state, a Choice (amount over 1000), and two Lambda tasks.
 6. Run it with different inputs and watch the **visual execution graph** highlight the path.
@@ -6967,17 +6895,6 @@ aws ecs describe-services --cluster demo --services web
 ```
 
 **What this does:** the **execution role** lets ECS pull the image from ECR and write logs, while the **task role** is what your code uses at runtime (confusing the two is a classic mistake). Putting tasks in **private subnets** with no public IP means traffic reaches them only through the ALB. The log group must exist before tasks start. Pushing the image uses `docker build` and `docker push` to ECR after `aws ecr get-login-password`. For EKS, the common starting point is the `eksctl` tool (`eksctl create cluster`), which creates the cluster and nodes. Command options can change, so confirm with `aws ecs help`.
-
-### 🔨 Your build
-1. Write a tiny web app (for example a Python or Node "hello" server) and a Dockerfile, and build and run it locally.
-2. Create an **ECR repository**, log in, and push your image. Check the Inspector scan results (Lesson 37) if enabled.
-3. In the ECS console, create a **cluster**, a **Fargate task definition** using your image, and a **service** with 2 tasks and an **Application Load Balancer**.
-4. Open the ALB's DNS name and see your app. Stop one task, and watch ECS replace it.
-5. Update the image tag and update the service, and watch the **rolling deployment**.
-6. Add **service auto scaling** based on CPU, and generate load to see tasks increase.
-7. Look at the logs in CloudWatch.
-8. Optional: read through the EKS console's cluster creation page and note the differences (node groups, add-ons). **Don't create an EKS cluster unless you want to pay the hourly fee.**
-9. Delete the service, cluster, load balancer, ECR images and log groups.
 
 ### 5. Interview questions (curveball level) with answers
 
@@ -7173,16 +7090,6 @@ df.write.mode("overwrite").partitionBy("order_date") \
 ```
 
 **What this does:** the crawler writes the table definition, so you don't type column names by hand. The CTAS step is the big saver: it pays the conversion cost once, so every later query is cheaper. The Athena **results location** must exist and be writable, and the data and result buckets should be encrypted. Column names (`order_date`) must match your data, and for CTAS the partition column must be last in the `SELECT`. Command and option names can change, so confirm with `aws glue help` and `aws athena help`.
-
-### 🔨 Your build
-1. Create an S3 bucket with `raw/orders/` and upload a small **fake** CSV (order_id, customer_id, city, amount, order_date) with a few hundred rows.
-2. Create a Glue database and **crawler** pointing at the folder, run it, and open the created table in the **Data Catalog**.
-3. Set an Athena **query results location**, and run `SELECT * ... LIMIT 10`. Note the **data scanned** shown for the query.
-4. Run a **CTAS** to create a partitioned Parquet table. Query the same question on both tables, and compare the data scanned.
-5. Create a **Glue ETL job** (visual or script) that deduplicates and writes Parquet to a `curated/` folder, and run it.
-6. Create an Athena **workgroup** with a **per-query data scan limit**, and run a query in it.
-7. Optional: point Athena at your **CloudTrail** or **CUR** data (Lesson 42) and run a query.
-8. Delete the crawler, jobs, tables, workgroup and bucket contents.
 
 ### 5. Interview questions (curveball level) with answers
 
