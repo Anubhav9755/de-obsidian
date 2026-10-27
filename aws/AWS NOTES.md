@@ -1,3 +1,74 @@
+# AWS NOTES
+
+## SYLLABUS
+
+**Domain 1: Cloud Concepts**
+ 1. What Is Cloud Computing
+ 2. Cloud Deployment Models (public, private, hybrid)
+ 3. Cloud Service Models (IaaS, PaaS, SaaS)
+ 4. Shared Responsibility Model
+ 8. Global Infrastructure (Region, AZ, Edge Location)
+ 9. Well-Architected Framework
+ 10. Cloud Adoption Framework (CAF)
+
+**Domain 2: Security**
+
+ 5. IAM Fundamentals (users, groups, roles, policies, ARN)
+ 11. Encryption basics and KMS
+ 12. Compliance programs
+ 13. Security services (Shield, WAF, GuardDuty, Config, CloudTrail)
+ 14. Trusted Advisor
+ 15. AWS Organizations (OUs, SCPs, consolidated billing)
+ 16. IAM best practices (MFA, root account)
+ Domain 1 + 2 combined notes and the CCP-style scenario practice
+
+**Domain 3: Technology**
+
+ 6. EC2 (and EC2 pricing models)
+ 7. S3
+ 17. Lambda
+ 18. Elastic Beanstalk
+ 19. Auto Scaling
+ 20. Elastic Load Balancing
+ 21. EBS
+ 22. EFS
+ 23. VPC
+ 24. RDS
+ 25. DynamoDB
+ 26. Aurora
+ 27. Redshift
+ 28. Route 53
+ 29. CloudFront
+ Extra: Boto3
+ 30. Direct Connect
+ 31. SQS
+ 32. SNS
+ 33. CloudWatch (and CloudWatch vs CloudTrail)
+ 34. CloudFormation
+ 35. Secrets Manager
+ 36. Cognito
+ 37. Inspector
+ 38. Macie
+ 39. Support Plans 
+
+**Domain 4: Billing, Pricing and Support**
+
+ 40. AWS pricing fundamentals
+ 41. Savings Plans and Reserved Instances in depth
+ 42. Budgets, Cost Explorer, and Cost and Usage Reports
+ 43. Cost allocation tags, billing alerts, and AWS Marketplace
+
+**EXTRAS**
+
+ - API Gateway 
+ - Systems Manager
+ - Security Hub 
+ - Kinesis, Step Functions
+ - ECS, EKS and Fargate
+ - Athena and Glue 
+
+--- 
+
 ### Lesson 1: What Is Cloud Computing (and why does it exist)
 
 #### The analogy first (unconventional bit)
