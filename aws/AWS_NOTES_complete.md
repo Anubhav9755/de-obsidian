@@ -6568,10 +6568,10 @@ Design the solution:
 
 ## Part A: Amazon Kinesis
 
-### 1. Analogy
+### Analogy
 A **river with a dam of observers** versus a **post office queue**. SQS is a post-office counter: each letter goes to one clerk and is removed. **Kinesis Data Streams is a river** flowing past several observation stations: many consumers can watch the same water independently, in order, and you can rewind and watch yesterday's stretch again (within the retention period).
 
-### 2. Definition
+### Definition
 **Amazon Kinesis** is a family of services for **collecting, processing and delivering real-time streaming data**.
 
 | Service | What it does |
@@ -6581,7 +6581,8 @@ A **river with a dam of observers** versus a **post office queue**. SQS is a pos
 | **Managed Service for Apache Flink** (formerly Kinesis Data Analytics) | Runs **real-time analytics and stream processing** (windows, aggregations) with Apache Flink. |
 | **Kinesis Video Streams** | Streams and stores **video and audio** from devices for processing. |
 
-#### Data Streams essentials
+### Data Streams essentials
+
 - **Shard:** the unit of capacity. Roughly **1 MB/s or 1,000 records/s write** and **2 MB/s read** per shard (check current limits). More shards means more throughput.
 - **Capacity modes:** **provisioned** (you choose shards) or **on-demand** (AWS scales for you).
 - **Partition key:** decides which shard a record goes to. Records with the same key stay in order within that shard. A **hot key** (one key getting most traffic) overloads one shard.
@@ -6589,7 +6590,7 @@ A **river with a dam of observers** versus a **post office queue**. SQS is a pos
 - **Consumers:** Lambda (with an event source mapping), applications using the **Kinesis Client Library (KCL)**, or Flink. **Enhanced fan-out** gives each consumer its own dedicated read throughput.
 - **Producers:** the AWS SDK, the **Kinesis Producer Library (KPL)**, the Kinesis agent, or many AWS services.
 
-#### Kinesis vs SQS vs SNS
+### Kinesis vs SQS vs SNS
 | | **SQS** | **SNS** | **Kinesis Data Streams** |
 |---|---|---|---|
 | Model | Queue, one consumer takes each message | Push to many subscribers | Ordered stream, many independent readers |
@@ -6597,14 +6598,15 @@ A **river with a dam of observers** versus a **post office queue**. SQS is a pos
 | Ordering | FIFO queue option | Limited | **Per partition key / shard** |
 | Typical use | Decoupling work | Fan-out alerts | Real-time analytics, event logs, clickstreams |
 
-### 3. The industry problem Kinesis solves
+### The industry problem Kinesis solves
 **A streaming platform** collects 50,000 playback events per second (play, pause, buffering) from millions of devices. The product team wants a live dashboard, the data team wants all events in S3 for analysis, and the fraud team wants to detect suspicious patterns within seconds.
 
 A queue would give each event to only one consumer. With **Kinesis Data Streams**, all three consume the same events independently: a **Flink** application computes per-minute aggregates, **Firehose** delivers raw events to S3 (as Parquet), and a **Lambda** consumer flags suspicious patterns. If the dashboard code had a bug, they rewind and reprocess the last 24 hours.
 
 **Where it's a poor fit:** simple background jobs (use SQS), low-volume events where managing shards is overkill (use SQS, SNS or EventBridge), and strict global ordering across all records (ordering is per shard).
 
-### 4. Code / hands-on (Kinesis)
+### Code / hands-on (Kinesis)
+
 ```bash
 # 1. Create a one-shard stream
 aws kinesis create-stream --stream-name clicks --shard-count 1
@@ -6634,13 +6636,16 @@ aws kinesis get-records --shard-iterator "$ITERATOR"
 
 ## Part B: AWS Step Functions
 
-### 1. Analogy
+### Analogy
+
 A **restaurant order ticket moving through the kitchen**: take order, check stock, if the item is out ask the customer to choose again, cook, plate, deliver, and if cooking fails retry twice then call the manager. **Step Functions is the head chef coordinating each step**, remembering where every order is, retrying failures, and keeping a record of what happened.
 
-### 2. Definition
+### Definition
+
 **AWS Step Functions** is a **serverless workflow orchestrator**. You define a **state machine** (in JSON, using Amazon States Language, or with a visual designer) made of steps that call **Lambda functions and over 200 AWS services**, with built-in **branching, parallelism, waiting, retries and error handling**, and a visual view of every execution.
 
-#### State types
+### State types
+
 | State | Purpose |
 |---|---|
 | **Task** | Do work: call Lambda, start an ECS task, write to DynamoDB, publish to SNS, start a Glue job, and more |
@@ -6650,12 +6655,13 @@ A **restaurant order ticket moving through the kitchen**: take order, check stoc
 | **Wait** | Pause for a time or until a date |
 | **Pass, Succeed, Fail** | Pass data along, or end the workflow successfully or with an error |
 
-#### Reliability features
+### Reliability features
+
 - **Retry** (with backoff) and **Catch** (route errors to a recovery path) on any task.
 - **Callback pattern (`.waitForTaskToken`):** pause until an external system or a human responds, for approvals.
 - Every execution has a **full history** of inputs, outputs and failures.
 
-#### Standard vs Express workflows
+### Standard vs Express workflows
 | | **Standard** | **Express** |
 |---|---|---|
 | Duration | Up to **1 year** | Up to **5 minutes** |
@@ -6664,19 +6670,19 @@ A **restaurant order ticket moving through the kitchen**: take order, check stoc
 | Billing | Per **state transition** | Per **request and duration** |
 | Best for | Order processing, approvals, long jobs | High-volume short workflows, streaming data processing |
 
-#### Step Functions vs other tools
+### Step Functions vs other tools
 - **vs chaining Lambdas:** one Lambda calling the next hides failures and loses state when something breaks. Step Functions keeps state, retries and a visual history, and each Lambda stays small.
 - **vs SQS:** SQS decouples a producer from workers. Step Functions **coordinates multiple steps with decisions**.
 - **vs Managed Airflow (MWAA):** Airflow suits scheduled data-pipeline DAGs and teams that know Python and Airflow. Step Functions suits event-driven, serverless application workflows.
 
-### 3. The industry problem Step Functions solves
+### The industry problem Step Functions solves
 **An online store's order flow:** charge the card, reserve stock, create a shipping label, send a confirmation. If the card is declined, stop. If the shipping API fails, retry three times then alert. If stock reservation succeeds but shipping fails permanently, **release the stock** (a compensating step).
 
 Hand-written code scatters this logic across functions, queues and retries, and a failure at step 3 leaves the order in an unknown state. With Step Functions, the flow is one **visible state machine**, every order's progress and failure is recorded, retries and compensations are declared instead of coded, and support can see exactly where order 8841 stopped.
 
 **Where it's a poor fit:** a single simple Lambda, very high-volume sub-second processing with Standard workflows (cost per transition, so consider Express), and logic that is really a data pipeline better modeled in an Airflow-style scheduler.
 
-### 4. Code / hands-on (Step Functions)
+### Code / hands-on (Step Functions)
 A small state machine (`order.asl.json`) with a retry and a failure path:
 ```json
 {
@@ -6729,7 +6735,7 @@ aws stepfunctions get-execution-history --execution-arn <execution-arn>
 7. Make one Lambda fail on purpose, add a **Retry** and a **Catch**, and observe the history.
 8. Delete the state machine, Lambdas and roles.
 
-### 5. Interview questions (curveball level) with answers
+### Interview questions (curveball level) with answers
 
 **Q1. A team uses SQS for clickstream events, but the analytics team says they also need the same events, and last week's data had a bug that needs reprocessing. What should change?**
 **Answer:** SQS delivers each message to one consumer and deletes it, with no replay. Move to **Kinesis Data Streams**: multiple independent consumers read the same ordered events, and with **retention** (extendable up to 365 days) the buggy window can be **replayed**. Use **Firehose** to land raw events in S3 as well, so there's a permanent copy. Keep SQS for work queues where each job should be handled once.
@@ -6746,7 +6752,8 @@ aws stepfunctions get-execution-history --execution-arn <execution-arn>
 **Q5. A workflow processes 50,000 short events per second, each with 6 steps, and the Step Functions bill is huge. What do you change?**
 **Answer:** Standard workflows are billed **per state transition**, which gets expensive at this volume. Use an **Express workflow**, billed per request and duration and designed for high-volume, short (up to 5 minutes) workloads, accepting **at-least-once** semantics, so steps must be **idempotent**. Also consider combining tiny steps into fewer states, or handling the simple path inside one Lambda.
 
-### 6. Scenario question
+### Scenario question
+
 **Scenario:** You are the cloud engineer at **PlayNova**, a mobile-gaming company.
 - Game clients send about 80,000 events per second (logins, purchases, level-ups).
 - The live-ops team needs a dashboard updating within seconds. The data team wants every raw event in S3 as Parquet. The anti-cheat team needs to scan events for suspicious patterns and reprocess the last day when they update their rules.
@@ -6762,7 +6769,7 @@ Design the solution:
 5. Standard or Express, and for which parts?
 6. How do you handle failures in the purchase workflow?
 
-### 7. Scenario model answer
+### Scenario model answer
 1. **Ingestion:** **Kinesis Data Streams** (on-demand or sized provisioned shards), because several teams need the same events, order per player matters, and replay is required. SQS gives each message to one consumer and has no replay.
 2. **Consumers:** **Managed Service for Apache Flink** (or a Lambda) for per-second aggregates feeding the live dashboard, **Firehose** to S3 with Parquet conversion for the data team, and a separate consumer (Lambda or Flink) for anti-cheat, using **enhanced fan-out** so consumers don't compete for read throughput. Extend **retention** so the anti-cheat team can replay the last day.
 3. **Hot shard and poison event:** use a **high-cardinality partition key** (player ID plus a suffix where order isn't needed) and reshard. For the poison event, set **bisect on error, a maximum retry count and record age**, an **on-failure destination** (SQS), and make consumers **idempotent**.
@@ -6783,15 +6790,17 @@ Design the solution:
 - **EC2** (Lesson 6) and **Lambda** (Lesson 17): two other ways to run code. Containers sit between them.
 - **ALB** (Lesson 20), **Auto Scaling** (Lesson 19), **VPC and security groups** (Lesson 23), **IAM roles** (Lesson 5), **CloudWatch** (Lesson 33): the supporting services containers use.
 
-### 1. Analogy
+### Analogy
 **Shipping containers at a port.** A standard container holds any cargo and fits any ship, truck or crane (a Docker image runs on any host). The **port authority** decides which containers go on which ship, replaces a damaged one, and adds more ships when cargo piles up (the orchestrator: **ECS or Kubernetes/EKS**). **Fargate** is like hiring a shipping company that supplies the ships and crews, so you only hand over containers and say how much space you need.
 
-### 2. Definition
+### Definition
+
 Running containers on AWS involves two separate choices:
 1. **The orchestrator (control plane):** ECS or EKS.
 2. **The compute (where the containers actually run):** EC2 instances you manage, or **Fargate**, where AWS manages the servers.
 
-#### Amazon ECS (Elastic Container Service)
+## Amazon ECS (Elastic Container Service)
+
 AWS's own, simpler container orchestrator.
 - **Cluster:** a logical group where tasks run.
 - **Task definition:** a blueprint (JSON) describing containers: image, CPU and memory, ports, environment variables, secrets, logging, and roles.
@@ -6801,19 +6810,22 @@ AWS's own, simpler container orchestrator.
 - **Networking:** with **awsvpc** mode each task gets its own network interface and security group.
 - **Secrets:** inject from **Secrets Manager** or **Parameter Store** (Lesson 35 and Systems Manager).
 
-#### Amazon EKS (Elastic Kubernetes Service)
+## Amazon EKS (Elastic Kubernetes Service)
+
 A **managed Kubernetes** control plane. Kubernetes is the open-source standard for orchestrating containers (**pods**, **deployments**, **services**, `kubectl`).
 - AWS runs and scales the **control plane** for you (for a per-cluster hourly fee). You choose compute: **managed node groups** (EC2), **Fargate**, or autoscalers such as **Karpenter**.
 - Choose EKS for **Kubernetes skills, portability across clouds and on-premises, and the large Kubernetes ecosystem** (Helm charts, operators).
 - It has a steeper learning curve and more moving parts than ECS.
 
-#### AWS Fargate
+## AWS Fargate
+
 **Serverless compute for containers** (works with both ECS and EKS).
 - You define **CPU and memory per task or pod**, and AWS provisions the underlying infrastructure. **No EC2 instances to patch, size or scale.**
 - You pay **per vCPU and GB of memory per second** while tasks run.
 - Trade-offs: slightly higher cost per unit than well-packed EC2 at steady high utilization, less control over the host (no custom kernel or privileged host access), and some special hardware (certain GPU needs) is better on EC2.
 
-#### Related options
+## Related options
+
 - **Amazon ECR:** the image registry, with scanning and lifecycle policies.
 - **AWS App Runner:** the simplest option, deploying a web app or API from an image or source code with almost no configuration.
 - **ECS Anywhere / EKS Anywhere:** run on your own hardware.
@@ -6828,7 +6840,7 @@ A **managed Kubernetes** control plane. Kubernetes is the open-source standard f
 | A basic web app with minimal operations effort | **App Runner** |
 | Short event-driven functions | **Lambda** |
 
-#### Containers vs EC2 vs Lambda
+## Containers vs EC2 vs Lambda
 | | EC2 | Containers (Fargate) | Lambda |
 |---|---|---|---|
 | You manage | OS, scaling, patching | Container image only | Code only |
@@ -6836,14 +6848,14 @@ A **managed Kubernetes** control plane. Kubernetes is the open-source standard f
 | Startup | Minutes | Seconds to a minute | Milliseconds to seconds |
 | Fit | Full control, legacy apps | Microservices, APIs, workers | Event-driven glue and APIs |
 
-### 3. The industry problem it solves
+###  The industry problem it solves
 **A company with 30 microservices** (orders, payments, search) written in different languages. Running each on its own EC2 instances means different setups, wasted capacity (each instance mostly idle), slow deployments, and "works on my machine" problems.
 
 With containers, each service is packaged as an image with its dependencies, **ECS services on Fargate** run the right number of copies behind an ALB, a new version rolls out gradually with automatic rollback, failed containers are replaced automatically, and **auto scaling** adds tasks at peak. Nobody patches servers. Costs line up with CPU and memory actually requested.
 
 **Where it's a poor fit:** a tiny function better served by Lambda, workloads needing full OS control, and a small team adopting EKS only because Kubernetes is fashionable (the operational overhead is real).
 
-### 4. Code / hands-on
+###  Code / hands-on
 ```bash
 # 1. A cluster (for Fargate this is just a logical group)
 aws ecs create-cluster --cluster-name demo
@@ -6866,6 +6878,7 @@ aws ecs describe-services --cluster demo --services web
 ```
 
 `taskdef.json`
+
 ```json
 {
   "family": "web",
@@ -6896,7 +6909,7 @@ aws ecs describe-services --cluster demo --services web
 
 **What this does:** the **execution role** lets ECS pull the image from ECR and write logs, while the **task role** is what your code uses at runtime (confusing the two is a classic mistake). Putting tasks in **private subnets** with no public IP means traffic reaches them only through the ALB. The log group must exist before tasks start. Pushing the image uses `docker build` and `docker push` to ECR after `aws ecr get-login-password`. For EKS, the common starting point is the `eksctl` tool (`eksctl create cluster`), which creates the cluster and nodes. Command options can change, so confirm with `aws ecs help`.
 
-### 5. Interview questions (curveball level) with answers
+### Interview questions (curveball level) with answers
 
 **Q1. A team is starting a new microservices platform with five engineers and no Kubernetes experience. They ask whether to use ECS or EKS. What do you advise?**
 **Answer:** **ECS on Fargate.** It has far fewer concepts, integrates directly with ALB, IAM, CloudWatch and Secrets Manager, and removes server management. EKS is worth the complexity when the team already knows Kubernetes, needs portability across clouds or on-premises, or depends on the Kubernetes ecosystem. The cost of EKS (cluster fee, operational overhead, upgrades) is easy to underestimate.
@@ -6913,7 +6926,8 @@ aws ecs describe-services --cluster demo --services web
 **Q5. Secrets (a database password) are currently baked into the container image. Why is that a problem, and what's the fix?**
 **Answer:** Anyone with image access (ECR pull permission, a leaked image, a laptop) can read the secret, and rotating it means rebuilding and redeploying every image. Store it in **Secrets Manager** (Lesson 35) and **inject it at runtime** using the task definition's `secrets` setting (the **execution role** fetches it), or have the app read it with the **task role**. Use rotation, remove the secret from the image history, and rotate the old, exposed password.
 
-### 6. Scenario question
+### Scenario question
+
 **Scenario:** You are the cloud engineer at **GreenCart**, a grocery-delivery company moving from one large monolith on EC2 to containers.
 - There are 12 services. Eight are web APIs behind a load balancer, three are background workers, and one is a nightly reporting job.
 - The team has three engineers, none of whom know Kubernetes.
@@ -6932,14 +6946,14 @@ Design the solution:
 6. How do you keep costs down?
 7. When would you revisit the EKS decision?
 
-### 7. Scenario model answer
-1. **Orchestrator and compute:** **ECS on Fargate**, because the team is small and has no Kubernetes experience, and nothing here needs Kubernetes-specific features.
-2. **Workloads:** each API is an **ECS service** behind an **ALB** (path or host-based routing to separate target groups). Workers are ECS services without a load balancer, scaling on **SQS queue depth** (Lesson 31). The nightly report is a **scheduled ECS task** (EventBridge schedule, or Step Functions) with the larger memory size, which runs for 40 minutes and then stops, so you pay only for that time.
-3. **The 7 p.m. spike:** **service auto scaling**, using target tracking on CPU or ALB request count per target, plus a **scheduled scaling** action to add capacity shortly before 7 p.m. so tasks are ready.
-4. **Security:** **ECR scanning with Inspector** and a pipeline gate on critical findings, **Secrets Manager injection** through the task definition (execution role) instead of baking secrets into images, tasks in **private subnets** with security groups allowing traffic only from the ALB, separate **task roles** with least privilege, and WAF on the ALB.
-5. **Safe deployments:** rolling or **blue/green** deployments, **health checks**, the **deployment circuit breaker with automatic rollback**, and a gradual rollout with CloudWatch alarms watching error rates.
-6. **Cost:** right-size task CPU and memory from real usage, a **Compute Savings Plan** for the steady baseline (covers Fargate), **Fargate Spot** for interruption-tolerant workers, scale in off-peak hours, and ECR lifecycle policies to remove old images.
-7. **Revisiting EKS:** if the team grows Kubernetes skills, needs portability to other clouds or on-premises, or adopts tools that assume Kubernetes, then EKS becomes reasonable. Migrating later is easier if services are already containerized and 12-factor in design.
+
+ -  **Orchestrator and compute:** **ECS on Fargate**, because the team is small and has no Kubernetes experience, and nothing here needs Kubernetes-specific features.
+ - **Workloads:** each API is an **ECS service** behind an **ALB** (path or host-based routing to separate target groups). Workers are ECS services without a load balancer, scaling on **SQS queue depth** (Lesson 31). The nightly report is a **scheduled ECS task** (EventBridge schedule, or Step Functions) with the larger memory size, which runs for 40 minutes and then stops, so you pay only for that time
+ - **The 7 p.m. spike:** **service auto scaling**, using target tracking on CPU or ALB request count per target, plus a **scheduled scaling** action to add capacity shortly before 7 p.m. so tasks are ready.
+ - **Security:** **ECR scanning with Inspector** and a pipeline gate on critical findings, **Secrets Manager injection** through the task definition (execution role) instead of baking secrets into images, tasks in **private subnets** with security groups allowing traffic only from the ALB, separate **task roles** with least privilege, and WAF on the ALB.
+ - **Safe deployments:** rolling or **blue/green** deployments, **health checks**, the **deployment circuit breaker with automatic rollback**, and a gradual rollout with CloudWatch alarms watching error rates.
+ - **Cost:** right-size task CPU and memory from real usage, a **Compute Savings Plan** for the steady baseline (covers Fargate), **Fargate Spot** for interruption-tolerant workers, scale in off-peak hours, and ECR lifecycle policies to remove old images.
+ - **Revisiting EKS:** if the team grows Kubernetes skills, needs portability to other clouds or on-premises, or adopts tools that assume Kubernetes, then EKS becomes reasonable. Migrating later is easier if services are already containerized and 12-factor in design.
 
 ---
 
@@ -6958,12 +6972,14 @@ Design the solution:
 - **ETL:** Extract, Transform, Load. Pulling data from sources, cleaning and reshaping it, and loading it somewhere useful.
 - **Step Functions and EventBridge** (Extra 4, Lesson 32): ways to trigger and orchestrate jobs.
 
-### 1. Analogy
+### Analogy
+
 A **huge library with no catalog**. Thousands of boxes of papers (files in S3) sit in a warehouse. **Glue** is the **librarian team**: it walks the shelves, writes catalog cards (the Data Catalog: what each box contains, its columns and location), and also cleans and reorganizes the papers into neat folders (ETL jobs). **Athena** is the **reading room**: you ask a question in SQL, a clerk fetches only the relevant papers using the catalog, and you pay by how much paper was read, with no staff to hire in advance.
 
-### 2. Definition
+##  Definition
 
-#### Amazon Athena
+### Amazon Athena
+
 A **serverless, interactive query service that runs standard SQL directly on data in S3**. There is no cluster to manage, and you **pay per data scanned** (a per-TB price, with a minimum per query), so the main way to save money is to **scan less**.
 - Built on open-source distributed SQL engines (Trino/Presto based), plus Apache Spark options for notebooks.
 - Supports CSV, JSON, **Parquet, ORC**, Avro, logs, and open table formats such as **Apache Iceberg**.
@@ -6981,27 +6997,22 @@ A **serverless, interactive query service that runs standard SQL directly on dat
 5. Avoid thousands of tiny files: aim for larger files (roughly tens to hundreds of MB).
 6. Use **CTAS** (`CREATE TABLE AS SELECT`) to convert raw data into partitioned Parquet once.
 
-#### AWS Glue
-A **serverless data integration service**. Its main parts:
-| Part | What it does |
-|---|---|
-| **Glue Data Catalog** | A central **metadata store** of databases and tables (schemas, locations, formats, partitions). Used by Athena, Redshift Spectrum, EMR and Glue jobs. |
-| **Crawlers** | Scan a data source (such as an S3 path), **infer the schema**, and create or update table definitions in the Data Catalog, including new partitions. |
-| **ETL jobs** | Serverless jobs, usually **Apache Spark** (PySpark or Scala), also Python shell and Ray, that read, transform and write data. You pay per **DPU-hour** (data processing unit), billed by the second. |
-| **Glue Studio** | A visual editor for building jobs. |
-| **Job bookmarks** | Track what was already processed so reruns handle only new data. |
-| **Triggers and workflows** | Schedule or chain crawlers and jobs. |
-| **Glue Data Quality** | Rules that check data (null checks, ranges, uniqueness). |
-| **Schema Registry, DataBrew** | Schema management for streaming, and a visual data-preparation tool. |
+### AWS Glue
+| Part                   | What it does                                                                                                                                                                                                                              |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Glue Data Catalog      | A central metadata store of databases and tables, including schemas, locations, formats, and partitions. Used by Athena, Redshift Spectrum, EMR, and Glue jobs.                                                                           |
+| Crawlers               | Scan data sources (such as S3 paths), infer schemas, and create or update table definitions in the Data Catalog, including new partitions.                                                                                                |
+| ETL jobs               | Serverless jobs, usually using Apache Spark (PySpark or Scala), as well as Python shell and Ray, to read, transform, and write data. Pricing is based on DPU-hours, with billing granularity depending on the job type and configuration. |
+| Glue Studio            | A visual editor for building and managing ETL jobs.                                                                                                                                                                                       |
+| Job bookmarks          | Track previously processed data so supported reruns can process new data without reprocessing everything.                                                                                                                                 |
+| Triggers and workflows | Schedule jobs or chain crawlers and jobs into automated workflows.                                                                                                                                                                        |
+| Glue Data Quality      | Checks data quality using rules such as null checks, value ranges, and uniqueness.                                                                                                                                                        |
+| Schema Registry        | Manages schemas for streaming data to help producers and consumers maintain schema compatibility.                                                                                                                                         |
+| AWS Glue DataBrew      | A visual tool for cleaning and preparing data without writing code.                                                                                                                                                                       |
 
 **Lake Formation** adds fine-grained, centralized permissions (down to columns and rows) on top of the Data Catalog, which matters for governance (and ties to Macie in Lesson 38).
 
-#### How they fit together
-```
-Raw files in S3  ->  Glue Crawler (catalog)  ->  Glue ETL job (clean, convert to Parquet, partition)
-                                         |                     |
-                                         +----> Glue Data Catalog <---- Athena (SQL), Redshift Spectrum, QuickSight
-```
+![[Pasted image 20261027220239.png]]
 
 #### Athena vs Redshift vs Glue (the usual confusion)
 | | **Athena** | **Redshift** | **Glue** |
@@ -7011,14 +7022,16 @@ Raw files in S3  ->  Glue Crawler (catalog)  ->  Glue ETL job (clean, convert to
 | Cost model | Per TB scanned | Per node-hour or serverless RPU | Per DPU-hour, crawler time |
 | Setup | None | Cluster or serverless setup | Jobs and crawlers |
 
-### 3. The industry problem it solves
+###  The industry problem it solves
+
 **An e-commerce company** stores years of order exports, clickstream files and application logs in S3 as CSV and JSON, about 40 TB. Analysts want answers ("which products sold best in Kanpur last month?") but nobody can query raw files, and standing up a warehouse for occasional questions is expensive.
 
 With **Glue**, a crawler catalogs the raw data, and a nightly **ETL job** converts it to **partitioned Parquet** (cleaned, deduplicated). With **Athena**, analysts run SQL directly on S3 and pay only for what each query scans. A date-partitioned Parquet table makes a month's query scan a few GB instead of 40 TB. The same catalog also feeds **QuickSight** dashboards and **Redshift Spectrum**.
 
 **Where it's a poor fit:** high-concurrency dashboards needing millisecond responses (use Redshift or a serving layer), queries that scan huge unpartitioned CSV repeatedly (the bill grows quickly), frequent row-level updates (better in a database or an open table format such as Iceberg), and heavy complex pipelines where a team needs full Spark cluster control (EMR).
 
-### 4. Code / hands-on
+### Code / hands-on
+
 **A Glue database and crawler over raw data:**
 ```bash
 # 1. A database in the Glue Data Catalog
@@ -7038,6 +7051,7 @@ aws glue get-tables --database-name lakedb
 ```
 
 **Querying with Athena (SQL), then converting to Parquet with CTAS:**
+
 ```sql
 -- Explore the raw table
 SELECT * FROM lakedb.orders LIMIT 10;
@@ -7060,6 +7074,7 @@ GROUP BY city;
 ```
 
 **Running it from the CLI:**
+
 ```bash
 aws athena start-query-execution \
   --query-string "SELECT city, SUM(amount) FROM lakedb.orders_parquet WHERE order_date = DATE '2026-10-20' GROUP BY city" \
@@ -7071,6 +7086,7 @@ aws athena get-query-results --query-execution-id <id>
 ```
 
 **A small Glue ETL job (PySpark) that converts CSV to partitioned Parquet:**
+
 ```python
 import sys
 from awsglue.utils import getResolvedOptions
@@ -7091,7 +7107,7 @@ df.write.mode("overwrite").partitionBy("order_date") \
 
 **What this does:** the crawler writes the table definition, so you don't type column names by hand. The CTAS step is the big saver: it pays the conversion cost once, so every later query is cheaper. The Athena **results location** must exist and be writable, and the data and result buckets should be encrypted. Column names (`order_date`) must match your data, and for CTAS the partition column must be last in the `SELECT`. Command and option names can change, so confirm with `aws glue help` and `aws athena help`.
 
-### 5. Interview questions (curveball level) with answers
+###  Interview questions (curveball level) with answers
 
 **Q1. An analyst's Athena query on a 5 TB CSV table costs a lot and takes minutes. How do you reduce both?**
 **Answer:** Athena charges per **data scanned**, so reduce what it scans. Convert the data once to **compressed Parquet** (columnar, so only needed columns are read), **partition** by the columns people filter on (usually date), use `SELECT` with specific columns instead of `*`, and compact thousands of tiny files into larger ones. Use a **CTAS** query or a **Glue ETL job** for the conversion, and set **workgroup data limits** to prevent accidental huge scans. Often a 5 TB scan becomes a few GB.
@@ -7108,7 +7124,8 @@ df.write.mode("overwrite").partitionBy("order_date") \
 **Q5. A Glue job processes the entire 2 TB dataset every night, but only about 5 GB is new each day. What do you change?**
 **Answer:** Make it **incremental**. Use **job bookmarks** to process only new data, or filter by the new partition (for example yesterday's date), and write results to partitioned outputs. Consider an open table format such as **Iceberg** for upserts and efficient incremental processing. Right-size the DPU count and use the flexible worker options to lower cost, and monitor job metrics in CloudWatch.
 
-### 6. Scenario question
+###  Scenario question
+
 **Scenario:** You are the data engineer at **BharatBites**, a food-delivery company.
 - 30 TB of order, delivery and app-event data sit in S3 as raw CSV and JSON, arriving hourly into folders by date.
 - Analysts run ad hoc SQL on them, and last month an `SELECT *` over the whole raw table cost far more than expected.
@@ -7127,7 +7144,7 @@ Design the solution:
 6. How do you serve the morning dashboards?
 7. How do you stop a bad file from breaking reports?
 
-### 7. Scenario model answer
+###  Scenario model answer
 1. **Lake structure:** separate **raw**, **curated** and (optionally) **analytics** zones in S3. Catalog all with the **Glue Data Catalog** (crawlers for the raw zone, explicit table definitions for curated).
 2. **Cheaper Athena:** convert to **partitioned, compressed Parquet** (partition by order date, maybe city) through CTAS or Glue, teach analysts to select specific columns, compact small files, and use **Athena workgroups** with **per-query scan limits** and cost tracking, plus Budgets (Lesson 42) alerts.
 3. **Nightly trusted dataset:** a **Glue ETL job** (scheduled by a Glue trigger, EventBridge or Step Functions) that deduplicates on `order_id`, applies validation, and writes partitioned Parquet to the curated zone, using **job bookmarks** or a date filter to process only new data.
