@@ -2171,3 +2171,89 @@ print(isinstance(r, Transaction))      # True
 ---
 ## Names, Objects, Identity & Copying
 
+- **Object**: a piece of data living in memory. Every object has a **type**, a **value** and an **identity**. `[1, 2, 3]` is an object, and so is `"hi"`.
+- **Name** (variable): a label that points to an object. As in Lesson 1, the name doesn’t “hold” the value.
+- **Alias**: a second name pointing to the _same_ object. `b = a` makes an alias, **not** a copy.
+- **Identity**: the object’s unique ID number in memory. `id(x)` shows it. `a is b` asks “same object?”. `a == b` asks “same value?”.
+- **Mutate**: change the object itself, in place. `nums.append(3)` mutates the list.
+- **Rebind**: point a name at a _different_ object. `nums = [99]` rebinds the name, and the old list is untouched.
+- **Shallow copy**: a new outer container whose items are still the _same_ inner objects.
+- **Deep copy**: a full copy at every level. Nothing is shared.
+
+**Industrial use:**
+
+- A pipeline goes raw → clean → report. The raw data must never change. If a “cleaning” function edits its input, the raw data is damaged and a re-run gives different results.
+- A `config` dict is passed through 3 stages. Stage 1 edits it, and stage 3 sees the edit by surprise.
+- A cache hands the same list to many callers. One caller edits it, and everyone else’s data changes.
+
+**Problem it solves:** “I changed one thing and something else changed too.” Most mysterious Python bugs are an alias or a shallow copy. Once you know exactly when data is shared and when it’s independent, you control it.
+
+#### Code 1: one object, two names
+
+```python
+a = [1, 2, 3]
+b = a                  # NOT a copy: b is a second name for the same list
+c = [1, 2, 3]          # a different list that merely looks the same
+
+b.append(4)
+print(a)               # [1, 2, 3, 4]   a changed too
+print(a is b)          # True    same object
+print(id(a) == id(b))  # True    same identity
+print(a == c)          # False   a now has 4 items, c has 3
+print(c == [1, 2, 3])  # True    same value
+```
+
+- `b = a` attaches a second label to the existing list. Nothing is copied.
+- `==` compares **values**. `is` compares **objects**.
+
+|Check|Asks|Example|
+|---|---|---|
+|`==`|same value?|`c == [1, 2, 3]` → `True`|
+|`is`|same object?|`c is a` → `False`|
+
+**Rule:** use `==` for values. Use `is` only for `None`: `if x is None`. Never use `is` for numbers or strings. Python reuses some small numbers and short strings behind the scenes, so `is` can look correct on your test data and fail on other data.
+
+#### Code 2: what “changing” really does
+
+| Type                           | Mutable? | A “change”                                        |
+| ------------------------------ | -------- | ------------------------------------------------- |
+| `int`, `float`, `str`, `tuple` | No       | builds a **new** object, and the name moves to it |
+| `list`, `dict`, `set`          | Yes      | changes the **same** object in place              |
+
+```python
+s = "data"
+print(id(s))
+s += "!"
+print(id(s))                # a different number: a NEW string was made
+
+nums = [1, 2]
+before = id(nums)
+nums.append(3)
+print(id(nums) == before)   # True: same list, changed in place
+nums = nums + [4]           # builds a NEW list, then points nums at it
+print(id(nums) == before)   # False
+```
+
+#### Code 3: what functions do with your data
+
+```python
+def add_item(items, x):
+    items.append(x)        # MUTATES: the caller's list changes
+
+def reset(items):
+    items = []             # REBINDS: only the local name moves
+
+cart = ["pen"]
+add_item(cart, "book")
+print(cart)                # ['pen', 'book']
+reset(cart)
+print(cart)                # ['pen', 'book']   unchanged
+```
+
+When you call a function, the parameter becomes **another name for the same object** (an alias).
+
+- Mutate through the parameter → the caller sees it.
+- Rebind the parameter → the caller does not.
+
+Python calls this **pass by object reference**. It is neither “by value” nor “by reference”.
+
