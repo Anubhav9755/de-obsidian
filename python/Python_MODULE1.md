@@ -2428,6 +2428,32 @@ print(remove_duplicates(nums))     # [3, 1, 2]
 print(nums)                        # [3, 1, 3, 2, 1]   unchanged
 ```
 
+Follow-up they love to ask: why not just `list(set(nums))`? A set has no order, so the order is lost. It also only works when every item is hashable (a list inside the list would crash it). A one-line alternative that keeps order is `list(dict.fromkeys(nums))`, because dicts remember insertion order.
+
+### TASK (Level 3): yours to write
+
+`assert` is a statement that crashes with `AssertionError` if its condition is `False`. Think of it as a tripwire that tells you something is wrong. Write these 5 lines **first**, then write the function until none of them trip.
+
+```python
+records = [{"id": 1, "tags": ["new"]}, {"id": 2, "tags": []}]
+
+# 1. write add_audit_tag(records, tag) that returns a NEW list
+# 2. every returned record must have `tag` added at the end of its "tags"
+# 3. the original records must stay completely unchanged
+# 4. do NOT use copy.deepcopy: copy only the parts you change
+
+result = add_audit_tag(records, "audited")
+
+assert result == [{"id": 1, "tags": ["new", "audited"]}, {"id": 2, "tags": ["audited"]}]
+assert records == [{"id": 1, "tags": ["new"]}, {"id": 2, "tags": []}]
+assert result is not records
+assert result[0] is not records[0]
+assert result[0]["tags"] is not records[0]["tags"]
+print("all tests passed")
+```
+
+**Stretch:** write one sentence in your notes on why `list(records)` alone would fail the last two asserts.
+
 |`x`|in `seen`?|action|`result`|
 |---|---|---|---|
 |3|no|add|`[3]`|
@@ -2437,4 +2463,59 @@ print(nums)                        # [3, 1, 3, 2, 1]   unchanged
 |1|yes|skip|`[3, 1, 2]`|
 
 Follow-up they love to ask: why not just `list(set(nums))`? A set has no order, so the order is lost. It also only works when every item is hashable (a list inside the list would crash it). A one-line alternative that keeps order is `list(dict.fromkeys(nums))`, because dicts remember insertion order.
+
+**How to think it through.** Before typing, ask: **what must be NEW so the original stays safe?**
+
+1. The outer list, because we return a new list.
+2. Each record dict, because we don’t want to touch the originals.
+3. Each `tags` list, because we are going to `append` to it. If it’s shared, the original changes.
+
+```python
+def add_audit_tag(records, tag):
+    new_records = []                            # step 1: a new outer list
+    for rec in records:
+        new_rec = dict(rec)                     # step 2: new dict (shallow copy)
+        new_rec["tags"] = list(rec["tags"])     # step 3: new tags list, so we don't share it
+        new_rec["tags"].append(tag)             # safe: we only touch the copy
+        new_records.append(new_rec)
+    return new_records
+```
+
+Paste the 5 asserts under it and you get `all tests passed`.
+
+**Let the asserts teach you.** If you skip step 3 and only do `new_rec = dict(rec)`, the `tags` list is still shared. The append then changes the original records, and the second assert fails. That failure is telling you “you copied one level, but you needed two.”
+
+**Stretch answer:** `list(records)` copies only the outer list. The dicts inside are the _same_ objects, so asserts 4 and 5 fail, and appending to their tags also changes the originals.
+
+**One-line version** (same idea, shorter):
+
+```python
+def add_audit_tag(records, tag):
+    return [{**rec, "tags": rec["tags"] + [tag]} for rec in records]
+```
+
+`{**rec, ...}` means “unpack everything in `rec` into a new dict, then override `tags`”. `rec["tags"] + [tag]` builds a new list, so nothing is shared.
+
+---
+
+## Lesson 11: Operators, Truthiness & Numbers
+
+- **Operator**: a symbol that does something to values, like `+`, `//`, `==`, `and`. The values it works on are called **operands**.
+- **Floor division (`//`)**: divides, then rounds the result **down** to a whole number.
+- **Modulo (`%`)**: the **remainder** after division. `17 % 5` is `2`.
+- **Short-circuit**: `and`/`or` stop as soon as the answer is known and never look at the rest.
+- **Truthy / falsy**: when you use any value in an `if`, Python treats it as `True` or `False`. “Falsy” means it counts as `False`. The places where Python expects a True/False (like `if` and `while`) are called a **boolean context**.
+- **`Decimal`**: an exact decimal number type from the `decimal` module, made for money.
+- **`NaN`** (“not a number”) and **`inf`** (infinity): special float values.
+
+**Industrial use:**
+
+- `//` and `%` split rows into pages and batches, pick every Nth row, wrap around a list, and convert seconds into hours/minutes/seconds.
+- `or` gives defaults. Short-circuit `and` checks “is the data there?” before using it.
+- Truthiness is behind every “is this field empty?” check in validation.
+- `Decimal` handles money, tax and interest, anywhere cents matter. Float is for measurements.
+
+**Problem it solves:** these mistakes don’t crash. They give a _believable wrong answer_: an invoice off by a paisa, a valid `0` treated as “missing”, the last page of data skipped. Silent wrong numbers are the worst bugs in a pipeline.
+
+
 
