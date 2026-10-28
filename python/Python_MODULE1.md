@@ -2479,6 +2479,8 @@ def add_audit_tag(records, tag):
         new_rec["tags"].append(tag)             # safe: we only touch the copy
         new_records.append(new_rec)
     return new_records
+    
+
 ```
 
 Paste the 5 asserts under it and you get `all tests passed`.
