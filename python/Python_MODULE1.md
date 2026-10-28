@@ -2319,3 +2319,45 @@ def clean_good(rec):
 
 **Habit:** copy exactly the level you will change. `deepcopy` everywhere is slow on big data.
 
+#### Level 1: fill in the blanks
+
+```python
+import copy
+
+a = [10, 20, 30]
+b = a
+c = a.____()                       # a real copy
+a.append(40)
+print(b)                           # ?
+print(c)                           # ?
+print(a is b, a is c, a == c)      # ?
+
+data = {"name": "Asha", "scores": [80, 90]}
+x = data.copy()
+y = copy.____(data)
+x["scores"].append(70)
+y["scores"].append(60)
+print(data["scores"])              # ?
+```
+
+**Answer:** `copy` and `deepcopy`. It prints:
+
+- `[10, 20, 30, 40]` (b is an alias of a)
+- `[10, 20, 30]` (c is a copy)
+- `True False False` (a has 40, c doesn’t, so `a == c` is `False`)
+- `[80, 90, 70]`
+
+#### Find the bug
+
+```python
+grid = [[0] * 3] * 3
+grid[0][0] = 5
+print(grid)        # expected [[5, 0, 0], [0, 0, 0], [0, 0, 0]]
+```
+
+**Answer:** it prints `[[5, 0, 0], [5, 0, 0], [5, 0, 0]]`. `* 3` repeats the **same** inner list three times, so all three rows are one object (`grid[0] is grid[1]` is `True`). Fix: build a fresh list per row.
+
+```python
+grid = [[0] * 3 for _ in range(3)]
+```
+
