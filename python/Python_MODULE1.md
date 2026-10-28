@@ -2169,4 +2169,5 @@ print(isinstance(r, Transaction))      # True
 
 
 ---
-## 
+## Names, Objects, Identity & Copying
+
