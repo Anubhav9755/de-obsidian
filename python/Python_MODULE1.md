@@ -2277,4 +2277,45 @@ print(p, q)           # [1, 9] [1]
 | `b = a`                                              | alias (no copy)  |
 | `a[:]`, `a.copy()`, `list(a)`, `dict(d)`, `d.copy()` | **shallow** copy |
 | `copy.deepcopy(a)`                                   | **deep** copy    |
+```python
+import copy
+
+orig = {"id": 1, "tags": ["a", "b"]}
+shallow = orig.copy()
+deep = copy.deepcopy(orig)
+
+shallow["id"] = 2                 # top level: independent
+shallow["tags"].append("c")       # inner list: SHARED with orig
+
+print(orig)                       # {'id': 1, 'tags': ['a', 'b', 'c']}
+print(deep)                       # {'id': 1, 'tags': ['a', 'b']}
+print(shallow["tags"] is orig["tags"])   # True
+print(deep["tags"] is orig["tags"])      # False
+```
+
+```bash
+orig     -> {id: 1, tags: [list A]}
+shallow  -> {id: 2, tags: [list A]}   new dict, SAME list A
+deep     -> {id: 1, tags: [list B]}   new dict, NEW list B (a copy of A)
+```
+
+#### Code 5: the real pipeline version
+
+```python
+raw = {"user": "  Asha ", "amount": "120", "tags": ["new"]}
+
+def clean_bad(rec):
+    rec["user"] = rec["user"].strip()
+    rec["amount"] = float(rec["amount"])
+    return rec                         # raw is damaged too
+
+def clean_good(rec):
+    out = dict(rec)                    # new outer dict
+    out["user"] = rec["user"].strip()
+    out["amount"] = float(rec["amount"])
+    out["tags"] = list(rec["tags"])    # copy the inner list too, in case we edit it later
+    return out
+```
+
+**Habit:** copy exactly the level you will change. `deepcopy` everywhere is slow on big data.
 
