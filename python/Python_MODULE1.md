@@ -2361,3 +2361,80 @@ print(grid)        # expected [[5, 0, 0], [0, 0, 0], [0, 0, 0]]
 grid = [[0] * 3 for _ in range(3)]
 ```
 
+### Interview Questions
+
+**Q1. Is Python pass by value or pass by reference?**  
+Neither. It is **pass by object reference**. The parameter is a new name for the same object. If the function _mutates_ the object (`append`), the caller sees it. If the function _rebinds_ the name (`items = []`), the caller does not. See Code 3.
+
+**Q2. What’s the difference between `sorted(nums)` and `nums.sort()`? What is `x` after `x = nums.sort()`?**  
+`sorted(nums)` returns a **new** sorted list and leaves `nums` alone. `nums.sort()` sorts `nums` **in place** and returns `None`. So `x = nums.sort()` makes `x` `None` and sorts `nums`. Most in-place list methods (`append`, `sort`, `reverse`, `extend`, `remove`) return `None`. `pop` is the exception: it returns the removed item.
+
+**Q3. Why do we write `if x is None` and not `if x == None`?**  
+`None` is a single object, so `is` can’t be fooled. `==` can be redefined by a class, and some libraries return something unexpected from `==` (for example, an array instead of True/False). `is None` is always safe and is the standard style.
+
+**Q4. Predict what happens (each line on a fresh `t = ([1, 2], 3)`):**
+
+```python
+t[0].append(9)
+t[0] = [7]
+t[0] += [5]
+```
+
+1. `t[0].append(9)` works. `t` becomes `([1, 2, 9], 3)`. The tuple still points to the same list, and the list itself is mutable.
+2. `t[0] = [7]` raises `TypeError: 'tuple' object does not support item assignment`. A tuple can’t repoint its slots.
+3. `t[0] += [5]` raises the same `TypeError`, **but `t` is still changed** to `([1, 2, 5], 3)`. The `+=` does two steps. First it extends the list in place (this works). Then it tries to store the result back into `t[0]` (this is the forbidden step). The error comes after the change had already happened.
+
+**Q5. What does this print?**
+
+```python
+def add_bonus(scores):
+    scores += [100]
+    return scores
+
+original = [50, 60]
+new = add_bonus(original)
+print(original, new, original is new)
+```
+
+It prints `[50, 60, 100] [50, 60, 100] True`. `+=` mutated the caller’s list, then the function returned that same list. So `new` isn’t a new list. It’s another name for `original`. Many people think a function that returns something has “made a copy”. It hasn’t.
+
+**Q6. Scenario: a shared `config` dict goes through 3 pipeline stages. Stage 1 edits `config["batch_size"]`, and stage 3 behaves differently. Why, and how do you fix it?**  
+All 3 stages hold aliases to **one** dict, so stage 1’s edit is visible to stage 3. Fixes, best first:
+
+- Don’t mutate. Each stage builds and returns new data.
+- If a stage must edit config, give it its own copy: `config.copy()` if the dict is flat, `copy.deepcopy(config)` if it is nested.
+- Later in the course we’ll see a **frozen** (read-only) object that raises an error on any edit, so nothing can leak silently.
+
+**Q7. Scenario: you must clean 2 million records without damaging the raw list. Someone says “just `deepcopy` the whole list first.” What’s wrong with that?**  
+`deepcopy` walks and duplicates **every** object at every level, so it is slow and it roughly doubles memory use. Better options:
+
+- Don’t edit the raw records. Build one new cleaned record at a time (Code 5), copying only the levels you change.
+- Process records one by one with a generator and write the results out, so you never hold a second full copy in memory.
+
+**Q8. Remove duplicates from a list, keep the original order, and do not change the input.**
+
+```python
+def remove_duplicates(items):
+    seen = set()
+    result = []
+    for x in items:
+        if x not in seen:          # O(1) lookup in a set
+            seen.add(x)
+            result.append(x)
+    return result
+
+nums = [3, 1, 3, 2, 1]
+print(remove_duplicates(nums))     # [3, 1, 2]
+print(nums)                        # [3, 1, 3, 2, 1]   unchanged
+```
+
+|`x`|in `seen`?|action|`result`|
+|---|---|---|---|
+|3|no|add|`[3]`|
+|1|no|add|`[3, 1]`|
+|3|yes|skip|`[3, 1]`|
+|2|no|add|`[3, 1, 2]`|
+|1|yes|skip|`[3, 1, 2]`|
+
+Follow-up they love to ask: why not just `list(set(nums))`? A set has no order, so the order is lost. It also only works when every item is hashable (a list inside the list would crash it). A one-line alternative that keeps order is `list(dict.fromkeys(nums))`, because dicts remember insertion order.
+
