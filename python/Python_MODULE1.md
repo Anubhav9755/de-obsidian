@@ -2517,5 +2517,305 @@ def add_audit_tag(records, tag):
 
 **Problem it solves:** these mistakes don’t crash. They give a _believable wrong answer_: an invoice off by a paisa, a valid `0` treated as “missing”, the last page of data skipped. Silent wrong numbers are the worst bugs in a pipeline.
 
+#### Code 1: arithmetic operators
 
+| Operator | Meaning                      | Example → result                 |
+| -------- | ---------------------------- | -------------------------------- |
+| `+ - *`  | add, subtract, multiply      | `3 * 4` → `12`                   |
+| `/`      | division, **always** a float | `7 / 2` → `3.5`, `8 / 2` → `4.0` |
+| `//`     | floor division               | `7 // 2` → `3`                   |
+| `%`      | remainder                    | `7 % 2` → `1`                    |
+| `**`     | power                        | `2 ** 10` → `1024`               |
 
+```python
+print(7 / 2)        # 3.5
+print(8 / 2)        # 4.0    still a float
+print(7 // 2)       # 3
+print(-7 // 2)      # -4     rounds DOWN (toward the smaller number), not toward zero
+print(7 % 2)        # 1
+print(-7 % 2)       # 1      with a positive right side, the result is never negative
+print(divmod(17, 5))   # (3, 2)   quotient and remainder in one call
+```
+
+`divmod(a, b)` gives `(a // b, a % b)` together.
+
+#### Code 2: where `//` and `%` are used
+
+```python
+page_size = 100
+for idx in [0, 99, 100, 250]:
+    print(idx, "-> page", idx // page_size, "position", idx % page_size)
+# 0 -> page 0 position 0
+# 99 -> page 0 position 99
+# 100 -> page 1 position 0
+# 250 -> page 2 position 50
+
+total = 3725                              # seconds
+minutes, seconds = divmod(total, 60)      # (62, 5)
+hours, minutes = divmod(minutes, 60)      # (1, 2)
+print(f"{hours}h {minutes}m {seconds}s")   # 1h 2m 5s
+```
+
+#### Code 3: comparisons can be chained
+
+```python
+score = 72
+print(0 <= score <= 100)    # True    means: 0 <= score and score <= 100
+print(60 <= score < 75)     # True
+```
+
+Use this for range checks. It’s shorter and clearer than `score >= 0 and score <= 100`.
+
+#### Code 4: `and` / `or` return a value, not just True/False
+
+- `a or b` → gives `a` if `a` is truthy, otherwise `b`.
+- `a and b` → gives `a` if `a` is falsy, otherwise `b`.
+
+```python
+name = ""
+print(name or "Unknown")    # Unknown   (name is falsy, so we get the second value)
+print("Asha" or "Unknown")  # Asha
+print(0 and 5)              # 0         (first value is falsy, so we stop there)
+print(3 and 5)              # 5
+```
+
+**Short-circuit keeps you safe:**
+
+```python
+row = None
+if row is not None and row["amount"] > 100:    # row is None, so the right side never runs
+    print("high value")
+
+# if row["amount"] > 100 and row is not None:  # TypeError: 'NoneType' object is not subscriptable
+```
+
+**Rule:** put the “is it safe?” check on the **left**.
+
+#### Code 5: truthiness
+
+|Falsy (counts as False)|Truthy (everything else)|
+|---|---|
+|`False`, `None`, `0`, `0.0`, `""`, `[]`, `()`, `{}`, `set()`|`1`, `-5`, `"0"`, `" "`, `"False"`, `[0]`|
+
+`"0"` and `" "` are truthy because they are **non-empty strings**. Only a truly empty string is falsy.
+
+**The classic trap:**
+
+```python
+def describe(amount):
+    if not amount:                  # catches None, but ALSO 0
+        return "missing"
+    return f"amount = {amount}"
+
+print(describe(0))      # missing    WRONG: 0 is a real, valid amount
+print(describe(None))   # missing
+```
+
+Fix: be exact about what you mean. `if amount is None:`.
+
+#### Code 6: numbers, floats and money
+
+```python
+print(2 ** 100)      # 1267650600228229401496703205376   Python ints never overflow
+print(0.1 + 0.2)     # 0.30000000000000004               floats are approximate (Lesson 1)
+```
+
+**`Decimal` for money.** Always build it from a **string**, never a float.
+
+```python
+from decimal import Decimal, ROUND_HALF_UP
+
+price = Decimal("19.99")
+print(price * 3)                           # 59.97
+print(Decimal("0.1") + Decimal("0.2"))     # 0.3
+print(Decimal(0.1))                        # 0.1000000000000000055511151231257827...  the float's hidden error got copied in
+```
+
+**Rounding:**
+
+```python
+print(round(2.5), round(3.5), round(0.5))   # 2 4 0
+```
+
+Python’s `round` uses **banker’s rounding** (round-half-to-even). A value exactly halfway goes to the nearest **even** number. This avoids always pushing up, which would bias large datasets. For billing, the rule is usually “half up”, so use `quantize`:
+
+```python
+tax = Decimal("2.675")
+print(tax.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))   # 2.68
+print(round(2.675, 2))                                          # 2.67  (the float is really 2.67499999...)
+```
+
+`quantize(Decimal("0.01"))` means “round to 2 decimal places, like the pattern I gave.”
+
+**Comparing floats, `nan` and `inf`:**
+
+```python
+import math
+print(math.isclose(0.1 + 0.2, 0.3))     # True
+
+nan = float("nan")
+print(nan == nan)                        # False   NaN is not equal to anything, even itself
+print(math.isnan(nan))                   # True    the right way to detect it
+print(float("inf") > 10 ** 100)          # True
+```
+
+Missing numbers in real datasets often show up as NaN. Since `nan == nan` is `False`, you can’t find them with `==`.
+
+#### Bonus: bitwise operators (awareness)
+
+A **bitwise** operator works on the binary digits (bits) of whole numbers.
+
+|Operator|Meaning|Example → result|
+|---|---|---|
+|`&`|AND|`5 & 3` → `1` (`101` & `011` = `001`)|
+|`\|`|OR|`5 \| 3` → `7`|
+|`^`|XOR (1 where bits differ)|`5 ^ 3` → `6`|
+|`<<`|shift left (× 2 each step)|`1 << 3` → `8`|
+|`>>`|shift right (÷ 2 each step)|`16 >> 2` → `4`|
+
+Real uses: permission flags, compression, hashing. You’ll mostly meet it in interviews. `n & 1` is `1` for odd numbers and `0` for even.
+
+#### Level 1: predict the output
+
+```python
+print(17 // 5, 17 % 5)                    # ?
+print(-17 // 5, -17 % 5)                  # ?
+print("" or "n/a")                        # ?
+print(0 or [] or "x")                     # ?
+print(3 and 0 and 9)                      # ?
+print(bool("0"), bool([0]), bool(0.0))    # ?
+```
+
+**Answer:**
+
+- `3 2`
+- `-4 3` (`-3.4` rounds down to `-4`, and `-4 * 5 + 3 = -17`)
+- `n/a`
+- `x` (`0` and `[]` are falsy, so `or` moves on to the last value)
+- `0` (`3` is truthy so `and` continues, then `0` is falsy so it stops there)
+- `True True False`
+
+#### Level 2: modify
+
+This function should use the default discount of 10 **only when** the key is missing. Right now a real discount of `0` gets replaced by 10.
+
+```python
+def get_discount(row):
+    return row.get("discount") or 10
+```
+
+**Answer:**
+
+```python
+def get_discount(row):
+    d = row.get("discount")
+    return 10 if d is None else d
+
+print(get_discount({"discount": 0}))    # 0    (kept, because 0 is a real value)
+print(get_discount({}))                 # 10
+print(get_discount({"discount": 5}))    # 5
+```
+
+#### Find the bug
+
+```python
+from decimal import Decimal
+price = Decimal(19.99)
+print(price * 3)        # expected 59.97
+```
+
+**Answer:** it prints a long messy number starting `59.9699999999999...`. `Decimal(19.99)` receives a float, which already holds a small error, and `Decimal` copies that error exactly. Fix: `Decimal("19.99")`, built from a string.
+
+#### Interview Questions
+
+**Q1. What are `-7 // 2` and `-7 % 2` in Python? Why?**  
+`-4` and `1`. `//` rounds **down** (`-3.5` becomes `-4`), and Python always keeps the rule `a == (a // b) * b + a % b`, so `(-4) * 2 + 1 = -7`. Because of this, `%` with a positive right side is never negative. That is handy for wrap-around: `(i - 1) % n` gives the previous index and goes from 0 to `n - 1`. In languages like C and Java, `-7 % 2` is `-1`, which surprises people.
+
+**Q2. What do these print?**
+
+```python
+print(1 < 2 < 3)
+print(3 > 2 > 2)
+print(1 == 1.0 == True)
+```
+
+`True`, `False`, `True`. `a < b < c` means `a < b and b < c`. The second: `3 > 2` is true but `2 > 2` is false. The third: `1 == 1.0` is true, and `1.0 == True` is true because `True` equals 1.
+
+**Q3. What does `print(None or 0 or "")` print? What risk does the `x = a or b` idiom carry?**  
+It prints an empty line, which is `""`. `or` returns the first truthy value, and if **none** is truthy it returns the **last** operand. The risk: `discount = row.get("discount") or 10` turns a real `0` into `10`, because it can’t tell “missing” from “zero”. Use `is None` when zero, empty and missing mean different things.
+
+**Q4. What does `print(round(2.5), round(3.5), round(2.675, 2))` print? Why, and what do you use for money?**  
+`2 4 2.67`. There are two _different_ reasons. The first two are banker’s rounding (exact halves go to the even number). The third is float error: `2.675` is stored as `2.67499999...`, so it rounds down. For money, use `Decimal` built from strings and `quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)`.
+
+**Q5. Scenario: a column of floats has NaN values for missing data. You filter with `x == float("nan")` and find nothing. Why? What do you do?**  
+`nan == nan` is always `False`, so `==` can never find a NaN. Use `math.isnan(x)`. The old trick `x != x` also works, because a NaN is the only value that isn’t equal to itself.
+
+**Q6. Scenario: a billing job adds 1,000,000 line items of `0.1` using floats. The total is about `100000.0000013` and not `100000.0`. Why, and how do you fix it?**  
+Each `0.1` carries a tiny error, and over a million additions the errors **accumulate**. Fixes: use `Decimal("0.10")` for money, or store whole paise as integers (`10` paise per item) and divide at the end. For plain float measurements, `math.fsum()` adds with extra care and gives `100000.0`.
+
+**Q7. Write `is_leap_year(y)`.** (A leap year is divisible by 4, but a century year must also be divisible by 400.)
+
+```python
+def is_leap_year(y):
+    return y % 4 == 0 and (y % 100 != 0 or y % 400 == 0)
+```
+
+|`y`|`y % 4 == 0`|`y % 100 != 0`|`y % 400 == 0`|Result|
+|---|---|---|---|---|
+|2024|True|True|not needed|`True`|
+|1900|True|False|False|`False`|
+|2000|True|False|True|`True`|
+|2023|False|not needed|not needed|`False`|
+
+Short-circuit means the “not needed” cells are never evaluated.
+
+**Q8. Check whether `n` is a power of two in one expression, without a loop.**
+
+```python
+def is_power_of_two(n):
+    return n > 0 and (n & (n - 1)) == 0
+```
+
+|`n`|binary `n`|binary `n - 1`|`n & (n - 1)`|Result|
+|---|---|---|---|---|
+|8|`1000`|`0111`|`0000`|`True`|
+|6|`0110`|`0101`|`0100`|`False`|
+|0||||`n > 0` is `False`, so it stops (without that guard, `0 & -1` is `0` and gives a wrong `True`)|
+
+A power of two has exactly one `1` bit. Subtracting 1 flips that bit and every bit below it, so the AND is `0`. Keep the parentheses. They make the order obvious.
+
+#### TASK (Level 3): yours to write
+
+Build a tiny invoice calculator. The data comes in as strings, like a CSV.
+
+```python
+from decimal import Decimal, ROUND_HALF_UP
+
+items = [
+    ("pen",  "12.50",   "3"),
+    ("book", "1,199.99", "2"),
+    ("bag",  "N/A",     "1"),
+    ("ink",  "",        "5"),
+]
+```
+
+```
+1. write to_decimal(text): remove commas, return a Decimal; if the text is blank or "N/A", return None
+2. write invoice(items): loop over the items, convert the price with to_decimal and the quantity with int
+3. if the price is None, add the item NAME to a bad list and skip it
+4. subtotal = sum of price * quantity for the good rows
+5. tax = subtotal * Decimal("0.18"), rounded to 2 places with ROUND_HALF_UP
+6. return (subtotal, tax, grand_total, bad)
+7. print the grand total as: Total: 2,876.23   (hint: {value:,.2f})
+```
+
+Write these asserts **first**:
+
+```python
+subtotal, tax, grand, bad = invoice(items)
+assert subtotal == Decimal("2437.48")
+assert tax == Decimal("438.75")
+assert grand == Decimal("2876.23")
+assert bad == ["bag", "ink"]
+print("all tests passed")
+```
