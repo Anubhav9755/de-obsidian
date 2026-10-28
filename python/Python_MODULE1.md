@@ -2257,3 +2257,24 @@ When you call a function, the parameter becomes **another name for the same obje
 
 Python calls this **pass by object reference**. It is neither “by value” nor “by reference”.
 
+**The `+=` trap:** on a list, `+=` mutates in place, while `x = x + [...]` rebinds.
+
+```python
+def f(x):
+    x += [9]          # mutates the caller's list
+def g(x):
+    x = x + [9]       # new list, local name only
+
+p = [1]; q = [1]
+f(p); g(q)
+print(p, q)           # [1, 9] [1]
+```
+
+#### Code 4: alias, shallow copy, deep copy
+
+| How                                                  | What you get     |
+| ---------------------------------------------------- | ---------------- |
+| `b = a`                                              | alias (no copy)  |
+| `a[:]`, `a.copy()`, `list(a)`, `dict(d)`, `d.copy()` | **shallow** copy |
+| `copy.deepcopy(a)`                                   | **deep** copy    |
+
