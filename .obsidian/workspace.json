@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "python/Python_MODULE1.md",
+                "file": "sql/SQL_Notes.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Python_MODULE1"
+              "title": "SQL_Notes"
             }
           }
         ]
@@ -83,7 +83,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "right": {
     "id": "e53e5e1d4a1cb4c0",
@@ -202,6 +203,7 @@
   },
   "active": "3a62392e213de149",
   "lastOpenFiles": [
+    "python/Python_MODULE1.md",
     "sql/SQL_Notes.md",
     "projects/project-log-template.md",
     "resources/Pasted image 20261027220239.png",
@@ -209,7 +211,6 @@
     "conflict-files-obsidian-git.md",
     "checklists/Python_checklist.md",
     "python/Python_checklist.md",
-    "python/Python_MODULE1.md",
     "python/Python_Master_Checklist_v2.md",
     "python/Python_COMPLETE (1).md",
     "aws/AWS NOTES.md",
