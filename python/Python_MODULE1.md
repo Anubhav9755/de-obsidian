@@ -51,6 +51,36 @@ print(int("5") + 5)  # 10
 | `abs()`   | Returns absolute value       | `abs(-10)`          | `10`       |
 | `round()` | Rounds a number              | `round(3.14159, 2)` | `3.14`     |
 
+## Useful number formatting
+
+|Format|Example code|Output|
+|---|---|---|
+|`:.2f`|`f"{123.456:.2f}"`|`123.46`|
+|`:.0f`|`f"{123.6:.0f}"`|`124`|
+|`:,.2f`|`f"{1234567.5:,.2f}"`|`1,234,567.50`|
+|`:,`|`f"{1234567:,}"`|`1,234,567`|
+|`:.2%`|`f"{0.8567:.2%}"`|`85.67%`|
+|`:+.2f`|`f"{12.5:+.2f}"`|`+12.50`|
+|`:e`|`f"{1200:e}"`|`1.200000e+03`|
+|`:010d`|`f"{42:010d}"`|`0000000042`|
+
+## Text alignment and spacing
+
+These are especially useful when printing reports or tables.
+
+|Format|Example|Output|
+|---|---|---|
+|`:<10`|`f"{'Python':<10}"`|`"Python "`|
+|`:>10`|`f"{'Python':>10}"`|`" Python"`|
+|`:^10`|`f"{'Python':^10}"`|`" Python "`|
+|`:*>10`|`f"{42:*>10}"`|`"********42"`|
+
+- `<` aligns left.
+- `>` aligns right.
+- `^` centers the text.
+- `10` sets the total field width to 10 characters.
+- `*` specifies the character used to fill empty space.
+
 **TASK** - A user typed " Rahul " as name and "21" as age. Print: Rahul is 21 years old. Next year he will be 22. 
  1. clean the name (remove spaces) 
  2. convert age to int
@@ -2832,26 +2862,32 @@ items = [
     ("ink",  "",        "5"),
 ]
 
-def to_decimal(text):
-	cleaned = text.replace(",","").strip()
-	if cleaned == "" or cleaned.upper() == "N/A":
-		return None
-	return Decimal(cleaned)
-	
-def invoice(items):
-	subtotal = Decimal("0")
-	bad = []
-	for name , price_raw, qty_raw in items:
-		price = to_decimal(price_raw)
-		qty = int(qty_raw)
-		if price is None:
-			bad.append(name)
-			continue
-		subtotal += price*qty
-	tax = 
+from decimal import Decimal, ROUND_HALF_UP
 
+def to_decimal(text):
+    """Convert a price string like '1,199.99' to Decimal. Blank or 'N/A' -> None."""
+    cleaned = text.replace(",", "").strip()
+    if cleaned == "" or cleaned.upper() == "N/A":
+        return None
+    return Decimal(cleaned)
+
+def invoice(items):
+    subtotal = Decimal("0")                    # start from a Decimal, not a float
+    bad = []
+    for name, price_raw, qty_raw in items:     # unpack each tuple (Lesson 4)
+        price = to_decimal(price_raw)
+        qty = int(qty_raw)
+        if price is None:                      # is None, not "if not price" (a price of 0 is valid)
+            bad.append(name)
+            continue                           # skip this row, go to the next one
+        subtotal += price * qty
+    tax = (subtotal * Decimal("0.18")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    grand = subtotal + tax
+    return subtotal, tax, grand, bad
 
 subtotal, tax, grand, bad = invoice(items)
+print(f"Total: {grand:,.2f}")                  # Total: 2,876.23
+
 assert subtotal == Decimal("2437.48")
 assert tax == Decimal("438.75")
 assert grand == Decimal("2876.23")
