@@ -2823,6 +2823,34 @@ items = [
 Write these asserts **first**:
 
 ```python
+from decimal import Decimal, ROUND_HALF_UP
+
+items = [
+    ("pen",  "12.50",   "3"),
+    ("book", "1,199.99", "2"),
+    ("bag",  "N/A",     "1"),
+    ("ink",  "",        "5"),
+]
+
+def to_decimal(text):
+	cleaned = text.replace(",","").strip()
+	if cleaned == "" or cleaned.upper() == "N/A":
+		return None
+	return Decimal(cleaned)
+	
+def invoice(items):
+	subtotal = Decimal("0")
+	bad = []
+	for name , price_raw, qty_raw in items:
+		price = to_decimal(price_raw)
+		qty = int(qty_raw)
+		if price is None:
+			bad.append(name)
+			continue
+		subtotal += price*qty
+	tax = 
+
+
 subtotal, tax, grand, bad = invoice(items)
 assert subtotal == Decimal("2437.48")
 assert tax == Decimal("438.75")
