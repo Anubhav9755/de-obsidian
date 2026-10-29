@@ -36,6 +36,30 @@ print("5" * 3)    # "555": a str times an int repeats the string
 print(int("5") + 5)  # 10
 ```
 
+
+**TASK** - A user typed " Rahul " as name and "21" as age. Print: Rahul is 21 years old. Next year he will be 22. 
+ 1. clean the name (remove spaces) 
+ 2. convert age to int
+ 3. print using f-string
+
+```python
+name_raw = "  Rahul "
+age_raw = "21"
+
+name = name_raw.strip()
+age = int(age_raw)
+print(f"{name} is {age} years old. Next year he will be {age + 1}.")
+```
+
+#### Interview Question - 
+
+Why does `0.1 + 0.2 == 0.3` return `False`? What would you use for money? 
+**Ans.** Floats are stored in binary, and 0.1 can’t be represented exactly, so `0.1 + 0.2` is `0.30000000000000004`. For money, use `Decimal` or store integer paise/cents. To compare floats, use `math.isclose()`.
+
+**Scenario:** an `amount` column has the values `"1,200.50"`, `"N/A"`, and `""`. Calling `float()` on each of them crashes. How would you handle this safely? _(Just describe your approach for now, no code needed.)_
+**Ans.**	Remove the comma with `.replace(",", "")`, then wrap `float()` in `try/except ValueError` and store `None` for bad values. Log those rows instead of crashing. That’s fail-soft with a paper trail, and it’s what real pipelines do. We’ll do `try/except` properly soon.
+
+---
 ## Useful character and number methods
 
 | Function  | What it does                 | Example             | Output     |
@@ -81,27 +105,40 @@ These are especially useful when printing reports or tables.
 - `10` sets the total field width to 10 characters.
 - `*` specifies the character used to fill empty space.
 
-**TASK** - A user typed " Rahul " as name and "21" as age. Print: Rahul is 21 years old. Next year he will be 22. 
- 1. clean the name (remove spaces) 
- 2. convert age to int
- 3. print using f-string
+## Number and rounding methods
 
-```python
-name_raw = "  Rahul "
-age_raw = "21"
+|Method|Example|Output|What it does|
+|---|---|---|---|
+|`round()`|`round(12.567, 2)`|`12.57`|Rounds a number|
+|`abs()`|`abs(-25)`|`25`|Returns absolute value|
+|`int()`|`int(12.9)`|`12`|Removes decimal part|
+|`float()`|`float("12.5")`|`12.5`|Converts to float|
+|`Decimal()`|`Decimal("12.50")`|`12.50`|Creates precise decimal value|
+|`.quantize()`|`Decimal("12.567").quantize(Decimal("0.01"))`|`12.57`|Sets decimal-place precision|
+|`math.floor()`|`math.floor(12.9)`|`12`|Rounds down|
+|`math.ceil()`|`math.ceil(12.1)`|`13`|Rounds up|
 
-name = name_raw.strip()
-age = int(age_raw)
-print(f"{name} is {age} years old. Next year he will be {age + 1}.")
+## Useful `Decimal` methods and operations
+
+First import:
+
+```
+from decimal import Decimal, ROUND_HALF_UP
 ```
 
-#### Interview Question - 
-
-Why does `0.1 + 0.2 == 0.3` return `False`? What would you use for money? 
-**Ans.** Floats are stored in binary, and 0.1 can’t be represented exactly, so `0.1 + 0.2` is `0.30000000000000004`. For money, use `Decimal` or store integer paise/cents. To compare floats, use `math.isclose()`.
-
-**Scenario:** an `amount` column has the values `"1,200.50"`, `"N/A"`, and `""`. Calling `float()` on each of them crashes. How would you handle this safely? _(Just describe your approach for now, no code needed.)_
-**Ans.**	Remove the comma with `.replace(",", "")`, then wrap `float()` in `try/except ValueError` and store `None` for bad values. Log those rows instead of crashing. That’s fail-soft with a paper trail, and it’s what real pipelines do. We’ll do `try/except` properly soon.
+| Operation      | Example                                      | Output                            |
+| -------------- | -------------------------------------------- | --------------------------------- |
+| Addition       | `Decimal("10.5") + Decimal("2")`             | `12.5`                            |
+| Subtraction    | `Decimal("10.5") - Decimal("2")`             | `8.5`                             |
+| Multiplication | `Decimal("10.5") * Decimal("2")`             | `21.0`                            |
+| Division       | `Decimal("10") / Decimal("4")`               | `2.5`                             |
+| Power          | `Decimal("2") ** 3`                          | `8`                               |
+| `.quantize()`  | `Decimal("5.678").quantize(Decimal("0.01"))` | `5.68`                            |
+| `.normalize()` | `Decimal("5.600").normalize()`               | `5.6`                             |
+| `.as_tuple()`  | `Decimal("12.5").as_tuple()`                 | Sign, digits and exponent details |
+- `round()` — rounds a number.
+- `quantize()` — rounds a `Decimal` to the precision of another `Decimal`, and can use an explicit rounding rule.
+- `f"{x:.2f}"` — formats the number for display as text.
 
 ---
 ## Lesson 2: Strings 
@@ -2894,3 +2931,4 @@ assert grand == Decimal("2876.23")
 assert bad == ["bag", "ink"]
 print("all tests passed")
 ```
+
