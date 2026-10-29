@@ -2885,12 +2885,14 @@ items = [
 5. tax = subtotal * Decimal("0.18"), rounded to 2 places with ROUND_HALF_UP
 6. return (subtotal, tax, grand_total, bad)
 7. print the grand total as: Total: 2,876.23   (hint: {value:,.2f})
+   
+All and All - This code is a small invoice calculator. It takes product names, prices, and quantities, skips products with missing prices, calculates the subtotal, adds 18% tax, and prints the final amount.
 ```
 
 Write these asserts **first**:
 
 ```python
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 
 items = [
     ("pen",  "12.50",   "3"),
@@ -2931,4 +2933,11 @@ assert grand == Decimal("2876.23")
 assert bad == ["bag", "ink"]
 print("all tests passed")
 ```
+
+- `ROUND_HALF_UP` — Rounds halfway values up when using `quantize()`.
+- `.replace(",", "")` — Removes commas from a price, so `"1,199.99"` becomes `"1199.99"`.
+- `.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)` — Rounds a `Decimal` value to two decimal places using the specified rounding rule.
+- `f"{grand:,.2f}"` — Formats the total with comma separators and exactly two decimal places, e.g. `2,876.23`.
+
+---
 
