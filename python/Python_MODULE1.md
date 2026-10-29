@@ -2941,3 +2941,40 @@ print("all tests passed")
 
 ---
 
+### Lesson 12: Strings in Full & Text Encoding
+
+- **Escape sequence**: a backslash plus a character that stands for something special. `\n` is a new line, `\t` is a tab, `\\` is one backslash.
+- **Raw string**: written `r"..."`. Backslashes are kept exactly as typed. Used for Windows paths and regex.
+- **Triple-quoted string**: `"""..."""` can span many lines.
+- **Format spec**: the part after `:` inside an f-string, like `{price:>10,.2f}`. It controls how the value is displayed.
+- **Unicode**: the standard that gives every character (any language, `₹`, emoji) its own number. (You saw `ord`/`chr` in Lesson 1.)
+- **Encoding**: the rule that turns characters into **bytes**. **UTF-8** is the standard everywhere.
+- **`bytes`**: raw numbers from 0 to 255. This is what files, networks and APIs really carry. **`.encode()`** turns `str` into `bytes`. **`.decode()`** turns `bytes` back into `str`.
+- **BOM** (byte order mark): an invisible marker some programs (Excel especially) write at the very start of a file.
+
+**Industrial use:**
+
+- Every file or API you read is bytes first. Names with accents, Hindi text, `₹` signs and emoji all depend on the right encoding.
+- Parsing logs and configs (`key=value`), zero-padding IDs, trimming prefixes, and printing aligned reports.
+- Building large text outputs (SQL, CSV, emails) efficiently.
+
+**Problem it solves:** without this you get `UnicodeDecodeError` crashes, garbled text like `cafÃ©` (called **mojibake**), IDs that don’t match because of an invisible character, and slow string-building code.
+
+#### Code 1: more string methods
+
+|Method|What it does|Example → result|
+|---|---|---|
+|`.find(x)`|position of `x`, or `-1` if missing|`"tx_102".find("_")` → `2`|
+|`.index(x)`|same, but **raises `ValueError`** if missing|`"tx_102".index("z")` → error|
+|`.partition(sep)`|splits at the **first** `sep` into `(before, sep, after)`|`"a=b=c".partition("=")` → `('a', '=', 'b=c')`|
+|`.rpartition(sep)`|same, at the **last** `sep`|`"a=b=c".rpartition("=")` → `('a=b', '=', 'c')`|
+|`.splitlines()`|splits on any kind of line break|`"a\nb\r\nc".splitlines()` → `['a','b','c']`|
+|`.zfill(n)`|pads with zeros on the left to width `n`|`"45".zfill(5)` → `'00045'`|
+|`.removeprefix(p)` / `.removesuffix(s)`|removes an exact start or end|`"INV-45".removeprefix("INV-")` → `'45'`|
+|`.isdigit()`|only digit characters, and not empty|`"45".isdigit()` → `True`, `"-5".isdigit()` → `False`|
+|`.casefold()`|a stronger `lower()` for case-insensitive comparing|`"Straße".casefold()` → `'strasse'`|
+|`.ljust(n, c)` / `.rjust(n, c)` / `.center(n, c)`|pad to width `n`|`"ab".rjust(5, ".")` → `'...ab'`|
+|`.translate(table)`|deletes or swaps characters|`"₹1,200".translate(str.maketrans("", "", "₹,"))` → `'1200'`|
+
+`str.maketrans("", "", "₹,")` builds the rule table. The third argument is the list of characters to delete.
+
