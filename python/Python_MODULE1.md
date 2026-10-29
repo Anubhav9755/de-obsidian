@@ -2480,10 +2480,19 @@ def add_audit_tag(records, tag):
         new_records.append(new_rec)
     return new_records
     
+    
+result = add_audit_tag(records, "audited")
+
+assert result == [{"id": 1, "tags": ["new", "audited"]}, {"id": 2, "tags": ["audited"]}]
+assert records == [{"id": 1, "tags": ["new"]}, {"id": 2, "tags": []}]
+assert result is not records
+assert result[0] is not records[0]
+assert result[0]["tags"] is not records[0]["tags"]
+print("all tests passed")
 
 ```
 
-Paste the 5 asserts under it and you get `all tests passed`.
+OUTPUT - all tests passed
 
 **Let the asserts teach you.** If you skip step 3 and only do `new_rec = dict(rec)`, the `tags` list is still shared. The append then changes the original records, and the second assert fails. That failure is telling you “you copied one level, but you needed two.”
 
