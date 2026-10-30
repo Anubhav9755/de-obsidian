@@ -2144,7 +2144,6 @@ WHERE v.vendor_tier = 'Preferred';
 - Target Alias Rules in PostgreSQL: In PostgreSQL UPDATE...FROM, never write UPDATE products p ... FROM products p JOIN vendors v. Repeating the target table in the FROM clause creates a self-join, leading to unexpected behavior.
     
 - Non-Deterministic Multi-Match Updates: If a single row in the target table matches multiple rows in the source table during a join-based update, SQL standard rules state that the resulting value is non-deterministic (the engine will pick one matching source row arbitrarily). Ensure join criteria maintain a 1:1 or N:1 relationship relative to the target table.
-    
 
 ---
 
@@ -2153,9 +2152,7 @@ WHERE v.vendor_tier = 'Preferred';
 The DELETE statement is the DML command used to remove existing rows from a table based on logical criteria.
 
 - Basic DELETE: Evaluates simple conditions on target table attributes to purge specific rows.
-    
 - JOIN / Subquery-Based DELETE: Uses data from related secondary tables (via subqueries or dialect-specific join constructs) to filter which target rows should be deleted.
-    
 
 **Application**
 
@@ -2196,20 +2193,20 @@ WHERE u.account_status = 'DEACTIVATED';
 **Code Breakdown**
 
 - Basic DELETE FROM ... WHERE: Scans the table and deletes rows satisfying the predicate. Omitting the WHERE clause permanently deletes all rows in the table.
-    
+
 - WHERE user_id IN (...) (Subquery): Evaluates an independent list of IDs from the users subquery and removes matching cart entries.
-    
+
 - USING users u (PostgreSQL): Introduces secondary lookup tables into the DELETE pipeline. The join logic connects target table sc to secondary table u inside the WHERE clause.
-    
+
 - DELETE sc FROM ... (MySQL): The table alias immediately following DELETE specifies which table's rows will be removed, while the FROM ... INNER JOIN constructs the matching filter logic.
-    
+
 
 **Important Points**
 
 - The Missing WHERE Clause Risk: A DELETE FROM table_name; statement without a WHERE clause removes every record in the table sequentially. Unlike TRUNCATE, row-by-row DELETE logs individual row deletions in the transaction log, making it slow on massive tables.
-    
+
 - Checking Rows Before Deletion: Always verify target records first by replacing DELETE with SELECT * using identical criteria:
-    
+
 
 ```sql
 -- Step 1: Verify output rows
@@ -2281,28 +2278,24 @@ WHEN NOT MATCHED THEN
 **Code Breakdown**
 
 - ON CONFLICT (product_id, view_date): Specifies the unique target constraint/index to watch for collisions.
-    
+
 - EXCLUDED Keyword (PostgreSQL): A virtual table representing the row values that were attempted to be inserted. EXCLUDED.view_count references the incoming candidate value.
-    
+
 - DO NOTHING: Silently ignores the insert attempt if a conflict occurs, avoiding thrown exceptions.
-    
+
 - MERGE INTO ... USING: Evaluates a join condition between a target table and a incoming source batch. The WHEN MATCHED and WHEN NOT MATCHED clauses route execution cleanly based on join resolution.
-    
 
 **Important Points**
 
 - Constraint Prerequisite for ON CONFLICT: PostgreSQL requires an explicit UNIQUE index or PRIMARY KEY constraint on the columns listed in ON CONFLICT (...). You cannot use ON CONFLICT on arbitrary non-unique columns.
-    
+
 - Concurrency Safety: Both ON CONFLICT and MERGE acquire internal database locks during execution, preventing duplicate key errors under parallel thread workloads.
-    
+
 - Dialect Summary:
     
     - PostgreSQL / SQLite: INSERT ... ON CONFLICT (col) DO UPDATE / DO NOTHING
-        
     - MySQL / MariaDB: INSERT ... ON DUPLICATE KEY UPDATE col = VALUES(col)
-        
     - SQL Server / Snowflake / Oracle / BigQuery: MERGE INTO target USING source ON ...
-        
 
 ---
 
@@ -2311,22 +2304,20 @@ WHEN NOT MATCHED THEN
 TRUNCATE, DELETE, and DROP are database commands used to remove data or database objects, operating at distinct architectural layers:
 
 - DELETE (DML): Removes specific or all rows from a table row-by-row based on a WHERE clause, logging each deleted row individually.
-    
+
 - TRUNCATE (DDL): Removes all rows from a table instantly by deallocating the table's underlying storage data pages, bypassing row-by-row deletion logging.
-    
+
 - DROP (DDL): Completely destroys the entire table object definition along with all its data, constraints, indexes, and grants from the database catalog.
-    
 
 Note: TRUNCATE can be rolled back inside explicit transactions in PostgreSQL and SQL Server, but causes an implicit commit in MySQL.
 
 **Application**
 
 - DELETE: Use when selectively purging subset rows via WHERE conditions, or when operating inside fine-grained transaction controls requiring row-level triggers to fire.
-    
+
 - TRUNCATE: Use when resetting staging tables, clearing temporary batch tables, or clearing massive operational datasets quickly without dropping schema structures.
-    
+
 - DROP: Use during schema migrations, teardowns, or lifecycle removal of obsolete database objects.
-    
 
 **Industrial Example**
 
@@ -2354,11 +2345,10 @@ DROP TABLE IF EXISTS obsolete_orders_2024;
 **Code Breakdown**
 
 - DELETE FROM orders WHERE ...: Evaluates rows individually against the WHERE predicate. Retains non-matching rows.
-    
+
 - TRUNCATE TABLE order_staging: Empties all data pages from disk instantly. Table metadata, constraints, and column definitions remain intact for future INSERT queries.
-    
+
 - DROP TABLE IF EXISTS ...: Instructs the database catalog to unregister the table object entirely. Future queries referencing this table will return a table does not exist error.
-    
 
 **Summary Comparison Matrix**
 
@@ -2423,11 +2413,9 @@ DROP: Rollbackable in PostgreSQL and SQL Server; causes an implicit transaction 
 - Identity / Auto-Increment Resets:
     
     - DELETE: Deleting all rows via DELETE FROM users; does not reset the primary key sequence. The next insert will receive ID N+1.
-        
     - TRUNCATE: Automatically resets primary key identities/sequences back to 1 (or default seed) in most SQL dialects.
         
 - Storage Space Reclaim: Running DELETE on millions of rows does not immediately return free disk space to the OS; it marks internal table pages as reusable. TRUNCATE and DROP immediately deallocate storage structures, returning space to the storage pool.
-    
 
 ---
 
@@ -2438,11 +2426,11 @@ The RETURNING clause is a DML extension (standard in PostgreSQL, SQLite, Oracle,
 **Application**
 
 - Retrieving Generated Keys: Capturing auto-incremented primary keys (user_id, order_id) or server-side defaults (created_at, UUID) immediately upon row insertion without running a separate SELECT query.
-    
+
 - Audit and Archival Logs: Returning the original values of deleted or updated rows to feed directly into audit logging streams.
-    
+
 - Pipeline Chaining: Pairing RETURNING with Common Table Expressions (CTEs) to feed modified rows directly into downstream operations within a single multi-table transaction.
-    
+
 
 **Industrial Example**
 
@@ -2482,18 +2470,17 @@ RETURNING user_id, email;
 **Code Breakdown**
 
 - RETURNING user_id, created_at: Instructs the execution engine to return a record set containing the auto-generated user_id and server-side computed created_at timestamp immediately after insertion completes.
-    
+
 - RETURNING ... AS new_status: Allows returned columns to be aliased, just like a standard SELECT query.
-    
+
 - DELETE ... RETURNING: Streams the purged row values back to the client buffer before removing them from table storage.
-    
 
 **Important Points**
 
 - Performance & Network Efficiency: Eliminates round-trip network hops between the application layer and database layer by combining write operations and data retrieval into a single query turn.
-    
+
 - Use with Data Modifying CTEs: PostgreSQL allows INSERT, UPDATE, or DELETE statements with RETURNING to live inside Common Table Expressions (WITH blocks). This enables powerful patterns like moving rows from active tables to historical archive tables in a single atomic SQL statement:
-    
+
 
 ```sql
 WITH deleted_orders AS (
@@ -2506,13 +2493,9 @@ SELECT * FROM deleted_orders;
 ```
 
 - Dialect Differences:
-    
     - PostgreSQL / SQLite / Oracle 18c+ / CockroachDB: Uses standard RETURNING col1, col2 (or RETURNING *).
-        
     - SQL Server: Uses the OUTPUT clause (OUTPUT inserted.col1, OUTPUT deleted.col1).
-        
     - MySQL: Does not support RETURNING or OUTPUT natively (requires using driver-level functions like LAST_INSERT_ID()).
-        
 
 ---
 
@@ -2567,13 +2550,12 @@ CREATE TABLE order_items (
 **Important Points Related to It**
 
 - Implicit Constraints: Declaring a primary key automatically enforces NOT NULL and UNIQUE constraints on all involved columns.
-    
+
 - Clustered Index Creation: In most relational database engines (such as MySQL InnoDB or SQL Server), declaring a primary key automatically creates a clustered index on those columns, dictating the physical storage order of rows on disk.
-    
+
 - Foreign Key Overhead: Joining child tables to a composite key table requires foreign keys in child tables to store all composite key columns, increasing table storage size and join complexity.
-    
+
 - Column Order in Composite Keys: Place the most frequently queried or highest-cardinality column first in a composite primary key (e.g., PRIMARY KEY (tenant_id, user_id)) to optimize B-tree index lookup efficiency.
-    
 
 ---
 
@@ -2595,11 +2577,10 @@ To control how a window function behaves, we use the OVER() clause. This clause 
 **The Core Components Explained:**
 
 - PARTITION BY: Defines the boundaries. It slices your dataset into isolated groups (e.g., by department or country). The window function calculates its values independently within each slice.
-    
+
 - ORDER BY: Determines the physical order of rows within each partition before the function executes.
-    
+
 - ROWS/RANGE BETWEEN (The Frame): Limits the calculation to a moving subset of rows relative to the current row.
-    
 
 ```sql
 DROP TABLE IF EXISTS employee_salaries;
