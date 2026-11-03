@@ -3214,7 +3214,7 @@ raw_lines = [
 
 Write these asserts first:
 
-``python
+```python
 rows = clean(raw_lines)
 assert rows == [("TX-0007", "Asha Sharma", Decimal("1200.50")),
                 ("TX-0012", "Ravi Kumar",  Decimal("85")),
