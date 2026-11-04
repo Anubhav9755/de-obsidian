@@ -3245,14 +3245,14 @@ Total                       16,284.50
 Hints: `partition("-")` splits the ID, `zfill(4)` pads the number, and `translate` (or a few chained `replace` calls) removes the symbols. Write the asserts, then one comment per step, then one line of code per comment, and run after every line.
 
 ```python
-def = clean(lines):
+def clean(lines):
 	row = []
 	for line in lines:
 		tx, name, amt = [p.strip() for p in line.strip().split(";")]
 		prefix, _, num = tx.upper().partition("-")
 		tx_id = f"{prefix}-{num.zfill(4)}"
 		name  = " ".join(name.split()).title()
-		amount = Decimal(Amt.translate(Str.maketrans("","","₹,")))
+		amount = Decimal(amt.translate(str.maketrans("","","₹,")))
 		rows.append((tx_id, name, amount))
 	return rows
 	
@@ -3264,6 +3264,19 @@ for tx_id, name, amount in rows:
 	print(f"{tx_id:<10}{name:<15}{amount:>12,.2f}")
 print("-" * 37)
 total = sum([amount for _, _, amount in rows])
-print(f{'Total':<25})
-		
+print(f"{'Total':<25}{total:>12,.2f}")	
 ```
+
+- `line.strip()` removes the spaces at the edges, and also the hidden `\r` at the end of line 3. Then `.split(";")` cuts it into 3 parts. The list comprehension strips each part. Result: `["TX-7", "ASHA sharma", "₹1,200.50"]`. The three names on the left unpack them.
+
+- `tx.upper().partition("-")` gives `("TX", "-", "7")`. The `_` is the middle piece we don’t need. `"7".zfill(4)` gives `"0007"`, and the f-string glues it back: `TX-0007`.
+
+- `name.split()` with **no argument** splits on any run of whitespace, so `"ravi KUMAR"` becomes `["ravi", "KUMAR"]`. `" ".join(...)` puts single spaces back, and `.title()` fixes the capitals.
+
+- `amt.translate(str.maketrans("", "", "₹, "))` **deletes** every `₹`, comma and space in one pass. The text is then safe for `Decimal`. We build it from a string, never a float.
+
+- Each cleaned row is packed as a tuple, so `clean` returns a list of tuples.
+
+- In the print formats, text is left-aligned (`<`) and numbers right-aligned (`>`). `{amount:>12,.2f}` means width 12, thousands commas, 2 decimals. `Decimal("85")` prints as `85.00` because of `.2f`.
+
+- The widths add up: 10 + 15 + 12 = 37, so the dash line is 37 long. The Total label is 25 wide (10 + 15) so the total lines up under the Amount column.
