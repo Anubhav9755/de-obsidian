@@ -3341,3 +3341,31 @@ not_tuple = (5)      # just the number 5 in brackets
 print(type(single), type(not_tuple))   # <class 'tuple'> <class 'int'>
 ```
 
+**`namedtuple`:**
+
+```python
+from collections import namedtuple
+
+Txn = namedtuple("Txn", ["tx_id", "user", "amount"])
+t = Txn("tx_1", "user_a", 150.0)
+print(t.amount, t[2])          # 150.0 150.0   name or position
+print(t)                       # Txn(tx_id='tx_1', user='user_a', amount=150.0)
+tx_id, user, amount = t        # still unpacks like a tuple
+print(t._replace(amount=99.0)) # tuples can't change, so this returns a NEW one
+print(t._asdict())             # {'tx_id': 'tx_1', 'user': 'user_a', 'amount': 150.0}
+```
+## Code 3: dict gaps
+
+**Merging:**
+
+```python
+defaults = {"retries": 3, "timeout": 30, "debug": False}
+override = {"timeout": 60, "debug": True}
+
+merged = defaults | override          # NEW dict, right side wins
+print(merged)    # {'retries': 3, 'timeout': 60, 'debug': True}
+print(defaults)  # unchanged
+# same result: {**defaults, **override}      (works on older Python too)
+# defaults.update(override)                  (changes defaults IN PLACE)
+```
+
