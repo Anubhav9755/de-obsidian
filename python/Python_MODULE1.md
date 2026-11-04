@@ -3243,3 +3243,27 @@ Total                       16,284.50
 ```
 
 Hints: `partition("-")` splits the ID, `zfill(4)` pads the number, and `translate` (or a few chained `replace` calls) removes the symbols. Write the asserts, then one comment per step, then one line of code per comment, and run after every line.
+
+```python
+def = clean(lines):
+	row = []
+	for line in lines:
+		tx, name, amt = [p.strip() for p in line.strip().split(";")]
+		prefix, _, num = tx.upper().partition("-")
+		tx_id = f"{prefix}-{num.zfill(4)}"
+		name  = " ".join(name.split()).title()
+		amount = Decimal(Amt.translate(Str.maketrans("","","₹,")))
+		rows.append((tx_id, name, amount))
+	return rows
+	
+rows = clean(raw_lines)
+
+print(f"{'ID':<10}{'Name':<15}{'Amount':>12}")
+print("-" * 37)
+for tx_id, name, amount in rows:
+	print(f"{tx_id:<10}{name:<15}{amount:>12,.2f}")
+print("-" * 37)
+total = sum([amount for _, _, amount in rows])
+print(f{'Total':<25})
+		
+```
