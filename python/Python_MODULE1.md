@@ -2984,7 +2984,7 @@ key, _, value = pair.partition("=")     # `_` is a name that means "I don't need
 print(key, value)                       # msg disk=full   (splits only at the FIRST =)
 ```
 
-The strip trap. strip, lstrip and rstrip take a set of characters, not a word:
+**The strip trap.** `strip`, `lstrip` and `rstrip` take a **set of characters**, not a word:
 
 ```python
 print("tx_tx_5".lstrip("tx_"))          # 5        ate every leading t, x and _
@@ -3008,22 +3008,23 @@ WHERE amount > 100
 
 #### Code 3: the format spec
 
-Pattern: {value : fill align width , .precision type}. You don’t need all parts at once.
+Pattern: `{value : fill align width , .precision type}`. You don’t need all parts at once.
 
-Spec	Meaning	Example → result
-:.2f	2 decimals	f"{3.14159:.2f}" → 3.14
-:,	thousands separator	f"{1234567:,}" → 1,234,567
-:,.2f	both	f"{1234567:,.2f}" → 1,234,567.00
-:>8 / :<8 / :^8	right / left / center in width 8	f"{'ab':>8}" → ' ab'
-:08.2f	zero-padded, width 8	f"{3.14159:08.2f}" → 00003.14
-:05d	zero-padded integer	f"{42:05d}" → 00042
-:.1%	percent	f"{0.256:.1%}" → 25.6%
-!r	show with quotes (repr)	f"{'a b'!r}" → 'a b'
-=	debug: name and value	f"{total=}" → total=450.5
+|Spec|Meaning|Example → result|
+|---|---|---|
+|`:.2f`|2 decimals|`f"{3.14159:.2f}"` → `3.14`|
+|`:,`|thousands separator|`f"{1234567:,}"` → `1,234,567`|
+|`:,.2f`|both|`f"{1234567:,.2f}"` → `1,234,567.00`|
+|`:>8` / `:<8` / `:^8`|right / left / center in width 8|`f"{'ab':>8}"` → `' ab'`|
+|`:08.2f`|zero-padded, width 8|`f"{3.14159:08.2f}"` → `00003.14`|
+|`:05d`|zero-padded integer|`f"{42:05d}"` → `00042`|
+|`:.1%`|percent|`f"{0.256:.1%}"` → `25.6%`|
+|`!r`|show with quotes (repr)|`f"{'a b'!r}"` → `'a b'`|
+|`=`|debug: name and value|`f"{total=}"` → `total=450.5`|
 
-The width can be a variable: f"{'x':>{w}}" with w = 7.
+The width can be a variable: `f"{'x':>{w}}"` with `w = 7`.
 
-An aligned report (what this is really for):
+**An aligned report (what this is really for):**
 
 ```python
 rows = [("pen", 3, 12.5), ("notebook", 12, 1199.99), ("bag", 1, 450)]
@@ -3034,15 +3035,17 @@ for name, qty, price in rows:
     print(f"{name:<10}{qty:>5}{price:>12,.2f}")
 ```
 
+```
 Item        Qty       Price
 ---------------------------
 pen           3       12.50
 notebook     12    1,199.99
 bag           1      450.00
+```
 
 Text is aligned left, numbers right. That’s the standard convention.
 
-#### Code 4: str vs bytes, and encodings
+#### Code 4: `str` vs `bytes`, and encodings
 
 ```python
 s = "café ₹"
@@ -3052,23 +3055,23 @@ print(len(s), len(b))           # 6 9    é takes 2 bytes and ₹ takes 3
 print(b.decode("utf-8"))        # café ₹   back to the original
 ```
 
-Wrong decoding gives garbage or a crash:
+**Wrong decoding gives garbage or a crash:**
 
 ```python
 print("café".encode("utf-8").decode("latin-1"))   # cafÃ©   (mojibake: wrong encoding)
 b"caf\xc3\xa9".decode("ascii")                    # UnicodeDecodeError: 'ascii' codec can't decode byte 0xc3 ...
 ```
 
-Rules for files:
+**Rules for files:**
 
 ```python
 with open("data.csv", encoding="utf-8") as f:       # ALWAYS state the encoding
     text = f.read()
 ```
 
-On Windows the default encoding of open() may not be UTF-8, so a script that works on Linux can break on your PC. Always write encoding="utf-8".
-For files saved from Excel, use encoding="utf-8-sig". It silently removes the BOM.
-errors="replace" puts a � where a byte can’t be decoded. errors="ignore" silently deletes it. Use these only as a last resort, and log it, because both hide data loss.
+- On Windows the default encoding of `open()` may **not** be UTF-8, so a script that works on Linux can break on your PC. Always write `encoding="utf-8"`.
+- For files saved from Excel, use `encoding="utf-8-sig"`. It silently removes the BOM.
+- `errors="replace"` puts a `�` where a byte can’t be decoded. `errors="ignore"` silently deletes it. Use these only as a last resort, and log it, because both hide data loss.
 
 #### Code 5: building strings
 
@@ -3083,7 +3086,7 @@ print(result)                       # Asha, Ravi, Meena,    <- trailing comma
 print(", ".join([n.title() for n in names]))    # Asha, Ravi, Meena   (built once, clean)
 ```
 
-", ".join(...) needs strings. ",".join([1, 2]) raises TypeError. Convert first: ",".join(map(str, [1, 2])) → '1,2'.
+`", ".join(...)` needs **strings**. `",".join([1, 2])` raises `TypeError`. Convert first: `",".join(map(str, [1, 2]))` → `'1,2'`.
 
 #### Level 1: fill in the blanks
 
@@ -3096,11 +3099,11 @@ print(f"{1234567.891:____}")                # want 1,234,567.89
 print("tx_tx_5".removeprefix("tx_"), "tx_tx_5".lstrip("tx_"))   # ?
 ```
 
-Answer: partition, zfill, ,.2f. It prints msg disk=full, 00042, 1,234,567.89, and tx_5 5.
+**Answer:** `partition`, `zfill`, `,.2f`. It prints `msg disk=full`, `00042`, `1,234,567.89`, and `tx_5 5`.
 
-##### Level 2: modify
+#### Level 2: modify
 
-This builds a name list, but it leaves a trailing , . Rewrite it with join so it prints Asha, Ravi, Meena.
+This builds a name list, but it leaves a trailing `,` . Rewrite it with `join` so it prints `Asha, Ravi, Meena`.
 
 ```python
 result = ""
@@ -3109,7 +3112,7 @@ for name in ["asha", "ravi", "meena"]:
 print(result)
 ```
 
-Answer:
+**Answer:**
 
 ```python
 names = ["asha", "ravi", "meena"]
@@ -3124,32 +3127,32 @@ with open("export.csv", encoding="utf-8") as f:       # file was saved from Exce
 print("id" in header)       # expected True, prints False
 ```
 
-Answer: the file starts with a hidden BOM, so the first column name is really '\ufeffid', which looks like id when printed. The way to spot it is print(repr(header[0])), which shows '\ufeffid' (Lesson 2’s repr trick). Fix: encoding="utf-8-sig".
+**Answer:** the file starts with a hidden **BOM**, so the first column name is really `'\ufeffid'`, which looks like `id` when printed. The way to spot it is `print(repr(header[0]))`, which shows `'\ufeffid'` (Lesson 2’s `repr` trick). Fix: `encoding="utf-8-sig"`.
 
-### Interview Questions
+#### Interview Questions
 
-Q1. What’s the difference between str and bytes? What are len("café") and len("café".encode("utf-8"))?
-str holds characters. bytes holds raw numbers (0–255). The lengths are 4 and 5, because é takes 2 bytes in UTF-8. Characters and bytes aren’t the same count, which is why you must decode on the way in and encode on the way out.
+**Q1. What’s the difference between `str` and `bytes`? What are `len("café")` and `len("café".encode("utf-8"))`?**  
+`str` holds characters. `bytes` holds raw numbers (0–255). The lengths are `4` and `5`, because `é` takes 2 bytes in UTF-8. Characters and bytes aren’t the same count, which is why you must **decode on the way in and encode on the way out**.
 
-Q2. Scenario: a CSV exported from Excel loads, but row["id"] gives KeyError, even though the header looks like id. Why?
-The BOM is stuck to the first column name ('\ufeffid'). Print repr(header[0]) to see it. Fix with encoding="utf-8-sig". In general, always pass encoding= explicitly.
+**Q2. Scenario: a CSV exported from Excel loads, but `row["id"]` gives `KeyError`, even though the header looks like `id`. Why?**  
+The BOM is stuck to the first column name (`'\ufeffid'`). Print `repr(header[0])` to see it. Fix with `encoding="utf-8-sig"`. In general, always pass `encoding=` explicitly.
 
-Q3. What does "tx_tx_5".lstrip("tx_") return, and why?
-"5". lstrip removes any leading characters that belong to the set {t, x, _}, not the word. For an exact prefix, use removeprefix("tx_"), which gives "tx_5".
+**Q3. What does `"tx_tx_5".lstrip("tx_")` return, and why?**  
+`"5"`. `lstrip` removes any leading characters that belong to the **set** `{t, x, _}`, not the word. For an exact prefix, use `removeprefix("tx_")`, which gives `"tx_5"`.
 
-Q4. Why is s += piece inside a big loop discouraged? What do you do instead? What’s the catch with join?
-Strings are immutable, so each += can build a new, longer string and copy the old text into it, which becomes slow on big data. Collect the pieces in a list and "".join(pieces) once at the end. The catch: join needs every item to be a str, so convert numbers first: ",".join(map(str, nums)).
+**Q4. Why is `s += piece` inside a big loop discouraged? What do you do instead? What’s the catch with `join`?**  
+Strings are immutable, so each `+=` can build a new, longer string and copy the old text into it, which becomes slow on big data. Collect the pieces in a list and `"".join(pieces)` once at the end. The catch: `join` needs every item to be a `str`, so convert numbers first: `",".join(map(str, nums))`.
 
-Q5. What do "Hello"[10] and "Hello"[10:] give?
-"Hello"[10] raises IndexError. "Hello"[10:] gives '', an empty string, with no error. Slicing never crashes, which is convenient but can hide a bug, such as a short ID quietly becoming blank.
+**Q5. What do `"Hello"[10]` and `"Hello"[10:]` give?**  
+`"Hello"[10]` raises `IndexError`. `"Hello"[10:]` gives `''`, an empty string, with no error. **Slicing never crashes**, which is convenient but can hide a bug, such as a short ID quietly becoming blank.
 
-Q6. Scenario: you match usernames across two systems. "José" from one doesn’t equal "José" from the other, and "Straße" fails a case-insensitive match against "STRASSE". Why? What do you do?
+**Q6. Scenario: you match usernames across two systems. `"José"` from one doesn’t equal `"José"` from the other, and `"Straße"` fails a case-insensitive match against `"STRASSE"`. Why? What do you do?**
 
-The first problem: é can be stored as one character, or as e plus a separate accent mark (a combining character). They look identical, but "é" == "e\u0301" is False. Normalise first (make both use the same form) with unicodedata.normalize("NFC", s), where NFC means “use the single-character form”.
-The second: lower() leaves ß alone ('straße'), while casefold() turns it into 'strasse'.
-So compare with unicodedata.normalize("NFC", a).casefold() == unicodedata.normalize("NFC", b).casefold().
+- The first problem: `é` can be stored as **one** character, or as `e` plus a separate accent mark (a _combining character_). They look identical, but `"é" == "e\u0301"` is `False`. **Normalise** first (make both use the same form) with `unicodedata.normalize("NFC", s)`, where NFC means “use the single-character form”.
+- The second: `lower()` leaves `ß` alone (`'straße'`), while `casefold()` turns it into `'strasse'`.
+- So compare with `unicodedata.normalize("NFC", a).casefold() == unicodedata.normalize("NFC", b).casefold()`.
 
-Q7. Write is_palindrome(s), ignoring case, spaces and punctuation.
+**Q7. Write `is_palindrome(s)`, ignoring case, spaces and punctuation.**
 
 ```python
 def is_palindrome(s):
@@ -3159,18 +3162,19 @@ def is_palindrome(s):
 print(is_palindrome("A man, a plan, a canal: Panama"))   # True
 ```
 
-`Trace for "Ab,a!":`
+Trace for `"Ab,a!"`:
 
-char	isalnum()	kept as
-A	True	a
-b	True	b
-,	False	skipped
-a	True	a
-!	False	skipped
+|char|`isalnum()`|kept as|
+|---|---|---|
+|`A`|True|`a`|
+|`b`|True|`b`|
+|`,`|False|skipped|
+|`a`|True|`a`|
+|`!`|False|skipped|
 
-['a','b','a'] == ['a','b','a'][::-1] → True. (isalnum() means letters or digits only.)
+`['a','b','a'] == ['a','b','a'][::-1]` → `True`. (`isalnum()` means letters or digits only.)
 
-Q8. Return the first non-repeating character in a string, or None.
+**Q8. Return the first non-repeating character in a string, or `None`.**
 
 ```python
 def first_unique(s):
@@ -3186,9 +3190,11 @@ print(first_unique("swiss"))    # w
 print(first_unique("aabb"))     # None
 ```
 
-For "swiss": counts are {'s': 3, 'w': 1, 'i': 1}. The second pass checks s (3, skip), then w (1, return). It runs in O(n). Calling s.count(ch) inside the loop would be O(n²), because each count rescans the whole string.
+For `"swiss"`: counts are `{'s': 3, 'w': 1, 'i': 1}`. The second pass checks `s` (3, skip), then `w` (1, return). It runs in O(n). Calling `s.count(ch)` inside the loop would be O(n²), because each `count` rescans the whole string.
 
-### TASK (Level 3): yours to write
+---
+
+#### TASK (Level 3): yours to write
 
 A messy export arrives as text lines. Clean it and print an aligned report.
 
@@ -3202,6 +3208,7 @@ raw_lines = [
 ]
 ```
 
+```
 1. write clean(lines) that returns a list of tuples: (tx_id, name, amount)
    - strip the line, split on ";", strip every part
    - tx_id: upper-case, number part zero-padded to 4 digits  (TX-7 -> TX-0007)
@@ -3211,8 +3218,9 @@ raw_lines = [
 3. print a line of 37 dashes
 4. print each row, with the amount shown with commas and 2 decimals
 5. print another line of 37 dashes, then a Total row (the label "Total" padded to width 25, then the total right-aligned in width 12)
+```
 
-Write these asserts first:
+Write these asserts **first**:
 
 ```python
 rows = clean(raw_lines)
@@ -3224,6 +3232,7 @@ print("all tests passed")
 
 Your printed table should look exactly like this:
 
+```
 ID        Name                 Amount
 -------------------------------------
 TX-0007   Asha Sharma        1,200.50
@@ -3231,5 +3240,6 @@ TX-0012   Ravi Kumar            85.00
 TX-0103   Meena             14,999.00
 -------------------------------------
 Total                       16,284.50
+```
 
-Hints: partition("-") splits the ID, zfill(4) pads the number, and translate (or a few chained replace calls) removes the symbols. Write the asserts, then one comment per step, then one line of code per comment, and run after every line.
+Hints: `partition("-")` splits the ID, `zfill(4)` pads the number, and `translate` (or a few chained `replace` calls) removes the symbols. Write the asserts, then one comment per step, then one line of code per comment, and run after every line.
