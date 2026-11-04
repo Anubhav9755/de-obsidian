@@ -3273,10 +3273,25 @@ print(f"{'Total':<25}{total:>12,.2f}")
 
 - `name.split()` with **no argument** splits on any run of whitespace, so `"ravi KUMAR"` becomes `["ravi", "KUMAR"]`. `" ".join(...)` puts single spaces back, and `.title()` fixes the capitals.
 
-- `amt.translate(str.maketrans("", "", "₹, "))` **deletes** every `₹`, comma and space in one pass. The text is then safe for `Decimal`. We build it from a string, never a float.
+- `amt.translate(str.maketrans("", "", "₹, "))` **deletes** every `₹`, comma and space in one pass. The text is then safe for `Decimal`. We build it from a string, never a float. here - `""` → No characters to replace, `""` → No replacement characters, `"₹, "` → Characters to delete. So it creates instructions to delete `₹`, `,` and spaces.
 
 - Each cleaned row is packed as a tuple, so `clean` returns a list of tuples.
 
 - In the print formats, text is left-aligned (`<`) and numbers right-aligned (`>`). `{amount:>12,.2f}` means width 12, thousands commas, 2 decimals. `Decimal("85")` prints as `85.00` because of `.2f`.
 
 - The widths add up: 10 + 15 + 12 = 37, so the dash line is 37 long. The Total label is 25 wide (10 + 15) so the total lines up under the Amount column.
+
+---
+
+### Lesson 13: Lists, Tuples, Dicts & Sets:
+
+- **Slice assignment**: replacing part of a list by assigning to a slice: `nums[1:3] = [9]`.
+- **`del`**: a statement that removes an item, a slice, or a dict key. It removes it by position or key and returns nothing.
+- **Named tuple** (`namedtuple`): a tuple whose items also have **names**, so you write `t.amount` and not `t[2]`. It comes from the `collections` module.
+- **Dict view**: what `.keys()`, `.values()` and `.items()` return. It is a live “window” onto the dict, not a copy.
+- **Merge** (dicts): combine two dicts into one. When both have the same key, the **right** one wins.
+- **Symmetric difference** (`^`): items in one set **or** the other, but not both.
+- **Subset / superset**: A is a subset of B when every item of A is also in B.
+- **Hashable**: an object that can be turned into a fixed number (a hash). Only hashable things can be dict keys or set members. Immutable types (`int`, `str`, a `tuple` of those) are hashable. `list`, `dict` and `set` are not.
+- **`frozenset`**: a set that can’t change, so it is hashable.
+
