@@ -3295,3 +3295,49 @@ print(f"{'Total':<25}{total:>12,.2f}")
 - **Hashable**: an object that can be turned into a fixed number (a hash). Only hashable things can be dict keys or set members. Immutable types (`int`, `str`, a `tuple` of those) are hashable. `list`, `dict` and `set` are not.
 - **`frozenset`**: a set that can’t change, so it is hashable.
 
+**Industrial use:**
+
+- **Reconciliation**: which orders are in the system but missing from the bank file, and the reverse? Sets answer this in one line.
+- **Config merging**: default settings plus user overrides.
+- **Leaderboards and top-N**: highest customer by total, ranked lists.
+- **Readable records**: `order.amount` in a pipeline is clearer than `order[2]`.
+
+**Problem it solves:** many “write a loop” tasks are one-liners with the right container tool. Fewer lines means fewer bugs, and sets and dicts are far faster than scanning lists.
+
+### Code 1: list gaps
+
+| Tool                            | What it does                                        |
+| ------------------------------- | --------------------------------------------------- |
+| `nums.index(x)`                 | position of the first `x` (`ValueError` if missing) |
+| `nums.count(x)`                 | how many times `x` appears                          |
+| `nums.reverse()`                | reverses **in place**, returns `None`               |
+| `del nums[i]` / `del nums[i:j]` | remove by position or by slice                      |
+| `nums.remove(x)`                | removes the first **value** `x`                     |
+| `nums.pop(i)`                   | removes by position **and returns** it              |
+
+```python
+nums = [10, 20, 30, 20, 40]
+print(nums.index(20), nums.count(20))   # 1 2
+del nums[0]                             # [20, 30, 20, 40]
+del nums[1:3]                           # [20, 40]
+nums[1:1] = [25, 27]                    # insert without replacing: [20, 25, 27, 40]
+nums[0:2] = [99]                        # replace 2 items with 1: [99, 27, 40]
+nums.reverse()                          # [40, 27, 99]
+```
+
+**Sorting is stable**: items with an equal key keep their original order.
+
+```python
+people = [("Asha", 30), ("Ravi", 25), ("Meena", 30), ("Kiran", 25)]
+print(sorted(people, key=lambda p: p[1]))
+# [('Ravi', 25), ('Kiran', 25), ('Asha', 30), ('Meena', 30)]   Ravi stays before Kiran
+```
+
+### Code 2: tuple gaps
+
+```python
+single = (5,)        # the COMMA makes the tuple
+not_tuple = (5)      # just the number 5 in brackets
+print(type(single), type(not_tuple))   # <class 'tuple'> <class 'int'>
+```
+
