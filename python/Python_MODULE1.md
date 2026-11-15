@@ -3491,6 +3491,27 @@ print(person.age)      # 22
 print(person.country)  # India
 ```
 
+### Important namedtuple features
+
+```python
+from collections import namedtuple
+Student = namedtuple("Student", ["name", "marks"])
+s1 = Student("Asha", 90)
+s2 = Student("Ravi", 85)
+```
+
+|Operation|Example|Output|
+|---|---|---|
+|Access by name|`s1.name`|`"Asha"`|
+|Access by index|`s1[0]`|`"Asha"`|
+|Access marks|`s1.marks`|`90`|
+|Get all values|`s1._asdict()`|`{'name': 'Asha', 'marks': 90}`|
+|Get fields|`s1._fields`|`('name', 'marks')`|
+|Replace a value|`s1._replace(marks=95)`|`Student(name='Asha', marks=95)`|
+|Get length|`len(s1)`|`2`|
+|Unpack|`name, marks = s1`|`"Asha", 90`|
+
+**Important:** `_replace()` doesn't modify the original namedtuple. It returns a new one.
 
 ## Code 3: dict gaps
 
