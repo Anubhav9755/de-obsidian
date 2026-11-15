@@ -3533,8 +3533,56 @@ Asha 50000
 Ravi 60000
 Meena 55000
 ```
-## 
-Code 3: dict gaps
+
+## Code 3: dict gaps
+
+### Creating Dictionaries
+
+|Method|Example|Result|
+|---|---|---|
+|Curly braces|`d = {"a": 1, "b": 2}`|`{'a': 1, 'b': 2}`|
+|Empty dictionary|`d = {}`|`{}`|
+|`dict()`|`d = dict(a=1, b=2)`|`{'a': 1, 'b': 2}`|
+|From pairs|`dict([("a", 1), ("b", 2)])`|`{'a': 1, 'b': 2}`|
+|`fromkeys()`|`dict.fromkeys(["a","b"], 0)`|`{'a': 0, 'b': 0}`|
+|Dictionary comprehension|`{x: x*x for x in range(3)}`|`{0: 0, 1: 1, 2: 4}`|## **Accessing Dictionary Elements**
+
+**Accessing Dictionary Elements**
+
+```
+student = {"name": "Asha", "age": 22, "marks": 90}
+```
+
+|Syntax|Purpose|Output|
+|---|---|---|
+|`student["name"]`|Access value using key|`"Asha"`|
+|`student["age"]`|Access age|`22`|
+|`student.get("marks")`|Safely access value|`90`|
+|`student.get("city")`|Missing key returns `None`|`None`|
+|`student.get("city", "Unknown")`|Provide default value|`"Unknown"`|
+**Important difference:**
+
+```python 
+student["city"]          # KeyError
+student.get("city")      # None
+student.get("city", 0)   # 0
+```
+Use `get()` when the key might not exist.
+
+## Adding and Updating Elements
+
+```
+student = {"name": "Asha", "age": 22}
+```
+
+| Syntax                                | Purpose                 | Result                  |
+| ------------------------------------- | ----------------------- | ----------------------- |
+| `student["marks"] = 90`               | Add new key             | Adds marks              |
+| `student["age"] = 23`                 | Update existing key     | Age becomes 23          |
+| `student.update({"age": 24})`         | Update one or more keys | Age becomes 24          |
+| `student.setdefault("city", "Delhi")` | Add key only if missing | Adds city               |
+| `student                              | = {"marks": 95}`        | Merge/update dictionary |
+
 
 ```python
 defaults = {"retries": 3, "timeout": 30, "debug": False}
@@ -3584,8 +3632,6 @@ flags = dict.fromkeys(["x", "y"], 0)            # {'x': 0, 'y': 0}
 
 **`fromkeys` trap (Lesson 10 again):**
 
-python
-
 ```python
 g = dict.fromkeys(["a", "b"], [])    # ONE list shared by every key
 g["a"].append(1)
@@ -3593,8 +3639,6 @@ print(g)                             # {'a': [1], 'b': [1]}
 ```
 
 **Safe nested access:**
-
-python
 
 ```python
 order = {"customer": {"name": "Rahul"}}           # no "address" key at all
