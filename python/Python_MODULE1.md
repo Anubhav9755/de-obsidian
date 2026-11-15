@@ -3647,17 +3647,17 @@ student = {"name": "Asha", "age": 22, "marks": 90}
 |`for x in student.values():`|Values|
 |`for x in student.items():`|Key-value tuples|
 |`for k, v in student.items():`|Key and value separately|
+### Dictionary Merging
+
 
 ```
-defaults = {"retries": 3, "timeout": 30}override = {"timeout": 60, "debug": True}
+defaults = {"retries": 3, "timeout": 30}
+override = {"timeout": 60, "debug": True}
 ```
 
-| Syntax                      | Purpose                    | Creates new dictionary?    |     |
-| --------------------------- | -------------------------- | -------------------------- | --- |
-| `defaults \\                | override`                  | Merge dictionaries         | Yes |
-| `{**defaults, **override}`  | Unpack and merge           | Yes                        |     |
-| `defaults.update(override)` | Update original dictionary | No                         |     |
-| `defaults \\                | = override`                | Update original dictionary | No  |
+![[Pasted image 20261115215258.png]]
+
+**Rule:** When duplicate keys exist, the right-side value wins.
 
 ```python
 defaults = {"retries": 3, "timeout": 30, "debug": False}
@@ -3668,6 +3668,144 @@ print(merged)    # {'retries': 3, 'timeout': 60, 'debug': True}
 print(defaults)  # unchanged
 # same result: {**defaults, **override}      (works on older Python too)
 # defaults.update(override)                  (changes defaults IN PLACE)
+```
+
+**Comprehension approach:** allows to create in dict in one line.
+
+```python
+squares = {x: x*x for x in range(1, 6)}
+print(squares)
+```
+
+Output:
+
+```
+{1: 1, 2: 4, 3: 9, 4: 16, 5: 25}
+```
+
+More examples:
+
+|Code|Purpose|Output|
+|---|---|---|
+|`{x: x*2 for x in range(4)}`|Create doubled values|`{0:0, 1:2, 2:4, 3:6}`|
+|`{x: x**2 for x in range(1,4)}`|Squares|`{1:1, 2:4, 3:9}`|
+|`{x: x for x in range(5) if x%2==0}`|Only even keys|`{0:0, 2:2, 4:4}`|
+|`{v:k for k,v in d.items()}`|Reverse keys and values|Depends on `d`|
+
+### Dictionary Unpacking
+
+The `**` operator unpacks dictionary key-value pairs.
+
+```python
+a = {"x": 10, "y": 20}
+b = {"z": 30}
+c = {**a, **b}
+print(c)     # {'x': 10, 'y': 20, 'z': 30}
+```
+
+Can also use `**` to pass dictionary values as keyword arguments to a function:
+
+```python
+def introduce(name, age):    
+print(name, age)
+person = {"name": "Asha", "age": 22}
+introduce(**person)    # Asha 22
+```
+
+### Checking Keys and Values
+
+```
+d = {"name": "Asha", "age": 22}
+```
+
+|Syntax|Purpose|Output|
+|---|---|---|
+|`"name" in d`|Check whether key exists|`True`|
+|`"city" in d`|Check missing key|`False`|
+|`"Asha" in d.values()`|Check whether value exists|`True`|
+|`"city" not in d`|Check key does not exist|`True`|
+|`len(d)`|Number of key-value pairs|`2`|
+
+**Important:** `in` checks keys by default, not values.
+
+```python
+print("Asha" in d)          # False
+print("Asha" in d.values()) # True
+```
+
+### Sorting Dictionaries
+
+```
+marks = {    "Asha": 90,    "Ravi": 75,    "Meena": 85}
+```
+
+|Code|Purpose|
+|---|---|
+|`sorted(marks)`|Sort keys alphabetically|
+|`sorted(marks.values())`|Sort values|
+|`sorted(marks.items())`|Sort pairs by key|
+|`sorted(marks.items(), key=lambda x: x[1])`|Sort by value|
+|`sorted(marks.items(), key=lambda x: x[1], reverse=True)`|Sort by value descending|
+
+```
+print(sorted(marks.items(), key=lambda x: x[1]))
+```
+
+Output:
+
+```
+[('Ravi',75),('Meena',85),('Asha',90)]
+```
+
+Remember:
+- `x[0]` → Key
+- `x[1]` → Value
+
+### Nested Dictionaries
+
+A dictionary can contain another dictionary.
+
+```python
+students = {
+	"student1": {
+	"name": "Asha",
+	"marks": 90
+	},
+	"student2": {
+		"name": "Ravi",
+		"marks": 85
+	}
+}
+```
+
+Access nested values:
+
+```python
+print(students["student1"]["name"])   # Asha
+print(students["student2"]["marks"])  # 85
+```
+
+## **15. Useful Dictionary Functions from** `collections`
+
+Python's `collections` module provides additional dictionary-like structures.
+
+|Structure|Purpose|Example|
+|---|---|---|
+|`defaultdict`|Automatically supplies default values for missing keys|`defaultdict(int)`|
+|`Counter`|Counts occurrences|`Counter("banana")`|
+|`OrderedDict`|Specialized ordered dictionary with extra operations|`OrderedDict()`|
+|`ChainMap`|Combines multiple mappings for lookup|`ChainMap(d1, d2)`|
+
+Example of `Counter`:
+
+```
+from collections import Counterwords = ["apple", "banana", "apple", "orange", "banana", "apple"]count = Counter(words)print(count)# Counter({'apple': 3, 'banana': 2, 'orange': 1})
+```
+
+Example of `defaultdict`:
+
+```
+from collections import defaultdictd = defaultdict(int)d["apple"] += 1d["apple"] += 1d["banana"] += 1print(d)# defaultdict(<class 'int'>, {'apple': 2, 'banana': 1})
 ```
 
 **Views are live:**
