@@ -3547,8 +3547,7 @@ print(merged)    # {'retries': 3, 'timeout': 60, 'debug': True} - The right-side
 print(defaults)  # unchanged
 
 defaults.update(override)
-print(defaults)
-
-
+	print(defaults)     # {'retries': 3,'timeout': 60,'debug': True}
 ```
+
 
