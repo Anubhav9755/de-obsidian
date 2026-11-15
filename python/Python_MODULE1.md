@@ -3511,8 +3511,9 @@ s2 = Student("Ravi", 85)
 |Get length|`len(s1)`|`2`|
 |Unpack|`name, marks = s1`|`"Asha", 90`|
 
+**Important:** `_replace()` doesn't modify the original namedtuple. It returns a new one.
 
-```pytho
+```python
 from collections import namedtuple
 
 Employee = namedtuple("Employee", ["name", "id", "salary"])
@@ -3527,8 +3528,11 @@ for emp in employees:
     print(emp.name, emp.salary)
 ```
 
-**Important:** `_replace()` doesn't modify the original namedtuple. It returns a new one.
-
+```
+Asha 50000
+Ravi 60000
+Meena 55000
+```
 ## Code 3: dict gaps
 
 **Merging:**
