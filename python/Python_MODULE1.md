@@ -3582,6 +3582,72 @@ student = {"name": "Asha", "age": 22}
 | `student.update({"age": 24})`         | Update one or more keys | Age becomes 24          |
 | `student.setdefault("city", "Delhi")` | Add key only if missing | Adds city               |
 | `student                              | = {"marks": 95}`        | Merge/update dictionary |
+`update()` overwrites existing values and `setdefault()` does not overwrite an existing value.
+
+### Removing Elements
+
+Assume:
+
+```
+d = {"a": 10, "b": 20, "c": 30}
+```
+
+|Method|Purpose|Result|
+|---|---|---|
+|`d.pop("a")`|Remove key and return its value|`10`|
+|`d.pop("x", 0)`|Remove key or return default|`0`|
+|`d.popitem()`|Remove and return last inserted pair|`('c', 30)`|
+|`del d["a"]`|Delete a particular key|Removes `"a"`|
+|`d.clear()`|Remove everything|`{}`|
+
+**Difference:**
+- `pop()` → Removes a specified key.
+- `popitem()` → Removes the last inserted key-value pair.
+- `del` → Deletes a key without returning its value.
+- `clear()` → Empties the entire dictionary.
+
+### All Built-in Dictionary Methods
+
+```
+d = {"name": "Asha", "age": 22, "marks": 90}
+```
+
+|Method|Purpose|Example|
+|---|---|---|
+|`get()`|Get value safely|`d.get("age")`|
+|`keys()`|Return all keys|`d.keys()`|
+|`values()`|Return all values|`d.values()`|
+|`items()`|Return key-value pairs|`d.items()`|
+|`update()`|Add/update multiple pairs|`d.update({"age": 23})`|
+|`pop()`|Remove specified key|`d.pop("age")`|
+|`popitem()`|Remove last inserted pair|`d.popitem()`|
+|`clear()`|Empty dictionary|`d.clear()`|
+|`copy()`|Shallow copy|`d.copy()`|
+|`setdefault()`|Get value or insert default|`d.setdefault("city", "Delhi")`|
+|`fromkeys()`|Create dictionary from keys|`dict.fromkeys(["a","b"], 0)`|
+
+**Note:** `fromkeys()` is a class method of `dict`, not an instance-specific method.
+
+| Method     | Returns                       |
+| ---------- | ----------------------------- |
+| `keys()`   | All keys                      |
+| `values()` | All values                    |
+| `items()`  | All key-value pairs as tuples |
+
+**Looping Through Dictionaries**
+
+```
+student = {"name": "Asha", "age": 22, "marks": 90}
+```
+
+|Syntax|What it returns|
+|---|---|
+|`for x in student:`|Keys|
+|`for x in student.keys():`|Keys|
+|`for x in student.values():`|Values|
+|`for x in student.items():`|Key-value tuples|
+|`for k, v in student.items():`|Key and value separately|
+
 
 
 ```python
