@@ -3533,21 +3533,74 @@ Asha 50000
 Ravi 60000
 Meena 55000
 ```
-## Code 3: dict gaps
-
-**Merging:**
+## 
+Code 3: dict gaps
 
 ```python
 defaults = {"retries": 3, "timeout": 30, "debug": False}
 override = {"timeout": 60, "debug": True}
 
 merged = defaults | override          # NEW dict, right side wins
-print(merged)    # {'retries': 3, 'timeout': 60, 'debug': True} - The right-side dictionary wins when keys are duplicated.
-
+print(merged)    # {'retries': 3, 'timeout': 60, 'debug': True}
 print(defaults)  # unchanged
-
-defaults.update(override)
-	print(defaults)     # {'retries': 3,'timeout': 60,'debug': True}
+# same result: {**defaults, **override}      (works on older Python too)
+# defaults.update(override)                  (changes defaults IN PLACE)
 ```
 
+**Views are live:**
 
+```python
+d = {"a": 1}
+keys = d.keys()
+d["b"] = 2
+print(list(keys))                    # ['a', 'b']   the view saw the change
+
+d1 = {"x": 1, "y": 2}; d2 = {"y": 9, "z": 3}
+print(d1.keys() & d2.keys())         # {'y'}   keys behave like sets
+```
+
+**The highest value, ranked, and the trap:**
+
+```python
+totals = {"user_a": 450.0, "user_b": 265.3, "user_c": 80.0}
+
+print(max(totals))                        # user_c     TRAP: compares the KEYS (names), not totals
+print(max(totals, key=totals.get))        # user_a     largest by VALUE, but gives back the key
+print(max(totals.values()))               # 450.0      the value, but not who owns it
+
+ranked = sorted(totals.items(), key=lambda kv: kv[1], reverse=True)
+print(ranked)   # [('user_a', 450.0), ('user_b', 265.3), ('user_c', 80.0)]
+print(dict(ranked))   # back into a dict, order kept
+```
+
+**Building dicts:**
+
+```python
+names = ["a", "b", "c"]; scores = [90, 80, 70]
+d = dict(zip(names, scores))                    # {'a': 90, 'b': 80, 'c': 70}
+inverted = {v: k for k, v in d.items()}         # {90: 'a', 80: 'b', 70: 'c'}  (values must be unique)
+flags = dict.fromkeys(["x", "y"], 0)            # {'x': 0, 'y': 0}
+```
+
+**`fromkeys` trap (Lesson 10 again):**
+
+python
+
+```python
+g = dict.fromkeys(["a", "b"], [])    # ONE list shared by every key
+g["a"].append(1)
+print(g)                             # {'a': [1], 'b': [1]}
+```
+
+**Safe nested access:**
+
+python
+
+```python
+order = {"customer": {"name": "Rahul"}}           # no "address" key at all
+# order["customer"]["address"]["city"]            # KeyError: 'address'
+city = order.get("customer", {}).get("address", {}).get("city", "unknown")
+print(city)                                        # unknown
+```
+
+Each `.get(key, {})` returns an empty dict when the key is missing, so the next `.get` still has something to work on.
