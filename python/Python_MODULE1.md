@@ -3785,9 +3785,7 @@ print(students["student1"]["name"])   # Asha
 print(students["student2"]["marks"])  # 85
 ```
 
-## **15. Useful Dictionary Functions from** `collections`
-
-Python's `collections` module provides additional dictionary-like structures.
+### Useful Dictionary Functions from`collections`
 
 |Structure|Purpose|Example|
 |---|---|---|
@@ -3796,17 +3794,99 @@ Python's `collections` module provides additional dictionary-like structures.
 |`OrderedDict`|Specialized ordered dictionary with extra operations|`OrderedDict()`|
 |`ChainMap`|Combines multiple mappings for lookup|`ChainMap(d1, d2)`|
 
-Example of `Counter`:
-
-```
-from collections import Counterwords = ["apple", "banana", "apple", "orange", "banana", "apple"]count = Counter(words)print(count)# Counter({'apple': 3, 'banana': 2, 'orange': 1})
+```python
+from collections import Counter
+words = ["apple", "banana", "apple", "orange", "banana", "apple"]
+count = Counter(words)
+print(count)   # Counter({'apple': 3, 'banana': 2, 'orange': 1})
 ```
 
 Example of `defaultdict`:
 
+```python
+from collections import defaultdict
+d = defaultdict(int)
+d["apple"] += 1
+d["apple"] += 1
+d["banana"] += 1
+print(d)    # defaultdict(<class 'int'>, {'apple': 2, 'banana': 1})
 ```
-from collections import defaultdictd = defaultdict(int)d["apple"] += 1d["apple"] += 1d["banana"] += 1print(d)# defaultdict(<class 'int'>, {'apple': 2, 'banana': 1})
+
+### Important Dictionary Concepts & Tricky Behaviour
+
+### A. Duplicate keys
+
+```python
+d = {"a": 10, "b": 20, "a": 50}
+print(d)   # {'a': 50, 'b': 20}
 ```
+
+### B. Dictionary keys must be hashable
+
+```python
+d = {"name": "Asha",10: "Number",(1, 2): "Tuple"}
+```
+
+These are valid keys. But:
+
+```python
+d = {[1, 2]: "Hello"}   # TypeError: unhashable type: 'list'
+```
+
+Lists, dictionaries and sets cannot be dictionary keys.
+
+### Shallow copy vs normal assignment**
+
+```python
+a = {"x": 10, "y": 20}
+b = a
+b["x"] = 99
+print(a)  # {'x': 99, 'y': 20}
+```
+
+Why? Both variables refer to the same dictionary. Use `copy()`:
+
+```python
+a = {"x": 10, "y": 20}
+b = a.copy()
+b["x"] = 99
+print(a)  # {'x': 10, 'y': 20}
+print(b)  # {'x': 99, 'y': 20}
+```
+
+Note: `copy()` is a shallow copy. Nested mutable objects are still shared.
+
+### `fromkeys()` mutable value trap
+
+```python
+keys = ["a", "b", "c"]
+d = dict.fromkeys(keys, [])
+d["a"].append(10)
+print(d)# {'a': [10], 'b': [10], 'c': [10]}
+```
+
+Why? All three keys refer to the same list. For independent lists, use:
+
+```python
+d = {key: [] for key in keys}
+```
+
+###  `get()` **vs** `setdefault()`
+
+```python
+d = {"apple": 10}
+print(d.get("banana", 0))  # 0
+print(d)                   # {'apple': 10}
+```
+
+`get()` doesn't insert a missing key.
+
+```python
+print(d.setdefault("banana", 0))   # 0
+print(d)    # {'apple': 10, 'banana': 0}
+```
+
+`setdefault()` inserts the key if it doesn't exist.
 
 **Views are live:**
 
