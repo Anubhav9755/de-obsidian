@@ -3387,18 +3387,85 @@ nums.reverse()                          # [40, 27, 99]
 people = [("Asha", 30), ("Ravi", 25), ("Meena", 30), ("Kiran", 25)]
 print(sorted(people, key=lambda p: p[1]))
 
+# p[0] → Name AND p[1] → Age
 # [('Ravi', 25), ('Kiran', 25), ('Asha', 30), ('Meena', 30)]   Ravi stays before Kiran
 ```
 
-### Code 2: tuple gaps
+### Code 2: tuple are immutable
 
-```python
-single = (5,)        # the COMMA makes the tuple
-not_tuple = (5)      # just the number 5 in brackets
-print(type(single), type(not_tuple))   # <class 'tuple'> <class 'int'>
+Tuples are immutable, but support slicing, concatenation and repetition.
+### Tuple Methods
+
+```
+nums = (10, 20, 30, 20, 40)
 ```
 
-**`namedtuple`:**
+|Method|Purpose|Example|Output|
+|---|---|---|---|
+|`count(x)`|Counts occurrences of a value|`nums.count(20)`|`2`|
+|`index(x)`|Returns first index of a value|`nums.index(30)`|`2`|
+
+### Tuple operations
+
+| Operation         | Purpose                         | Example                | Result             |
+| ----------------- | ------------------------------- | ---------------------- | ------------------ |
+| `len(t)`          | Get length                      | `len(nums)`            | `5`                |
+| `max(t)`          | Get maximum                     | `max(nums)`            | `40`               |
+| `min(t)`          | Get minimum                     | `min(nums)`            | `10`               |
+| `sum(t)`          | Calculate sum                   | `sum(nums)`            | `100`              |
+| `sorted(t)`       | Sort tuple                      | `sorted(nums)`         | `[10,20,20,30,40]` |
+| `reversed(t)`     | Reverse iterator                | `list(reversed(nums))` | `[40,20,30,20,10]` |
+| `tuple(iterable)` | Convert to tuple                | `tuple([1,2,3])`       | `(1,2,3)`          |
+| `any(t)`          | True if any element is truthy   | `any((0,1,0))`         | `True`             |
+| `all(t)`          | True if all elements are truthy | `all((1,2,3))`         | `True`             |
+
+lets,
+```
+t = (10, 20, 30, 40, 50)
+```
+
+|Syntax|Purpose|Output|
+|---|---|---|
+|`t[:]`|Entire tuple|`(10,20,30,40,50)`|
+|`t[:3]`|First 3 elements|`(10,20,30)`|
+|`t[2:]`|Index 2 to end|`(30,40,50)`|
+|`t[1:4]`|Index 1 to 3|`(20,30,40)`|
+|`t[-1]`|Last element|`50`|
+|`t[:-1]`|Everything except last|`(10,20,30,40)`|
+|`t[::2]`|Every second element|`(10,30,50)`|
+|`t[::-1]`|Reverse tuple|`(50,40,30,20,10)`|
+|`t[1::2]`|Every second element from index 1|`(20,40)`|
+
+## packing and unpacking
+
+|Operation|Example|Result|
+|---|---|---|
+|Packing|`t = 10, 20, 30`|`(10,20,30)`|
+|Unpacking|`a,b,c = (10,20,30)`|`a=10, b=20, c=30`|
+|Extended unpacking|`a,*b = (10,20,30,40)`|`a=10, b=[20,30,40]`|
+|Swapping|`a,b = b,a`|Values exchanged|
+
+```python
+t = (10, 20, 30)
+t[0] = 99  # TypeError
+```
+
+```python
+a = (10, 20)b = (30, 40)
+print(a + b)   # (10, 20, 30, 40)
+```
+
+```python
+t = (10, 20)
+print(t * 3)   # (10, 20, 10, 20, 10, 20)
+```
+
+```python
+t = (10, 20, 30)
+print(20 in t)      # Trueprint(50 not in t)  # True
+```
+
+**`namedtuple`:** special type of tuple in Python that allows you to **access tuple elements using names instead of index numbers**.
 
 ```python
 from collections import namedtuple
