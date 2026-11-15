@@ -3648,7 +3648,16 @@ student = {"name": "Asha", "age": 22, "marks": 90}
 |`for x in student.items():`|Key-value tuples|
 |`for k, v in student.items():`|Key and value separately|
 
+```
+defaults = {"retries": 3, "timeout": 30}override = {"timeout": 60, "debug": True}
+```
 
+| Syntax                      | Purpose                    | Creates new dictionary?    |     |
+| --------------------------- | -------------------------- | -------------------------- | --- |
+| `defaults \\                | override`                  | Merge dictionaries         | Yes |
+| `{**defaults, **override}`  | Unpack and merge           | Yes                        |     |
+| `defaults.update(override)` | Update original dictionary | No                         |     |
+| `defaults \\                | = override`                | Update original dictionary | No  |
 
 ```python
 defaults = {"retries": 3, "timeout": 30, "debug": False}
