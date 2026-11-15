@@ -3542,9 +3542,13 @@ defaults = {"retries": 3, "timeout": 30, "debug": False}
 override = {"timeout": 60, "debug": True}
 
 merged = defaults | override          # NEW dict, right side wins
-print(merged)    # {'retries': 3, 'timeout': 60, 'debug': True}
+print(merged)    # {'retries': 3, 'timeout': 60, 'debug': True} - The right-side dictionary wins when keys are duplicated.
+
 print(defaults)  # unchanged
-# same result: {**defaults, **override}      (works on older Python too)
-# defaults.update(override)                  (changes defaults IN PLACE)
+
+defaults.update(override)
+print(defaults)
+
+
 ```
 
