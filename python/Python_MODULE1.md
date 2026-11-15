@@ -3467,6 +3467,17 @@ print(20 in t)      # Trueprint(50 not in t)  # True
 
 **`namedtuple`:** special type of tuple in Python that allows you to **access tuple elements using names instead of index numbers**.
 
+problem with normal tuple is that we need to remember what each index represents.
+
+like - 
+person = ("Anubhav", 22, "India")
+
+print(person[0])  # Anubhav
+print(person[1])  # 22
+print(person[2])  # India
+```
+```
+---
 ```python
 from collections import namedtuple
 
