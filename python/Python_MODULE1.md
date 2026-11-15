@@ -3469,26 +3469,29 @@ print(20 in t)      # Trueprint(50 not in t)  # True
 
 problem with normal tuple is that we need to remember what each index represents.
 
-like - 
+```python
 person = ("Anubhav", 22, "India")
 
 print(person[0])  # Anubhav
 print(person[1])  # 22
 print(person[2])  # India
 ```
-```
----
+
+and namedtuple:
+
 ```python
 from collections import namedtuple
 
-Txn = namedtuple("Txn", ["tx_id", "user", "amount"])
-t = Txn("tx_1", "user_a", 150.0)
-print(t.amount, t[2])          # 150.0 150.0   name or position
-print(t)                       # Txn(tx_id='tx_1', user='user_a', amount=150.0)
-tx_id, user, amount = t        # still unpacks like a tuple
-print(t._replace(amount=99.0)) # tuples can't change, so this returns a NEW one
-print(t._asdict())             # {'tx_id': 'tx_1', 'user': 'user_a', 'amount': 150.0}
+Person = namedtuple("Person", ["name", "age", "country"])
+
+person = Person("Anubhav", 22, "India")
+
+print(person.name)     # Anubhav
+print(person.age)      # 22
+print(person.country)  # India
 ```
+
+
 ## Code 3: dict gaps
 
 **Merging:**
