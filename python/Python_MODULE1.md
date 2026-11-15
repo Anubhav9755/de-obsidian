@@ -3304,16 +3304,72 @@ print(f"{'Total':<25}{total:>12,.2f}")
 
 **Problem it solves:** many “write a loop” tasks are one-liners with the right container tool. Fewer lines means fewer bugs, and sets and dicts are far faster than scanning lists.
 
-### Code 1: list gaps
+## Code 1: list gaps
 
-| Tool                            | What it does                                        |
-| ------------------------------- | --------------------------------------------------- |
-| `nums.index(x)`                 | position of the first `x` (`ValueError` if missing) |
-| `nums.count(x)`                 | how many times `x` appears                          |
-| `nums.reverse()`                | reverses **in place**, returns `None`               |
-| `del nums[i]` / `del nums[i:j]` | remove by position or by slice                      |
-| `nums.remove(x)`                | removes the first **value** `x`                     |
-| `nums.pop(i)`                   | removes by position **and returns** it              |
+### 1. List slicing assignment methods
+
+```
+nums = [10, 20, 30, 40, 50]
+```
+
+|Syntax|What it does|Result|
+|---|---|---|
+|`nums[1:1] = [99]`|Insert at index 1|`[10, 99, 20, 30, 40, 50]`|
+|`nums[1:1] = [99, 88]`|Insert multiple elements|`[10, 99, 88, 20, 30, 40, 50]`|
+|`nums[1:2] = [99]`|Replace 1 element|`[10, 99, 30, 40, 50]`|
+|`nums[1:3] = [99]`|Replace 2 with 1|`[10, 99, 40, 50]`|
+|`nums[1:3] = [99, 88, 77]`|Replace 2 with 3|`[10, 99, 88, 77, 40, 50]`|
+|`nums[:2] = [99]`|Replace first 2 elements|`[99, 30, 40, 50]`|
+|`nums[2:] = [99]`|Replace from index 2 onward|`[10, 20, 99]`|
+|`nums[:] = [1, 2, 3]`|Replace entire list|`[1, 2, 3]`|
+|`nums[1:3] = []`|Delete selected elements|`[10, 40, 50]`|
+|`nums[:] = []`|Empty entire list|`[]`|
+
+##  Important slicing patterns
+
+| Syntax       | Meaning                                  |
+| ------------ | ---------------------------------------- |
+| `nums[:]`    | Entire list                              |
+| `nums[:3]`   | From beginning to index 2                |
+| `nums[2:]`   | From index 2 to end                      |
+| `nums[1:4]`  | Index 1 to 3                             |
+| `nums[-1:]`  | Last element                             |
+| `nums[:-1]`  | Everything except last                   |
+| `nums[::2]`  | Every second element                     |
+| `nums[::-1]` | Reverse the list                         |
+| `nums[1::2]` | Every second element starting at index 1 |
+| `nums[::-2]` | Reverse with a step of 2                 |
+
+### 3. Other useful Python list methods
+
+|Method|Purpose|Example|
+|---|---|---|
+|`append(x)`|Add one element at end|`nums.append(60)`|
+|`extend(iterable)`|Add multiple elements|`nums.extend([60,70])`|
+|`insert(i,x)`|Insert at specific index|`nums.insert(1,99)`|
+|`remove(x)`|Remove first matching value|`nums.remove(20)`|
+|`pop()`|Remove and return last element|`nums.pop()`|
+|`pop(i)`|Remove and return element at index|`nums.pop(1)`|
+|`clear()`|Remove all elements|`nums.clear()`|
+|`index(x)`|Find first index of value|`nums.index(30)`|
+|`count(x)`|Count occurrences|`nums.count(10)`|
+|`sort()`|Sort ascending|`nums.sort()`|
+|`reverse()`|Reverse in place|`nums.reverse()`|
+|`copy()`|Create shallow copy|`nums.copy()`|
+
+### 4. Difference between similar methods
+
+|Operation|Difference|
+|---|---|
+|`append([1,2])`|Adds the entire list as one element|
+|`extend([1,2])`|Adds elements individually|
+|`insert(1,99)`|Inserts one element at an index|
+|`nums[1:1] = [99]`|Inserts one or more elements using slicing|
+|`remove(20)`|Removes by value|
+|`pop(1)`|Removes by index|
+|`del nums[1:3]`|Deletes a slice|
+|`nums[1:3] = []`|Deletes a slice using assignment|
+
 
 ```python
 nums = [10, 20, 30, 20, 40]
@@ -3330,6 +3386,7 @@ nums.reverse()                          # [40, 27, 99]
 ```python
 people = [("Asha", 30), ("Ravi", 25), ("Meena", 30), ("Kiran", 25)]
 print(sorted(people, key=lambda p: p[1]))
+
 # [('Ravi', 25), ('Kiran', 25), ('Asha', 30), ('Meena', 30)]   Ravi stays before Kiran
 ```
 
