@@ -70,4 +70,5 @@ FROM employees;
 
 ## Lesson 2: Filtering rows (`WHERE`)
 
+`WHERE` chooses **rows**. It keeps only the rows where a condition is true.
 
