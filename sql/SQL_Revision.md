@@ -52,6 +52,19 @@ Aarav’s row shows `8500.00` under `bonus`. The calculation affects only the ou
 
 The bonus isn’t stored in the table, so we calculate it from `salary`. SQL can do arithmetic (`+ - * /`) inside `SELECT`. `AS` gives the result a readable name (an alias).
 
+**Question 4:** Show the name and hire date of every employee.
+
+```sql
+SELECT name, hire_date
+FROM employees;
+```
+
+**Question 5:** Show each employee’s name and their annual salary . Label the column `annual_salary`
+
+```sql
+SELECT name, salary*12 AS annual_salary
+FROM employees;
+```
 
 
 SQL runs in a different order than you write it:
