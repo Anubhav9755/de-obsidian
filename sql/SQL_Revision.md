@@ -66,39 +66,8 @@ SELECT name, salary*12 AS annual_salary
 FROM employees;
 ```
 
+---
 
-SQL runs in a different order than you write it:
-**FROM** (which table) → **WHERE** (which rows) → **SELECT** (which columns) → **DISTINCT** (remove duplicate rows) → **LIMIT** (keep the first N rows)
+## Lesson 2: Filtering rows (`WHERE`)
 
-So when read a question, ask in this order: _which table? which rows? which columns? duplicates? how many?_ That is the thinking pattern for every query this week.
-
-**Question :** Show the name and city of all employees in the Engineering department.
-
-1. Table: `employees`
-2. Rows: only where `department = 'Engineering'`
-3. Columns: `name`, `city`
-4. Duplicates or limit: not asked
-
-```sql
-SELECT name, city
-FROM employees
-WHERE department = 'Engineering';
-
-Result: Aarav–Pune, Rohan–Bengaluru, Isha–Pune.
-```
-
-**Question :** Which departments have employees working in Pune? Each department once.
-
-1. Table: `employees`
-2. Rows: `city = 'Pune'`
-3. Column: `department`
-4. Duplicates: Pune has two Engineering employees, so the words “each once” mean `DISTINCT`
-
-```sql
-SELECT department
-FROM employees
-WHERE city = 'Pune';
-
-Result: Engineering, HR, Sales.
-```
 
