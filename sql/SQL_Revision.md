@@ -45,7 +45,10 @@ So when read a question, ask in this order: _which table? which rows? which colu
 SELECT name, city
 FROM employees
 WHERE department = 'Engineering';
+
+Result: Aarav–Pune, Rohan–Bengaluru, Isha–Pune.
 ```
 
-`Result`: Aarav–Pune, Rohan–Bengaluru, Isha–Pune.
+
+**Question 2:** Which departments have employees working in Pune? Each department once.
 
