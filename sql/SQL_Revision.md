@@ -89,3 +89,9 @@ The order SQL actually runs these in is **FROM** (find the table), then **WHERE*
 |`>` / `<`|greater / less than|
 |`>=` / `<=`|greater or equal / less or equal|
 
+Two formatting rules:
+
+- Text goes in **single quotes**: `'Sales'`. Text comparisons are case-sensitive in PostgreSQL, so `'sales'` won’t match `'Sales'`.
+- Numbers have **no quotes**: `salary > 60000`.
+- Dates go in single quotes, as `'YYYY-MM-DD'`.
+
