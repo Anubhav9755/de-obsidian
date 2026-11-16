@@ -72,3 +72,20 @@ FROM employees;
 
 `WHERE` chooses **rows**. It keeps only the rows where a condition is true.
 
+```sql
+SELECT columns
+FROM table
+WHERE condition;
+```
+
+The order SQL actually runs these in is **FROM** (find the table), then **WHERE** (keep matching rows), then **SELECT** (pick columns). That’s why you can filter on a column you don’t display.
+
+### Comparison operators
+
+|Operator|Meaning|
+|---|---|
+|`=`|equal to (just one `=` in SQL)|
+|`<>` or `!=`|not equal to|
+|`>` / `<`|greater / less than|
+|`>=` / `<=`|greater or equal / less or equal|
+
