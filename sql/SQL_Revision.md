@@ -157,3 +157,11 @@ WHERE department = 'Engineering' AND city = 'Pune';
 Result: Aarav, Isha.
 ```
 
+AND narrows results whereas OR widens the result.
+
+**Question 12:** Show the name and department of employees in Sales or HR.
+
+```sql
+SELECT name, department
+FR
+```
