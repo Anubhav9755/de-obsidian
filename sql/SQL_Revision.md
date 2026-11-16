@@ -95,3 +95,23 @@ Two formatting rules:
 - Numbers have **no quotes**: `salary > 60000`.
 - Dates go in single quotes, as `'YYYY-MM-DD'`.
 
+**Question 6:** Show the name and salary of employees earning more than 60000.
+
+```sql
+SELECT name, salary
+FROM employees
+WHERE salary > 6000;
+
+Result: Aarav (85000), Rohan (95000), Kabir (61000), Isha (72000).
+```
+
+**Question 7:** Show the names of employees who work in Pune.
+
+```sql
+SELECT name
+FROM employees
+WHERE city ='Pune';
+
+
+```
+
