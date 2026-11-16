@@ -136,6 +136,24 @@ WHERE department <> 'Sales';
 ```sql
 SELECT name, city, salary
 FROM employees
-WHERE salary >= 5000;
+WHERE salary >= 50000;
+```
+
+---
+
+## Lesson 3: Combining conditions (`AND`, `OR`, `NOT`)
+
+- **`AND`**: both conditions must be true.
+- **`OR`**: at least one condition must be true.
+- **`NOT`**: flips a condition (`NOT city = 'Pune'` is the same as `city <> 'Pune'`).
+
+**Question 11:** Show the names of Engineering employees who work in Pune.
+
+```sql
+SELECT name
+FROM employees
+WHERE department = 'Engineering' AND city = 'Pune';
+
+Result: Aarav, Isha.
 ```
 
