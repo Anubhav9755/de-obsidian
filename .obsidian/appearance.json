@@ -1,5 +1,6 @@
 {
   "theme": "moonstone",
   "cssTheme": "Minimal",
-  "accentColor": "#7a8ce6"
+  "accentColor": "#7a8ce6",
+  "showRibbon": true
 }
