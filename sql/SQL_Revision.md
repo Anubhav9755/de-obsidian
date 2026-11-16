@@ -223,5 +223,29 @@ Result: 6 rows (Aarav, Meera, Kabir, Isha, Anaya, Arjun)
 SELECT name, salary
 FROM employee
 WHERE salary BETWEEN 50000 AND 60000;
+
+Result: Diya (52000), Vikram (54000), Anaya (50000), Neha (58000).
+```
+
+Always put the smaller value first: `BETWEEN 60000 AND 50000` returns nothing.
+
+**Question 18:** Show the names of employees hired during 2022.
+
+```sql
+SELECT name
+FROM employees
+WHERE hire_date BETWEEN '22-01-01' AND '22-12-31';
+
+Result: Diya, Isha, Anaya.
+```
+
+**Question 19:** Show the names of employees who are not in Sales or HR.
+
+```sql
+SELECT name
+FROM employees
+WHERE department NOT IN ('Sales','HR');
+
+Result: Aarav, Rohan, Isha, Neha.
 ```
 
