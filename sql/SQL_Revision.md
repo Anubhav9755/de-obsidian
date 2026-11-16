@@ -199,3 +199,14 @@ FROM employees
 WHERE (city = 'Mumbai' OR city = 'Delhi') AND hire_date >= '22-01-01';
 ```
 
+## Lesson 4: Shortcuts for ranges and lists (`IN`, `BETWEEN`)
+
+- **`IN (...)`** checks whether a value matches any item in a list. It replaces a chain of `OR`s on the same column.
+- **`BETWEEN a AND b`** checks whether a value is in a range. It includes both ends, so it’s the same as `>= a AND <= b`.
+
+Add `NOT` in front of either to flip it: `NOT IN`, `NOT BETWEEN`.
+
+**Question 16:** Show the names of employees who work in Pune or Mumbai.
+
+```sql
+```
