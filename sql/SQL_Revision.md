@@ -26,15 +26,40 @@ INSERT INTO employees VALUES
 (10, 'Arjun',  'Sales',       'Pune',      47000, '2020-03-25');
 ```
 
+
+**Question 1:** Show everything in the employees table. `(all columns)`
+
+```sql
+SELECT *
+FROM employees;
+```
+
+**Question 2:** Show only each employee’s name and department. `(chosen columns)`
+
+```sql
+SELECT name, department
+FROM employees;
+```
+
+**Question 3:** Show each employee’s name and a 10% bonus on their salary, with the bonus column labelled `bonus`. `(calculating and renaming)`
+
+```sql
+SELECT name, salary*0.10 AS bonus
+FROM employees;
+```
+
+Aarav’s row shows `8500.00` under `bonus`. The calculation affects only the output, not the stored table.
+
+The bonus isn’t stored in the table, so we calculate it from `salary`. SQL can do arithmetic (`+ - * /`) inside `SELECT`. `AS` gives the result a readable name (an alias).
+
 SQL runs in a different order than you write it:
 
 **FROM** (which table) → **WHERE** (which rows) → **SELECT** (which columns) → **DISTINCT** (remove duplicate rows) → **LIMIT** (keep the first N rows)
 
 So when read a question, ask in this order: _which table? which rows? which columns? duplicates? how many?_ That is the thinking pattern for every query this week.
 
-**Question 1:** Show the name and city of all employees in the Engineering department.
 
-**Thinking:**
+**Question :** Show the name and city of all employees in the Engineering department.
 
 1. Table: `employees`
 2. Rows: only where `department = 'Engineering'`
@@ -49,6 +74,18 @@ WHERE department = 'Engineering';
 Result: Aarav–Pune, Rohan–Bengaluru, Isha–Pune.
 ```
 
+**Question :** Which departments have employees working in Pune? Each department once.
 
-**Question 2:** Which departments have employees working in Pune? Each department once.
+1. Table: `employees`
+2. Rows: `city = 'Pune'`
+3. Column: `department`
+4. Duplicates: Pune has two Engineering employees, so the words “each once” mean `DISTINCT`
+
+```sql
+SELECT department
+FROM employees
+WHERE city = 'Pune';
+
+Result: Engineering, HR, Sales.
+```
 
