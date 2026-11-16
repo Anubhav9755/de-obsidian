@@ -199,6 +199,7 @@ FROM employees
 WHERE (city = 'Mumbai' OR city = 'Delhi') AND hire_date >= '22-01-01';
 ```
 
+---
 ## Lesson 4: Shortcuts for ranges and lists (`IN`, `BETWEEN`)
 
 - **`IN (...)`** checks whether a value matches any item in a list. It replaces a chain of `OR`s on the same column.
@@ -248,4 +249,28 @@ WHERE department NOT IN ('Sales','HR');
 
 Result: Aarav, Rohan, Isha, Neha.
 ```
+
+**The habit to build:** when notice the same column compared to several values, reach for `IN`. When you see “from X to Y” or “between”, reach for `BETWEEN`, and remember both ends are included.
+
+**Question 20:** Show the name and city of employees who work in Delhi, Mumbai or Bengaluru. Use `IN`.
+
+```sql
+SELECT name, city
+FROM employees
+WHERE city IN ('Delhi','Mumbai','Bengaluru'); 
+
+result - 6 rows (Diya, Vikram, Kabir, Anaya, Rohan, Neha)
+```
+
+**Question 21:** Show the name and salary of employees earning between 55000 and 90000, **and** who work in Engineering or Marketing. 
+
+```sql
+SELECT name, salary
+FROM employees
+WHERE salary 55000 BETWEEN 90000 AND department IN ('Engineering','Marketing');
+```
+
+Show the name, department and hire date of employees hired between 2021-01-01 and 2021-12-31 who work in Sales or Engineering.
+
+---
 
