@@ -112,6 +112,30 @@ SELECT name
 FROM employees
 WHERE city ='Pune';
 
+Result: Aarav, Meera, Isha, Arjun.
+```
 
+**Question 8:** Show the names of employees who joined on or after 1 January 2022.
+
+```sql
+SELECT name
+FROM employees
+WHERE hire_date >= '2022-01-01';
+```
+
+**Question 9:** Show the name and department of every employee who is **not** in the Sales department.
+
+```sql
+SELECT name, department
+FROM employees
+WHERE department <> 'Sales';
+```
+
+**Question 10:** Show the name, city and salary of employees earning **at least** 50000.
+
+```sql
+SELECT name, city, salary
+FROM employees
+WHERE salary >= 5000;
 ```
 
