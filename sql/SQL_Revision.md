@@ -275,7 +275,7 @@ WHERE salary 55000 BETWEEN 90000 AND department IN ('Engineering','Marketing');
 ```sql
 SELECT name, department, hire_date
 FROM employees
-WHERE hire 55000 BETWEEN 90000 AND department IN ('Engineering','Marketing');
+WHERE hire_date 55000 BETWEEN 90000 AND department IN ('Engineering','Marketing');
 ```
 
 ---
