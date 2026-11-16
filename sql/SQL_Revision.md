@@ -224,3 +224,4 @@ SELECT name, salary
 FROM employee
 WHERE salary BETWEEN 50000 AND 60000;
 ```
+
