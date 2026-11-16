@@ -52,12 +52,12 @@ Aarav’s row shows `8500.00` under `bonus`. The calculation affects only the ou
 
 The bonus isn’t stored in the table, so we calculate it from `salary`. SQL can do arithmetic (`+ - * /`) inside `SELECT`. `AS` gives the result a readable name (an alias).
 
-SQL runs in a different order than you write it:
 
+
+SQL runs in a different order than you write it:
 **FROM** (which table) → **WHERE** (which rows) → **SELECT** (which columns) → **DISTINCT** (remove duplicate rows) → **LIMIT** (keep the first N rows)
 
 So when read a question, ask in this order: _which table? which rows? which columns? duplicates? how many?_ That is the thinking pattern for every query this week.
-
 
 **Question :** Show the name and city of all employees in the Engineering department.
 
