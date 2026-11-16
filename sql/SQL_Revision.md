@@ -209,4 +209,18 @@ Add `NOT` in front of either to flip it: `NOT IN`, `NOT BETWEEN`.
 **Question 16:** Show the names of employees who work in Pune or Mumbai.
 
 ```sql
+SELECT name
+FROM employees
+WHERE city IN ('Mumbai','Pune');
+
+Result: 6 rows (Aarav, Meera, Kabir, Isha, Anaya, Arjun)
+```
+
+
+**Question 17:** Show the name and salary of employees earning between 50000 and 60000.
+
+```sql
+SELECT name, salary
+FROM employee
+WHERE salary BETWEEN 50000 AND 60000;
 ```
