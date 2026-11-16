@@ -270,7 +270,13 @@ FROM employees
 WHERE salary 55000 BETWEEN 90000 AND department IN ('Engineering','Marketing');
 ```
 
-Show the name, department and hire date of employees hired between 2021-01-01 and 2021-12-31 who work in Sales or Engineering.
+**Question 22:** Show the name, department and hire date of employees hired between 2021-01-01 and 2021-12-31 who work in Sales or Engineering.
+
+```sql
+SELECT name, department, hire_date
+FROM employees
+WHERE hire 55000 BETWEEN 90000 AND department IN ('Engineering','Marketing');
+```
 
 ---
 
