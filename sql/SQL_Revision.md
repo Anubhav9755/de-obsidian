@@ -163,5 +163,39 @@ AND narrows results whereas OR widens the result.
 
 ```sql
 SELECT name, department
-FR
+FROM employees
+WHERE department = 'Sales' OR department = 'HR';
+
+Result: Diya, Meera, Kabir, Vikram, Anaya, Arjun.
 ```
+
+**Question 13:** Show the names of employees who work in Pune or Delhi and earn more than 50000.
+
+```sql
+SELECT name
+FROM employees
+WHERE (city = 'Pune' OR city = 'Delhi') AND salary > 50000;
+
+Result: Aarav, Diya, Isha, Vikram.
+```
+
+SQL evaluates `AND` before `OR`.
+
+**The habit to build:** whenever you mix `AND` and `OR`, add parentheses to show exactly what you mean, even when they aren’t strictly required. Then check the output against a few rows you can verify by eye.
+
+**Question 14:** Show the name and salary of Engineering employees earning more than 80000.
+
+```sql
+SELECT name, salary
+FROM employees
+WHERE department = 'Engineering' AND salary > 80000;
+```
+
+**Question 15:** Show the name, department and city of employees who work in Mumbai or Delhi and were hired on or after 2022-01-01.
+
+```sql
+SELECT name, department, city
+FROM employees
+WHERE (city = 'Mumbai' OR city = 'Delhi') AND hire_date >= '22-01-01';
+```
+
