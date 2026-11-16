@@ -275,8 +275,17 @@ WHERE salary 55000 BETWEEN 90000 AND department IN ('Engineering','Marketing');
 ```sql
 SELECT name, department, hire_date
 FROM employees
-WHERE hire_date 55000 BETWEEN 90000 AND department IN ('Engineering','Marketing');
+WHERE hire_date 2021-01-01 BETWEEN 2021-12-31 AND department IN ('Engineering','Sales');
 ```
 
 ---
+
+## Lesson 5: Matching text patterns (`LIKE`) 
+
+Only know part of the text: “names that start with A” or “cities containing ‘ba’”. `LIKE` matches a pattern, and the pattern uses two wildcards:
+
+|Wildcard|Meaning|
+|---|---|
+|`%`|any number of characters (including none)|
+|`_`|exactly one character|
 
