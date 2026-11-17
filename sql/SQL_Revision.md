@@ -294,3 +294,41 @@ Two things to remember:
 - `LIKE` in PostgreSQL is **case-sensitive**. `ILIKE` ignores case. In MySQL and SQL Server, `LIKE` is already case-insensitive by default.
 - `NOT LIKE` flips the match.
 
+
+**Question 23:** Show the names of employees whose name starts with ‘A’.
+
+```SQL
+SELECT name
+FROM employees
+WHERE name LIKE 'A%';
+
+Result: Aarav, Anaya, Arjun.
+```
+
+**Question 24:** Show the names of employees whose name anywhere with ‘a’.
+
+```sql
+SELECT name
+FROM employees
+WHERE name LIKE '%a%';
+
+Result: Diya, Meera, Isha, Anaya, Neha, Aarav
+```
+
+**Question 24:** Show the names of employees whose second letter is ‘a’.
+
+```sql
+SELECT name
+FROM employees
+WHERE name LIKE '_a%';
+
+Result: Aarav, Kabir.
+```
+
+**Question 26.** Show the name and department of employees whose name starts with ‘A’ and who are **not** in the Sales department.
+
+```sql
+SELECT name, department
+FROM employees
+WHERE name LIKE 'A%' AND department <> 'Sales';
+```
