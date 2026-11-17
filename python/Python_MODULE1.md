@@ -3941,3 +3941,287 @@ print(city)                                        # unknown
 ```
 
 Each `.get(key, {})` returns an empty dict when the key is missing, so the next `.get` still has something to work on.
+
+
+---
+
+### Lesson 14: The Looping Toolkit
+
+- for-else: the else block after a loop runs only if the loop finished without hitting break. (while has the same.)
+- pass: a do-nothing statement. It fills a spot where Python needs a statement, such as an if body you’ll write later.
+- Lazy: produces values one at a time when asked, instead of building everything up front. range is lazy.
+- * unpacking in a call: zip(*rows) hands each inner list to zip as a separate argument, the same as writing zip(rows[0], rows[1]).
+- Transpose: swap rows and columns of a table.
+- Walrus operator :=: assigns a value to a name inside an expression, so you can compute once, test it and reuse it.
+- Sentinel: a special value that means “stop”. It’s used in iter(callable, sentinel).
+- match-case: compares a value against patterns, like a smarter if/elif chain. A capture pattern pulls pieces into names. _ is the wildcard that matches anything. A guard is an extra if on a case.
+
+#### Industrial use:
+
+- for-else: “search for a bad row, and if none is found, continue” with no flag variable.
+- zip(header, row) turns a CSV row into a record dict, and zip(*rows) turns rows into columns.
+- match-case: routing events or API responses by their shape ({"type": "click", ...}).
+- Reading a huge file in fixed-size chunks until nothing is left.
+- Nested comprehensions flatten the “list of pages of results” that APIs return.
+
+**Problem it solves:** flag variables (found = False), calling a function twice to test and use its result, 15-branch if/elif chains, and a real silent bug: zip quietly drops data when the lists differ in length.
+
+**Code 1: for-else**
+
+```python
+amounts = [120.0, 45.5, -3.0, 80.0]
+
+for a in amounts:
+    if a < 0:
+        print("bad row found:", a)
+        break
+else:                          # runs ONLY if the loop did not hit break
+    print("all rows OK")
+# bad row found: -3.0       (with no negative number it would print "all rows OK")
+```
+
+- The old way needs a flag: found_bad = False, set it to True before break, then if not found_bad:. for-else removes the flag.
+- Read else as “no break happened”, not “the loop was empty”.
+- An empty loop also runs else, because nothing triggered a break.
+
+**Code 2: range details**
+
+```python
+print(list(range(5, 0, -1)))    # [5, 4, 3, 2, 1]   a negative step counts down
+print(list(range(0, 10, 3)))    # [0, 3, 6, 9]
+
+r = range(10**9)                # instant: range is lazy, it stores only start, stop, step
+print(len(r), 999 in r)         # 1000000000 True   no giant list was ever built
+
+names = ["asha", "ravi"]
+for i in range(len(names)):             
+	print(i, names[i]) 					# works, but clumsy coz it generate the index and use the index to access the value.
+for i, n in enumerate(names):           # better
+    print(i, n)
+```
+
+enumerate() gives you both the index and the value directly, without needing to access the list using an index.
+
+**Code 3: zip and its silent trap**
+
+```python
+from itertools import zip_longest
+
+names = ["asha", "ravi", "meena"]
+scores = [90, 80]
+
+print(list(zip(names, scores)))
+# [('asha', 90), ('ravi', 80)]            meena has silently VANISHED
+
+print(list(zip_longest(names, scores, fillvalue=0)))
+# [('asha', 90), ('ravi', 80), ('meena', 0)]     runs to the longest, fills the gap
+
+# zip(names, scores, strict=True)         # ValueError: zip() argument 2 is shorter than argument 1
+```
+
+
+Code
+
+Meaning
+
+zip(a, b)
+
+Combine elements position-wise
+
+zip(*rows)
+
+Unpack rows, then combine position-wise
+
+dict(zip(a, b))
+
+Combine and create key-value pairs
+
+
+Function
+
+Behaviour
+
+zip()
+
+Stops at shortest iterable
+
+zip_longest()
+
+Stops at longest iterable
+
+zip_longest(fillvalue=0)
+
+Fills missing values with 0
+
+zip(strict=True)
+
+Raises error if lengths differ
+
+
+**Two everyday patterns:**
+
+```
+python
+header = ["id", "name", "amount"]
+row = ["tx_1", "Asha", "150"]
+print(dict(zip(header, row)))        # {'id': 'tx_1', 'name': 'Asha', 'amount': '150'}   a CSV row -> a record
+
+rows = [[1, 2, 3], [4, 5, 6]]
+print(list(zip(*rows)))              # [(1, 4), (2, 5), (3, 6)]    transpose: rows -> columns
+```
+
+dict(zip(header, row)) – Creating a dictionary
+zip(*rows) – Transposing rows into columns
+
+**Code 4: comprehensions**
+Python reads list comprehensions from LEFT to RIGHT, and the order of for loops matters.
+
+```python
+# `if` at the END = FILTER: some items are dropped
+print([n for n in range(10) if n % 2 == 0])                   # [0, 2, 4, 6, 8]
+
+# `if/else` at the START = TRANSFORM: every item stays, its value changes
+print(["even" if n % 2 == 0 else "odd" for n in range(4)])    # ['even', 'odd', 'even', 'odd']
+
+matrix = [[1, 2, 3], [4, 5, 6]]
+print([x for row in matrix for x in row])                     # [1, 2, 3, 4, 5, 6]   flatten
+print([(a, b) for a in "ab" for b in (1, 2)])                 # [('a', 1), ('a', 2), ('b', 1), ('b', 2)]
+print([[x * x for x in row] for row in matrix])               # [[1, 4, 9], [16, 25, 36]]   keeps the shape
+```
+
+- if at the END → decides whether to keep or remove an item.
+- if/else at the START → decides what value to put in the list.
+- for row in matrix → Take one row at a time.
+	for x in row → Take one element from that row.
+		x → Put that element into the final list.
+- Take one character from "ab".
+	For that character, take every value from (1, 2).
+		Create a tuple (a, b).
+- Take one row from matrix.
+	For that row, take every element x.
+		Multiply x by itself (x * x).
+		Put the result into a new list.
+	Finish the new list for that row.
+  Repeat for every row in matrix.
+  Collect all the new lists into one outer list.
+
+**Reading rule:** in [x for row in matrix for x in row], the for clauses read left to right in the same order as nested loops (outer first).
+
+**Code 5: walrus := and iter(callable, sentinel)**
+Calculate a value, store it in a variable, and use that value immediately in the same expression.
+
+```python
+data = [5, 12, 7, 30]
+big = [y for x in data if (y := x * 2) > 20]     # compute x*2 once: test it AND keep it
+print(big)                                        # [24, 60]
+
+items = [1, 2, 3, 4]
+if (n := len(items)) > 3:                         # compute len once, then reuse n
+    print(f"{n} items is too many")               # 4 items is too many
+```
+
+- Take one number x from data.
+	- Multiply x by 2.
+	- Store the result in y using :=.
+	- Check whether y > 20.
+		- If TRUE, keep y in the new list.
+		- If FALSE, skip it.
+- Repeat for every number in data.
+
+- Calculate the length of items.
+- Store the result in n.
+- Check whether n > 3.
+	- If TRUE, print the message using n.
+	- Otherwise, do nothing.
+
+```python
+from io import StringIO
+
+f = StringIO("abcdefghij")
+for chunk in iter(lambda: f.read(4), ""):    # keep calling f.read(4) until it returns ""
+    print(chunk)                              # abcd, efgh, ij
+
+f = StringIO("abcdefghij")
+while (chunk := f.read(4)):                   # same idea with walrus: an empty string is falsy
+    print(chunk, end=" ")                     # abcd efgh ij
+```
+  
+iter() with lambda
+
+Syntax
+
+Purpose
+
+iter(iterable)
+
+Creates an iterator from an iterable
+
+iter(callable, sentinel)
+
+Repeatedly calls a function until its result equals the sentinel
+
+while loop with the walrus operator (:=)
+
+Concept
+
+Remember this
+
+StringIO
+
+Treats a string like a file
+
+read(4)
+
+Reads up to 4 characters
+
+lambda
+
+Creates a small anonymous function
+
+iter(func, "")
+
+Calls a function until it returns ""
+
+sentinel
+
+The value that tells iter() to stop
+
+:=
+
+Assigns and evaluates a value
+
+while
+
+Repeats while the condition is truthy
+
+end=" "
+
+Prints output on the same line with spaces
+
+
+
+**Code 6: match-case**
+
+```python
+def handle(event):
+    match event:
+        case {"type": "click", "x": x, "y": y}:               # dict pattern, captures x and y
+            return f"click at {x},{y}"
+        case {"type": "key", "key": k} if k.isdigit():        # guard: an extra condition
+            return f"digit {k}"
+        case {"type": "key", "key": k}:
+            return f"key {k}"
+        case [first, *rest]:                                  # a list of any length >= 1
+            return f"list starting with {first}, {len(rest)} more"
+        case "quit" | "exit":                                 # | means "either"
+            return "bye"
+        case _:                                               # wildcard: everything else
+            return "unknown"
+
+print(handle({"type": "click", "x": 3, "y": 4}))    # click at 3,4
+print(handle({"type": "key", "key": "7"}))          # digit 7
+print(handle({"type": "key", "key": "a"}))          # key a
+print(handle([1, 2, 3]))                             # list starting with 1, 2 more
+print(handle("exit"))                                # bye
+print(handle(42))                                    # unknown
+```
