@@ -289,3 +289,8 @@ Only know part of the text: “names that start with A” or “cities containin
 |`%`|any number of characters (including none)|
 |`_`|exactly one character|
 
+Two things to remember:
+
+- `LIKE` in PostgreSQL is **case-sensitive**. `ILIKE` ignores case. In MySQL and SQL Server, `LIKE` is already case-insensitive by default.
+- `NOT LIKE` flips the match.
+
