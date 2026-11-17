@@ -331,4 +331,20 @@ Result: Aarav, Kabir.
 SELECT name, department
 FROM employees
 WHERE name LIKE 'A%' AND department <> 'Sales';
+
+Result: Aarav, Anaya
 ```
+
+---
+### Lesson 6: Removing duplicates (`DISTINCT`)
+
+A table can have many rows with the same value. If you select `department` from `employees`, you get 10 rows, with “Sales” appearing 4 times. Often you only want the **unique** values. Put `DISTINCT` right after `SELECT`.
+
+```sql
+SELECT DISTINCT column
+FROM table;
+```
+
+**Key rule:** `DISTINCT` looks at the **entire row of selected columns**, not just the first column. If you select two columns, a row is a duplicate only when **both** values match another row.
+
+
