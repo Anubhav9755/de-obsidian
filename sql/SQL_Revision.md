@@ -347,4 +347,43 @@ FROM table;
 
 **Key rule:** `DISTINCT` looks at the **entire row of selected columns**, not just the first column. If you select two columns, a row is a duplicate only when **both** values match another row.
 
+**Question 27:** List the departments that exist in the company, each once.
 
+```sql
+SELECT DISTINCT department
+FROM employees;
+
+Result: Engineering, Sales, HR, Marketing (4 rows, in no guaranteed order)
+```
+
+
+**Question 28:** List each unique combination of department and city.
+
+```sql
+SELECT DISTINCT department, city
+FROM employees;
+```
+
+This returns 8 rows, not 10. Only two combinations repeat: Engineering in Pune (Aarav and Isha) and Sales in Delhi (Diya and Vikram). Notice that Engineering appears 3 times in the table, but “Engineering + Pune” and “Engineering + Bengaluru” are different combinations, so both survive.
+
+**Question 29:** In which cities do Sales employees work? Each city once.
+
+```sql
+SELECT DISTINCT city
+FROM employees;
+WHERE department = 'Sales';
+
+Result: Delhi, Mumbai, Pune (Delhi would appear twice without `DISTINCT`).
+```
+
+**Words that signal `DISTINCT`:** “unique”, “each once”, “different”, “without repetition”, “list the departments/cities that...”.
+
+**Question 30.** List the unique department and city combinations for employees hired on or after 2021-01-01.
+
+```sql
+SELECT DISTINCT city,department
+FROM employees;
+WHERE hire_date ;
+
+Result: Delhi, Mumbai, Pune (Delhi would appear twice without `DISTINCT`).
+```
