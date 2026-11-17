@@ -383,7 +383,7 @@ Result: Delhi, Mumbai, Pune (Delhi would appear twice without `DISTINCT`).
 ```sql
 SELECT DISTINCT city,department
 FROM employees;
-WHERE hire_date ;
+WHERE hire_date >= ;
 
 Result: Delhi, Mumbai, Pune (Delhi would appear twice without `DISTINCT`).
 ```
