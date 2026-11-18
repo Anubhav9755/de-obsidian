@@ -24,6 +24,8 @@ INSERT INTO employees VALUES
 (8,  'Anaya',  'HR',          'Mumbai',    50000, '2022-05-30'),
 (9,  'Neha',   'Marketing',   'Bengaluru', 58000, '2023-08-01'),
 (10, 'Arjun',  'Sales',       'Pune',      47000, '2020-03-25');
+(11, 'Sara',   'Marketing',      NULL,       55000, '2023-09-10'),
+(12, 'Dev',    'HR',            'Delhi',     NULL,  '2023-10-05');
 ```
 
 
@@ -429,6 +431,37 @@ Result: Rohan, Aarav, Isha.
 ```sql
 SELECT name, department, salary
 FROM employees
-ORDER BY 
+ORDER BY department ASC, salary DESC
 ```
+
+Engineering comes first (Rohan, Aarav, Isha), then HR, Marketing, Sales. `ASC` or `DESC` applies to the column right before it, so each column needs its own direction.
+
+**Question 34** Show the name and hire date of the 4 most recently hired employees.
+
+```sql
+SELECT name, hire_date
+FROM employees
+ORDER BY hire_date ASC
+LIMIT 4;
+```
+
+**Question 35.** Show the name, city and salary of employees in Pune or Delhi, sorted by city A to Z, and within each city by salary highest first.
+
+```sql
+SELECT name, city, salary
+FROM employees
+WHERE city IN ('Pune','Delhi')
+ORDER BY city ASC, salary DESC;
+```
+
+---
+
+### Lesson 8: Missing values (`NULL`)
+
+`NULL` means **no value / unknown**. It is not zero and not an empty string. A salary of `NULL` means “we don’t know the salary,” not “the salary is 0.”
+
+Because NULL means “unknown,” normal comparisons don’t work with it:
+
+- `salary = NULL` is never true, even for NULL rows. It returns 0 rows.
+- To test for NULL, use **`IS NULL`** and **`IS NOT NULL`**.
 
