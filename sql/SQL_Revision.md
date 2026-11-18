@@ -626,6 +626,27 @@ SELECT city, COUNT(*) AS emp_count
 FROM employees
 GROUP BY city
 ORDER BY emp_count DESC;
+```
 
+Result: Pune 4, Delhi 3, Bengaluru 2, Mumbai 2, and then a row with an empty city and a count of 1. NULLs don’t disappear in `GROUP BY`; they form their own group (that’s Sara). `ORDER BY` can use the alias, since it runs after `SELECT`.
 
+**Question 50.** Show each city and the highest salary in that city.
+
+```sql
+SELECT city, MAX(salary) AS highest_salary
+FROM employees
+GROUP BY city;
+
+RESULT - Pune 85000, Delhi 54000, Bengaluru 95000, Mumbai 61000, and an empty city (Sara) 55000.
+```
+
+**Q2.** Show each department and the number of employees hired on or after 2022-01-01. (Think about the order: which rows should be removed before the grouping happens?)
+
+```sql
+SELECT department, COUNT(*) AS recent_hires
+FROM employees
+WHERE hire_date >= '2022-01-01'
+GROUP BY department;
+
+Result: Sales 2, HR 3, Engineering 1, Marketing 2
 ```
