@@ -24,8 +24,8 @@ INSERT INTO employees VALUES
 (8,  'Anaya',  'HR',          'Mumbai',    50000, '2022-05-30'),
 (9,  'Neha',   'Marketing',   'Bengaluru', 58000, '2023-08-01'),
 (10, 'Arjun',  'Sales',       'Pune',      47000, '2020-03-25');
-(11, 'Sara',   'Marketing',      NULL,       55000, '2023-09-10'),
-(12, 'Dev',    'HR',            'Delhi',     NULL,  '2023-10-05');
+(11, 'Sara',   'Marketing',    NULL,       55000, '2023-09-10'),
+(12, 'Dev',    'HR',          'Delhi',     NULL,  '2023-10-05');
 ```
 
 
@@ -465,3 +465,4 @@ Because NULL means “unknown,” normal comparisons don’t work with it:
 - `salary = NULL` is never true, even for NULL rows. It returns 0 rows.
 - To test for NULL, use **`IS NULL`** and **`IS NOT NULL`**.
 
+**Question :** Show the name of employees whose city is missing.
