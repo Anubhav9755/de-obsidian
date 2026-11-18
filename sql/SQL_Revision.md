@@ -465,4 +465,32 @@ Because NULL means “unknown,” normal comparisons don’t work with it:
 - `salary = NULL` is never true, even for NULL rows. It returns 0 rows.
 - To test for NULL, use **`IS NULL`** and **`IS NOT NULL`**.
 
-**Question :** Show the name of employees whose city is missing.
+**Question 36 :** Show the name of employees whose city is missing.
+
+```sql
+SELECT name
+FROM employees
+WHERE city IS NULL;
+
+Result: Sara
+```
+
+**Question 37:** Show the name and salary of employees whose salary is recorded.
+
+```sql
+SELECT name, salary
+FROM employees
+WHERE salary IS NOT NULL;
+
+Result: 11 rows
+```
+
+**Question 38:** Show the names of employees who are not in Pune.
+
+```sql
+SELECT name
+FROM employees
+WHERE city <> 'Pune' OR city IS NULL;
+
+Now it returns 8 rows, including Sara.
+```
