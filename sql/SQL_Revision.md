@@ -569,4 +569,18 @@ Result: 4
 
 **One rule for now:** when you aggregate, the result has **one row**. You can’t mix an aggregate with a normal column (like `SELECT name, MAX(salary)`) yet. That needs `GROUP BY`.
 
+**Question 45:** How many employees are there in total, and how many have a recorded city? (Show both in one query.)
 
+```sql
+SELECT COUNT(*) as total_emp,
+		COUNT(city) AS with_city
+FROM employees
+```
+
+**Question 46:** Show the total salary and the average salary of employees in the HR department. (Look closely at the HR rows before you predict the average.)
+
+```sql
+SELECT SUM(salary), AVERAGE(salary)
+FROM employees
+WHERE department = 'HR' AND salary IS NOT NULL;
+```
