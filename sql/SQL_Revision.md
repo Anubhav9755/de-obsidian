@@ -494,3 +494,7 @@ WHERE city <> 'Pune' OR city IS NULL;
 
 Result: Now it returns 8 rows, including Sara.
 ```
+
+**Question 39.** Show the name and department of employees whose salary is missing.
+
+**Question 2.** Show the name and city of employees who are not in Delhi, **including** those with no city recorded.
