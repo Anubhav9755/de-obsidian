@@ -640,7 +640,7 @@ GROUP BY city;
 RESULT - Pune 85000, Delhi 54000, Bengaluru 95000, Mumbai 61000, and an empty city (Sara) 55000.
 ```
 
-**Q2.** Show each department and the number of employees hired on or after 2022-01-01. (Think about the order: which rows should be removed before the grouping happens?)
+**Question 51.** Show each department and the number of employees hired on or after 2022-01-01. (Think about the order: which rows should be removed before the grouping happens?)
 
 ```sql
 SELECT department, COUNT(*) AS recent_hires
@@ -650,3 +650,17 @@ GROUP BY department;
 
 Result: Sales 2, HR 3, Engineering 1, Marketing 2
 ```
+
+**Question 52:** For each department, how many employees earn more than 50000?
+
+```sql
+SELECT department, COUNT(*) AS total_emp
+FROM employees
+WHERE salary > 50000; 
+GROUP BY department
+
+Result: Engineering 3, Sales 3, Marketing 2, which is 3 rows
+```
+
+v
+---
