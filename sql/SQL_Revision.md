@@ -541,6 +541,11 @@ Result: 12 and 11
 
 ```sql
 SELECT MAX(salary) AS HIGHEST,
-MIN(salary) AS LOWEST,
-AVG(salar)
+		MIN(salary) AS LOWEST,
+		AVG(salary) AS AVERAGE
+FROM employees;
+
+Result: 95000, 47000, 61545.45
 ```
+
+
