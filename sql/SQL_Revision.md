@@ -563,4 +563,10 @@ Result: 53500
 ```sql
 SELECT COUNT(DISTINCT department) AS dept_count
 FROM employees;
+
+Result: 4
 ```
+
+**One rule for now:** when you aggregate, the result has **one row**. You can’t mix an aggregate with a normal column (like `SELECT name, MAX(salary)`) yet. That needs `GROUP BY`.
+
+
