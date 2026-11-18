@@ -514,3 +514,33 @@ WHERE city <> 'Delhi' OR city IS NULL;
 ---
 ## Lesson 9: Summarising data (aggregate functions)
 
+Until now, every query returned individual rows. Aggregate functions **collapse 
+many rows into one summary value**:
+
+|Function|What it gives|
+|---|---|
+|`COUNT(*)`|number of rows|
+|`COUNT(column)`|number of rows where that column is **not NULL**|
+|`SUM(column)`|total|
+|`AVG(column)`|average|
+|`MIN(column)` / `MAX(column)`|smallest / largest value|
+
+**Important:** `SUM`, `AVG`, `MIN`, `MAX` and `COUNT(column)` all **ignore NULLs**. Only `COUNT(*)` counts every row.
+
+**Question 41:** How many employees are there, and how many have a recorded salary?
+
+```SQL
+SELECT COUNT(*) AS total_employees,
+       COUNT(salary) AS with_salary
+FROM employees;
+
+Result: 12 and 11
+```
+
+**Question 42:** Show the highest, lowest and average salary in the company.
+
+```sql
+SELECT MAX(salary) AS HIGHEST,
+MIN(salary) AS LOWEST,
+AVG(salar)
+```
