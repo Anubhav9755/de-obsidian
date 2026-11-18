@@ -591,5 +591,41 @@ WHERE department = 'HR';
 
 Last lesson, an aggregate gave **one answer for the whole table**. But most real questions are “per” questions: the average salary **per department**, the number of employees **per city**. `GROUP BY` splits the rows into groups and runs the aggregate **once per group**.
 
-``
+```SQL
+SELECT group_column, AGGREGATE(column)
+FROM table
+GROUP BY group_column;
+```
 
+**The rule that causes most errors:** every column in `SELECT` that is _not_ inside an aggregate must also be in `GROUP BY`. The words “per”, “for each” and “by” in a question are your signal to use it.
+
+**Question 47:** How many employees are in each department?
+
+```sql
+SELECT department, COUNT(*) AS emp_count
+FROM employees
+GROUP BY department;
+
+Result: Engineering 3, Sales 4, HR 3, Marketing 2
+```
+
+**Question 48:** Show the average salary of each department.
+
+```sql
+SELECT department, AVG(salary) AS avg_salary
+FROM employees
+GROUP BY department;
+
+Result: Engineering 84000, Sales 53500, HR 49000, Marketing 56500
+```
+
+**Question 49:** Show the number of employees in each city, largest first.
+
+```sql
+SELECT city, COUNT(*) AS emp_count
+FROM employees
+GROUP BY city
+ORDER BY emp_count DESC;
+
+
+```
