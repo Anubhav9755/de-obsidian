@@ -370,7 +370,7 @@ This returns 8 rows, not 10. Only two combinations repeat: Engineering in Pune (
 
 ```sql
 SELECT DISTINCT city
-FROM employees;
+FROM employees
 WHERE department = 'Sales';
 
 Result: Delhi, Mumbai, Pune (Delhi would appear twice without `DISTINCT`).
@@ -382,8 +382,7 @@ Result: Delhi, Mumbai, Pune (Delhi would appear twice without `DISTINCT`).
 
 ```sql
 SELECT DISTINCT city,department
-FROM employees;
-WHERE hire_date >= ;
-
-Result: Delhi, Mumbai, Pune (Delhi would appear twice without `DISTINCT`).
+FROM employees
+WHERE hire_date >= 2021-01-01;
 ```
+
