@@ -386,3 +386,49 @@ FROM employees
 WHERE hire_date >= 2021-01-01;
 ```
 
+---
+### Lesson 7: Sorting and limiting (`ORDER BY`, `LIMIT`)
+
+Rows come back in no guaranteed order unless you ask. `ORDER BY` sorts them, and `LIMIT` keeps only the first N rows of the sorted result.
+
+```sql
+SELECT columns 
+FROM table 
+WHERE condition 
+ORDER BY column [ASC|DESC]
+LIMIT n;
+```
+
+- `ASC` is ascending (smallest first) and is the default. `DESC` is descending (largest first).
+- `ORDER BY` comes after `WHERE`; `LIMIT` goes last.
+- `LIMIT` without `ORDER BY` gives you arbitrary rows, so always sort first when you want “top” or “first”.
+
+**Question 31:** Show employee names and salaries, highest salary first.
+
+```sql
+SELECT name, salary
+FROM employees
+ORDER BY salary DESC;
+
+Result: Rohan (95000), Aarav (85000), Isha (72000).
+```
+
+**Question 32:** Show the 3 highest-paid employees.
+
+```sql
+SELECT name, salary
+FROM employees
+ORDER BY salary DESC
+LIMIT 3;
+
+Result: Rohan, Aarav, Isha.
+```
+
+**Question 33:** Show name, department and salary, sorted by department A to Z, and within each department by salary highest first.
+
+```sql
+SELECT name, department, salary
+FROM employees
+ORDER BY 
+```
+
