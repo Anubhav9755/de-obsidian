@@ -580,7 +580,16 @@ FROM employees
 **Question 46:** Show the total salary and the average salary of employees in the HR department. (Look closely at the HR rows before you predict the average.)
 
 ```sql
-SELECT SUM(salary), AVERAGE(salary)
+SELECT SUM(salary), AVG(salary)
 FROM employees
-WHERE department = 'HR' AND salary IS NOT NULL;
+WHERE department = 'HR';
 ```
+
+---
+
+### Lesson 10: Summarising per group (`GROUP BY`)
+
+Last lesson, an aggregate gave **one answer for the whole table**. But most real questions are “per” questions: the average salary **per department**, the number of employees **per city**. `GROUP BY` splits the rows into groups and runs the aggregate **once per group**.
+
+``
+
