@@ -492,5 +492,5 @@ SELECT name
 FROM employees
 WHERE city <> 'Pune' OR city IS NULL;
 
-Now it returns 8 rows, including Sara.
+Result: Now it returns 8 rows, including Sara.
 ```
