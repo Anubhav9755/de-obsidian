@@ -548,4 +548,19 @@ FROM employees;
 Result: 95000, 47000, 61545.45
 ```
 
+**Question 43:** What is the average salary of Sales employees?
 
+```sql
+SELECT AVERAGE(salary) AS avg_salary
+FROM employees
+WHERE department = 'Sales';
+
+Result: 53500
+```
+
+**Question 44:** How many different departments are there?
+
+```sql
+SELECT COUNT(DISTINCT department) AS dept_count
+FROM employees;
+```
