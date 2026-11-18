@@ -662,5 +662,26 @@ GROUP BY department
 Result: Engineering 3, Sales 3, Marketing 2, which is 3 rows
 ```
 
-v
+**Question 53.** Show each department and its lowest salary.
+
+```sql
+SELECT department, MIN(salary) AS min_salary
+FROM employees
+GROUP BY department;
+```
+
+`RESULT:` 4 rows (Engineering 72000, Sales 47000, HR 48000, Marketing 55000). HR is 48000 because Dev’s NULL salary is ignored.
+
+**Question 54.** Show each city and the number of employees hired **before** 2022-01-01, with the city that has the most such employees first.
+
+```sql
+SELECT city, COUNT(*) AS new_joinee
+FROM employees
+WHERE hire_date < '2022-01-01'
+GROUP BY city
+ORDER BY new_joinee DESC;
+```
+
+
 ---
+
