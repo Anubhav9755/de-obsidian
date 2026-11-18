@@ -497,4 +497,20 @@ Result: Now it returns 8 rows, including Sara.
 
 **Question 39.** Show the name and department of employees whose salary is missing.
 
-**Question 2.** Show the name and city of employees who are not in Delhi, **including** those with no city recorded.
+```sql
+SELECT name, department
+FROM employees
+WHERE salary IS NULL;
+```
+
+**Question 40.** Show the name and city of employees who are not in Delhi, **including** those with no city recorded.
+
+```sql
+SELECT name, city 
+FROM employees
+WHERE city <> 'Delhi' OR city IS NULL;
+```
+
+---
+## Lesson 9: Summarising data (aggregate functions)
+
