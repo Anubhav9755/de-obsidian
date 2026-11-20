@@ -851,5 +851,22 @@ SELECT name, salary
 FROM employees;
 ```
 
+**Question 66:** For each department, show the total employees and how many of them earn 60000 or more.
+
+Thinking:
+- One row per? Department.
+- Calculate: a total count, plus a count of only some rows.
+- We can’t use WHERE, because it would remove the other employees from the total. So we count conditionally: CASE gives 1 to people who qualify and 0 to the rest, then SUM adds up the 1s.
+
+```sql
+SELECT department,
+	COUNT(*) AS total_emp
+	SUM(CASE WHEN salary >= 60000 THEN 1 ELSE 0 END) AS high_earner
+FROM employees
+GROUP BY department;
+``
+```
+
+
 
 
