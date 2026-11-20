@@ -682,6 +682,174 @@ GROUP BY city
 ORDER BY new_joinee DESC;
 ```
 
+---
+
+## Lesson 11: Filtering groups (HAVING)
+
+WHERE filters rows before grouping. But sometimes you want to filter groups based on their result, like “departments with more than 2 employees.” The count only exists after grouping, so WHERE can’t see it. That’s what HAVING is for.
+
+	WHERE	HAVING
+Filters	individual rows	whole groups
+Runs	before GROUP BY	after GROUP BY
+Can use aggregates?	No	Yes
+
+Full order of execution: FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT.
+
+**Here are the three patterns side by side, using the same table.**
+
+**Pattern 1:** only WHERE (filter people, then summarise)
+
+**Question 55:** For employees hired on or after 2022-01-01, how many are in each department?
+
+```sql
+SELECT department, COUNT(*) AS recent_hires
+FROM employees
+WHERE hire_date >= '2022-01-01'
+GROUP BY department;
+```
+
+Result: 4 rows (Sales 2, HR 3, Engineering 1, Marketing 2). Every group is shown, because nothing tests the group’s result. The only condition is about a single person’s hire date.
+
+**Pattern 2:** only HAVING (summarise everyone, then filter groups)
+
+**Question 56:** Which departments have more than 2 employees?
+
+```sql
+SELECT department, COUNT(*) AS emp_count
+FROM employees
+GROUP BY department
+HAVING COUNT(*) > 2;
+```
+
+Result: 3 rows (Engineering 3, Sales 4, HR 3). Marketing has 2, so it fails. Every employee is counted, so there’s no WHERE. The only condition is about a group’s count.
+
+**Pattern 3:** both (filter people, summarise, filter groups)
+
+**Question 57:** Among employees hired on or after 2021-01-01, which departments have an average salary above 55000?
+
+```sql
+SELECT department, AVG(salary) AS avg_salary
+FROM employees
+WHERE hire_date >= '2021-01-01'
+GROUP BY department
+HAVING AVG(salary) > 55000;
+```
+
+**Question 58:** Which departments have more than 2 employees?
+
+One row per? Department.
+Calculate? Count of employees.
+Filter rows first? No.
+Filter groups? Yes: count > 2.
+Expected rows? Engineering 3, Sales 4, HR 3 pass; Marketing (2) fails. 3 rows.
+
+```SQL
+SELECT department, COUNT(*) AS emp_count
+FROM employees
+GROUP BY department
+HAVING COUNT(*) > 2;
+```
+
+**Question 59:** Show departments whose average salary is above 55000.
+
+```SQL
+SELECT department, AVG(salary) as avg_salary
+FROM employees
+GROUP BY department
+HAVING AVG(salary) > 55000;
+```
+
+**Question 60:** Among employees hired on or after 2022-01-01, which departments have at least 2 such employees?
+
+```sql
+SELECT department, COUNT(*) AS total_employee
+FROM employees
+WHERE hire_date >= '2022-01-01'
+GROUP BY department
+HAVING COUNT(*) >=2;
+```
+
+**Question 61:** Show each city and its employee count, but only cities with more than 1 employee.
+
+```sql
+select city, count(*) as emp_count
+from employees
+group by city
+having count(*) > 1;
+Returns 4 rows: Pune 4, Delhi 3, Bengaluru 2, Mumbai 2
+```
+
+**Question 62:** Show each department and its highest salary, but only departments where the highest salary is at least 60000.
+
+```sql
+select department, max(salary) as max_salary
+from employees
+group by department
+having max_salary >= 60000
+Returns 2 rows: Engineering 95000 and Sales 61000
+```
+
+**Question 63:** Considering only employees hired on or after 2021-01-01, show each department’s average salary, but only departments whose average is above 55000.
+
+```sql
+select department, avg(salary) as avg_salary
+fromemployees
+where hire_date >= '2021-01-01'
+group by department
+having avg(salary) > 55000;
+```
+
+**Classify:** label each as WHERE only, HAVING only, or both.
+
+a) Number of employees per department, counting only employees in Pune.
+- WHERE city = 'Pune' then GROUP BY department gives Engineering 2, HR 1, Sales 1.
+
+b) Cities whose total salary is above 120000.
+- Group by city, then HAVING SUM(salary) > 120000 gives Pune (252000) and Bengaluru (153000).
+  
+c) For employees hired before 2022-01-01, each department’s maximum salary, but only departments where that maximum exceeds 80000.
+- The hire date is a row filter and the max is a group test.
+
+**Question 64:** Considering only employees who earn more than 50000, show each city that has at least 2 such employees, along with the count.
+
+```sql
+select city, count(*) as emp_count
+from employees
+where salary > 50000
+group by city
+having count(*) >= 2;
+```
 
 ---
+
+## Lesson 12: Conditional logic (CASE WHEN)
+
+CASE WHEN is SQL’s if/else. It checks conditions in order and returns a value for the first one that is true. It’s how you create labels like “High / Medium / Low” or count rows under a condition.
+
+```sql
+CASE
+	WHEN condn1 THEN result1
+	WHEN condn2 THEN result2
+	ELSE default_result
+END
+```
+
+Two rules:
+- Order matters. The first true WHEN wins, and the rest are ignored.
+- Without an ELSE, rows that match nothing get NULL.
+
+Question 65: Show each employee’s name, salary and a salary band: High (80000 or more), Medium (55000 up to 80000), Low (below 55000), and Unknown if the salary is missing.
+
+```SQL
+SELECT name, salary
+	CASE
+		WHEN salary IS NULL THEN 'Unknown'
+		WHEN salary >= 80000 THEN 'High'
+		WHEN salary >= 55000 THEN 'Medium'
+		ELSE 'Low'
+	END AS salary_band
+FROM employees;
+```
+
+
 
