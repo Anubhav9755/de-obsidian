@@ -3945,11 +3945,34 @@ Each `.get(key, {})` returns an empty dict when the key is missing, so the next 
 ### Code 4: set gaps
 A **set** is a collection that stores **unique elements**. It is useful when you want to remove duplicates, check whether an element exists, or perform mathematical set operations.
 
+```python
+nums = {1, 2, 3, 4, 5}
+```
 
+### Important characteristics
 
+| Property                | Set                   |
+| ----------------------- | --------------------- |
+| Mutable                 | Yes                   |
+| Allows duplicates       | No                    |
+| Ordered                 | No guaranteed order   |
+| Indexing                | Not supported         |
+| Slicing                 | Not supported         |
+| Allows mixed data types | Yes                   |
+| Elements must be        | Hashable              |
+| Duplicate elements      | Automatically removed |
 
+## Set creation**
 
-
+| Syntax            | Example                      | Output                 |
+| ----------------- | ---------------------------- | ---------------------- |
+| Curly braces      | `s = {1, 2, 3}`              | `{1, 2, 3}`            |
+| Empty set         | `s = set()`                  | `set()`                |
+| From list         | `set([1, 2, 2, 3])`          | `{1, 2, 3}`            |
+| From tuple        | `set((1, 2, 3))`             | `{1, 2, 3}`            |
+| From string       | `set("hello")`               | `{'h', 'e', 'l', 'o'}` |
+| From range        | `set(range(1, 5))`           | `{1, 2, 3, 4}`         |
+| Set comprehension | `{x*x for x in range(1, 4)}` | `{1, 4, 9}`            |
 
 ---
 

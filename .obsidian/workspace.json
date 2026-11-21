@@ -15,7 +15,7 @@
               "state": {
                 "file": "python/Python_MODULE1.md",
                 "mode": "source",
-                "source": true
+                "source": false
               },
               "icon": "lucide-file",
               "title": "Python_MODULE1"
@@ -35,8 +35,7 @@
               "title": "SQL_Revision"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -216,10 +215,10 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "e25be2c6f9e3eef4",
+  "active": "3a62392e213de149",
   "lastOpenFiles": [
-    "python/Python_MODULE1.md",
     "sql/SQL_Revision.md",
+    "python/Python_MODULE1.md",
     "Pasted image 20261121223323.png",
     "conflict-files-obsidian-git.md",
     "README.md",
