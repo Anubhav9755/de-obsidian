@@ -4141,7 +4141,7 @@ for a in amounts:
     if a < 0:
         print("bad row found:", a)
         break
-else:                          # runs ONLY if the loop did not hit break
+else:                       # runs ONLY if the loop did not hit break
     print("all rows OK")
 # bad row found: -3.0       (with no negative number it would print "all rows OK")
 ```
@@ -4185,49 +4185,22 @@ print(list(zip_longest(names, scores, fillvalue=0)))
 # zip(names, scores, strict=True)         # ValueError: zip() argument 2 is shorter than argument 1
 ```
 
+|Code|Meaning|
+|---|---|
+|`zip(a, b)`|Combines elements position-wise|
+|`zip(*rows)`|Unpacks rows, then combines elements position-wise|
+|`dict(zip(a, b))`|Combines elements into key-value pairs and creates a dictionary
 
-Code
-
-Meaning
-
-zip(a, b)
-
-Combine elements position-wise
-
-zip(*rows)
-
-Unpack rows, then combine position-wise
-
-dict(zip(a, b))
-
-Combine and create key-value pairs
-
-
-Function
-
-Behaviour
-
-zip()
-
-Stops at shortest iterable
-
-zip_longest()
-
-Stops at longest iterable
-
-zip_longest(fillvalue=0)
-
-Fills missing values with 0
-
-zip(strict=True)
-
-Raises error if lengths differ
-
+|Function|Behaviour|
+|---|---|
+|`zip()`|Stops at the shortest iterable|
+|`zip_longest()`|Continues until the longest iterable is exhausted|
+|`zip_longest(fillvalue=0)`|Fills missing values with `0`|
+|`zip(strict=True)`|Raises `ValueError` if iterable lengths differ|
 
 **Two everyday patterns:**
 
-```
-python
+```python
 header = ["id", "name", "amount"]
 row = ["tx_1", "Asha", "150"]
 print(dict(zip(header, row)))        # {'id': 'tx_1', 'name': 'Asha', 'amount': '150'}   a CSV row -> a record
@@ -4293,7 +4266,6 @@ if (n := len(items)) > 3:                         # compute len once, then reuse
 		- If TRUE, keep y in the new list.
 		- If FALSE, skip it.
 - Repeat for every number in data.
-
 - Calculate the length of items.
 - Store the result in n.
 - Check whether n > 3.
@@ -4312,82 +4284,41 @@ while (chunk := f.read(4)):                   # same idea with walrus: an empty 
     print(chunk, end=" ")                     # abcd efgh ij
 ```
   
-iter() with lambda
-
-Syntax
-
-Purpose
-
-iter(iterable)
-
-Creates an iterator from an iterable
-
-iter(callable, sentinel)
-
-Repeatedly calls a function until its result equals the sentinel
-
-while loop with the walrus operator (:=)
-
-Concept
-
-Remember this
-
-StringIO
-
-Treats a string like a file
-
-read(4)
-
-Reads up to 4 characters
-
-lambda
-
-Creates a small anonymous function
-
-iter(func, "")
-
-Calls a function until it returns ""
-
-sentinel
-
-The value that tells iter() to stop
-
-:=
-
-Assigns and evaluates a value
-
-while
-
-Repeats while the condition is truthy
-
-end=" "
-
-Prints output on the same line with spaces
-
-
+|Concept / Syntax|Purpose / Remember this|
+|---|---|
+|`iter(iterable)`|Creates an iterator from an iterable|
+|`iter(callable, sentinel)`|Repeatedly calls a function until its result equals the sentinel|
+|`StringIO`|Treats a string like a file|
+|`read(4)`|Reads up to 4 characters|
+|`lambda`|Creates a small anonymous function|
+|`iter(func, "")`|Calls a function until it returns `""`|
+|`sentinel`|The value that tells `iter()` to stop|
+|`:=` (walrus operator)|Assigns and evaluates a value|
+|`while`|Repeats while the condition is truthy|
+|`end=" "`|Prints output on the same line with spaces|
 
 **Code 6: match-case**
 
 ```python
 def handle(event):
     match event:
-        case {"type": "click", "x": x, "y": y}:               # dict pattern, captures x and y
+        case {"type": "click", "x": x, "y": y}:     # dict pattern, captures x and y
             return f"click at {x},{y}"
-        case {"type": "key", "key": k} if k.isdigit():        # guard: an extra condition
+        case {"type": "key", "key": k} if k.isdigit():  # guard: an extra condition
             return f"digit {k}"
         case {"type": "key", "key": k}:
             return f"key {k}"
-        case [first, *rest]:                                  # a list of any length >= 1
+        case [first, *rest]:             # a list of any length >= 1
             return f"list starting with {first}, {len(rest)} more"
-        case "quit" | "exit":                                 # | means "either"
+        case "quit" | "exit":            # | means "either"
             return "bye"
-        case _:                                               # wildcard: everything else
+        case _:                          # wildcard: everything else
             return "unknown"
 
 print(handle({"type": "click", "x": 3, "y": 4}))    # click at 3,4
 print(handle({"type": "key", "key": "7"}))          # digit 7
 print(handle({"type": "key", "key": "a"}))          # key a
-print(handle([1, 2, 3]))                             # list starting with 1, 2 more
+print(handle([1, 2, 3]))              # list starting with 1, 2 more
 print(handle("exit"))                                # bye
 print(handle(42))                                    # unknown
 ```
