@@ -4143,7 +4143,7 @@ for a in amounts:
         break
 else:                       # runs ONLY if the loop did not hit break
     print("all rows OK")
-# bad row found: -3.0       (with no negative number it would print "all rows OK")
+# bad row found: -3.0   (with no negative number it would print "all rows OK")
 ```
 
 - The old way needs a flag: found_bad = False, set it to True before break, then if not found_bad:. for-else removes the flag.
@@ -4161,8 +4161,8 @@ print(len(r), 999 in r)         # 1000000000 True   no giant list was ever built
 
 names = ["asha", "ravi"]
 for i in range(len(names)):             
-	print(i, names[i]) 					# works, but clumsy coz it generate the index and use the index to access the value.
-for i, n in enumerate(names):           # better
+	print(i, names[i]) 			# works, but clumsy coz it generate the index and use the index to access the value.
+for i, n in enumerate(names):   # better
     print(i, n)
 ```
 
@@ -4177,12 +4177,13 @@ names = ["asha", "ravi", "meena"]
 scores = [90, 80]
 
 print(list(zip(names, scores)))
-# [('asha', 90), ('ravi', 80)]            meena has silently VANISHED
+# [('asha', 90), ('ravi', 80)]    meena has silently VANISHED
 
 print(list(zip_longest(names, scores, fillvalue=0)))
-# [('asha', 90), ('ravi', 80), ('meena', 0)]     runs to the longest, fills the gap
+# [('asha', 90), ('ravi', 80), ('meena', 0)]  runs to the longest, fills the gap
 
-# zip(names, scores, strict=True)         # ValueError: zip() argument 2 is shorter than argument 1
+# zip(names, scores, strict=True)      
+# ValueError: zip() argument 2 is shorter than argument 1
 ```
 
 |Code|Meaning|
@@ -4255,8 +4256,8 @@ big = [y for x in data if (y := x * 2) > 20]     # compute x*2 once: test it AND
 print(big)                                        # [24, 60]
 
 items = [1, 2, 3, 4]
-if (n := len(items)) > 3:                         # compute len once, then reuse n
-    print(f"{n} items is too many")               # 4 items is too many
+if (n := len(items)) > 3:          # compute len once, then reuse n
+    print(f"{n} items is too many")            # 4 items is too many
 ```
 
 - Take one number x from data.
@@ -4319,6 +4320,7 @@ print(handle({"type": "click", "x": 3, "y": 4}))    # click at 3,4
 print(handle({"type": "key", "key": "7"}))          # digit 7
 print(handle({"type": "key", "key": "a"}))          # key a
 print(handle([1, 2, 3]))              # list starting with 1, 2 more
-print(handle("exit"))                                # bye
-print(handle(42))                                    # unknown
+print(handle("exit"))                               # bye
+print(handle(42))                                   # unknown
 ```
+
