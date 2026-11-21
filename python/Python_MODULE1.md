@@ -3962,7 +3962,7 @@ nums = {1, 2, 3, 4, 5}
 | Elements must be        | Hashable              |
 | Duplicate elements      | Automatically removed |
 
-## Set creation**
+### Set creation
 
 | Syntax            | Example                      | Output                 |
 | ----------------- | ---------------------------- | ---------------------- |
@@ -3973,6 +3973,19 @@ nums = {1, 2, 3, 4, 5}
 | From string       | `set("hello")`               | `{'h', 'e', 'l', 'o'}` |
 | From range        | `set(range(1, 5))`           | `{1, 2, 3, 4}`         |
 | Set comprehension | `{x*x for x in range(1, 4)}` | `{1, 4, 9}`            |
+**exception:**
+
+```python
+s = {}       # Empty dictionary
+s = set()    # Empty set
+```
+
+### Adding elements
+
+| Method             | Purpose                | Example            | Result            |
+| ------------------ | ---------------------- | ------------------ | ----------------- |
+| `add(x)`           | Adds one element       | `s.add(4)`         | `{1, 2, 3, 4}`    |
+| `update(iterable)` | Adds multiple elements | `s.update([4, 5])` | `{1, 2, 3, 4, 5}` |
 
 ---
 
