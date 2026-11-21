@@ -15,7 +15,7 @@
               "state": {
                 "file": "python/Python_MODULE1.md",
                 "mode": "source",
-                "source": false
+                "source": true
               },
               "icon": "lucide-file",
               "title": "Python_MODULE1"

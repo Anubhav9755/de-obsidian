@@ -682,8 +682,6 @@ GROUP BY city
 ORDER BY new_joinee DESC;
 ```
 
-<<<<<<< HEAD
-=======
 ---
 
 ## Lesson 11: Filtering groups (HAVING)
@@ -822,7 +820,6 @@ group by city
 having count(*) >= 2;
 ```
 
->>>>>>> origin/main
 ---
 
 ## Lesson 12: Conditional logic (CASE WHEN)
