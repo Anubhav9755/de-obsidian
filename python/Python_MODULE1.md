@@ -4236,8 +4236,8 @@ rows = [[1, 2, 3], [4, 5, 6]]
 print(list(zip(*rows)))              # [(1, 4), (2, 5), (3, 6)]    transpose: rows -> columns
 ```
 
-dict(zip(header, row)) – Creating a dictionary
-zip(*rows) – Transposing rows into columns
+- dict(zip(header, row)) – Creating a dictionary
+- zip(*rows) – Transposing rows into columns
 
 **Code 4: comprehensions**
 Python reads list comprehensions from LEFT to RIGHT, and the order of for loops matters.
@@ -4258,18 +4258,18 @@ print([[x * x for x in row] for row in matrix])               # [[1, 4, 9], [16,
 - if at the END → decides whether to keep or remove an item.
 - if/else at the START → decides what value to put in the list.
 - for row in matrix → Take one row at a time.
-	for x in row → Take one element from that row.
-		x → Put that element into the final list.
+	- for x in row → Take one element from that row.
+	- x → Put that element into the final list.
 - Take one character from "ab".
-	For that character, take every value from (1, 2).
-		Create a tuple (a, b).
+	- For that character, take every value from (1, 2).
+		- Create a tuple (a, b).
 - Take one row from matrix.
-	For that row, take every element x.
-		Multiply x by itself (x * x).
-		Put the result into a new list.
-	Finish the new list for that row.
-  Repeat for every row in matrix.
-  Collect all the new lists into one outer list.
+	- For that row, take every element x.
+		- Multiply x by itself (x * x).
+		- Put the result into a new list.
+	- Finish the new list for that row.
+- Repeat for every row in matrix.
+-  Collect all the new lists into one outer list.
 
 **Reading rule:** in [x for row in matrix for x in row], the for clauses read left to right in the same order as nested loops (outer first).
 
