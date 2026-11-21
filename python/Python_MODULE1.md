@@ -4186,11 +4186,11 @@ print(list(zip_longest(names, scores, fillvalue=0)))
 # ValueError: zip() argument 2 is shorter than argument 1
 ```
 
-|Code|Meaning|
-|---|---|
-|`zip(a, b)`|Combines elements position-wise|
-|`zip(*rows)`|Unpacks rows, then combines elements position-wise|
-|`dict(zip(a, b))`|Combines elements into key-value pairs and creates a dictionary
+| Code              | Meaning                                                         |
+| ----------------- | --------------------------------------------------------------- |
+| `zip(a, b)`       | Combines elements position-wise                                 |
+| `zip(*rows)`      | Unpacks rows, then combines elements position-wise              |
+| `dict(zip(a, b))` | Combines elements into key-value pairs and creates a dictionary |
 
 |Function|Behaviour|
 |---|---|
