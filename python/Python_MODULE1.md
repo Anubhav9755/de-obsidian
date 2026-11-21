@@ -3942,6 +3942,12 @@ print(city)                                        # unknown
 
 Each `.get(key, {})` returns an empty dict when the key is missing, so the next `.get` still has something to work on.
 
+### Code 4: set gaps
+A **set** is a collection that stores **unique elements**. It is useful when you want to remove duplicates, check whether an element exists, or perform mathematical set operations.
+
+
+
+
 
 ---
 
