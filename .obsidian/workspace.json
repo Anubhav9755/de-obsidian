@@ -35,7 +35,8 @@
               "title": "SQL_Revision"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -215,10 +216,10 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "3a62392e213de149",
+  "active": "e25be2c6f9e3eef4",
   "lastOpenFiles": [
-    "sql/SQL_Revision.md",
     "python/Python_MODULE1.md",
+    "sql/SQL_Revision.md",
     "Pasted image 20261121223323.png",
     "conflict-files-obsidian-git.md",
     "README.md",
