@@ -3986,6 +3986,128 @@ s = set()    # Empty set
 | ------------------ | ---------------------- | ------------------ | ----------------- |
 | `add(x)`           | Adds one element       | `s.add(4)`         | `{1, 2, 3, 4}`    |
 | `update(iterable)` | Adds multiple elements | `s.update([4, 5])` | `{1, 2, 3, 4, 5}` |
+**Important difference:**
+
+```python
+s = {1, 2}
+s.add((3, 4))
+# {1, 2, (3, 4)}
+s = {1, 2}
+s.update((3, 4))
+# {1, 2, 3, 4}
+```
+
+## Removing elements
+
+|Method|Purpose|Example|Important behaviour|
+|---|---|---|---|
+|`remove(x)`|Removes specified element|`s.remove(2)`|Raises `KeyError` if absent|
+|`discard(x)`|Removes specified element|`s.discard(2)`|No error if absent|
+|`pop()`|Removes and returns an arbitrary element|`s.pop()`|Raises `KeyError` if empty|
+|`clear()`|Removes all elements|`s.clear()`|Returns `None`|
+
+### All set methods
+
+| No. | Method                          | Purpose                                  | Example                            |
+| --- | ------------------------------- | ---------------------------------------- | ---------------------------------- |
+| 1   | `add(x)`                        | Add one element                          | `s.add(5)`                         |
+| 2   | `update(iterable)`              | Add multiple elements                    | `s.update([5, 6])`                 |
+| 3   | `remove(x)`                     | Remove an element                        | `s.remove(2)`                      |
+| 4   | `discard(x)`                    | Safely remove an element                 | `s.discard(2)`                     |
+| 5   | `pop()`                         | Remove arbitrary element                 | `s.pop()`                          |
+| 6   | `clear()`                       | Empty the set                            | `s.clear()`                        |
+| 7   | `copy()`                        | Shallow copy                             | `t = s.copy()`                     |
+| 8   | `union()`                       | Combine sets                             | `s.union(t)`                       |
+| 9   | `intersection()`                | Find common elements                     | `s.intersection(t)`                |
+| 10  | `difference()`                  | Find elements only in first set          | `s.difference(t)`                  |
+| 11  | `symmetric_difference()`        | Find non-common elements                 | `s.symmetric_difference(t)`        |
+| 12  | `intersection_update()`         | Keep common elements in original set     | `s.intersection_update(t)`         |
+| 13  | `difference_update()`           | Remove elements found in another set     | `s.difference_update(t)`           |
+| 14  | `symmetric_difference_update()` | Keep non-common elements in original set | `s.symmetric_difference_update(t)` |
+| 15  | `issubset()`                    | Check subset                             | `s.issubset(t)`                    |
+| 16  | `issuperset()`                  | Check superset                           | `s.issuperset(t)`                  |
+| 17  | `isdisjoint()`                  | Check whether no elements are common     | `s.isdisjoint(t)`                  |
+|     |                                 |                                          |                                    |
+
+### Set operations
+
+```
+A = {1, 2, 3, 4}
+B = {3, 4, 5, 6}
+```
+
+| Operation            | Method                      | Operator | Output               |
+| -------------------- | --------------------------- | -------- | -------------------- |
+| Union                | `A.union(B)`                | `A \|B   | `{1, 2, 3, 4, 5, 6}` |
+| Intersection         | `A.intersection(B)`         | `A & B`  | `{3, 4}`             |
+| Difference           | `A.difference(B)`           | `A - B`  | `{1, 2}`             |
+| Reverse difference   | `B.difference(A)`           | `B - A`  | `{5, 6}`             |
+| Symmetric difference | `A.symmetric_difference(B)` | `A ^ B`  | `{1, 2, 5, 6}`       |
+### Update operations (modify original set)
+
+| Method                           | What it does                   | Example                            |
+| -------------------------------- | ------------------------------ | ---------------------------------- |
+| `update(B)`                      | Adds all elements of B         | `A.update(B)`                      |
+| `intersection_update(B)`         | Keeps only common elements     | `A.intersection_update(B)`         |
+| `difference_update(B)`           | Removes elements present in B  | `A.difference_update(B)`           |
+| `symmetric_difference_update(B)` | Keeps only non-common elements | `A.symmetric_difference_update(B)` |
+
+### Subset, superset and disjoint operations
+
+```
+A = {1, 2, 3, 4, 5}
+B = {2, 3}
+C = {7, 8}
+```
+
+|Method|Operator|Example|Output|
+|---|---|---|---|
+|`issubset()`|`<=`|`B.issubset(A)`|`True`|
+|`issuperset()`|`>=`|`A.issuperset(B)`|`True`|
+|Proper subset|`<`|`B < A`|`True`|
+|Proper superset|`>`|`A > B`|`True`|
+|`isdisjoint()`|No operator|`A.isdisjoint(C)`|`True`|
+
+- **Subset:** All elements of B exist in A.
+- **Superset:** A contains all elements of B.
+- **Disjoint:** Two sets have no common elements.
+
+### Built-in functions with sets
+
+| Function       | Purpose                                | Example                     | Output                                   |
+| -------------- | -------------------------------------- | --------------------------- | ---------------------------------------- |
+| `len(s)`       | Number of elements                     | `len({1, 2, 3})`            | `3`                                      |
+| `min(s)`       | Smallest element                       | `min({3, 1, 2})`            | `1`                                      |
+| `max(s)`       | Largest element                        | `max({3, 1, 2})`            | `3`                                      |
+| `sum(s)`       | Sum of elements                        | `sum({1, 2, 3})`            | `6`                                      |
+| `sorted(s)`    | Sort elements                          | `sorted({3, 1, 2})`         | `[1, 2, 3]`                              |
+| `any(s)`       | True if at least one element is truthy | `any({0, 1})`               | `True`                                   |
+| `all(s)`       | True if all elements are truthy        | `all({1, 2})`               | `True`                                   |
+| `set(x)`       | Convert iterable to set                | `set([1, 1, 2])`            | `{1, 2}`                                 |
+| `frozenset(x)` | Create immutable set                   | `frozenset([1, 2])`         | `frozenset({1, 2})`                      |
+| `enumerate(s)` | Generate index-value pairs             | `list(enumerate({10, 20}))` | Index-value pairs (order not guaranteed) |
+
+###  `frozenset` **vs** `set`
+
+| Feature                          | `set`      | `frozenset`   |
+| -------------------------------- | ---------- | ------------- |
+| Mutable                          | Yes        | No            |
+| Add elements                     | `add()`    | Not supported |
+| Remove elements                  | `remove()` | Not supported |
+| Union                            | Yes        | Yes           |
+| Intersection                     | Yes        | Yes           |
+| Difference                       | Yes        | Yes           |
+| Can be dictionary key            | No         | Yes           |
+| Can be an element of another set | No         | Yes           |
+
+```PYTHON
+s = frozenset([1, 2, 3])
+
+data = {s: "numbers"}
+
+print(data[frozenset([1, 2, 3])])
+# numbers
+```
 
 ---
 
