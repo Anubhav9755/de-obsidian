@@ -682,6 +682,5 @@ GROUP BY city
 ORDER BY new_joinee DESC;
 ```
 
-
 ---
 
